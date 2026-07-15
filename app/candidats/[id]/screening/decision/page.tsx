@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRecruiter, getCandidate, getInterview, getEvaluationGrid, getSyntheses } from "@/lib/noa/queries";
+import { requireRecruiter, getCandidate, getInterview, getEvaluationGrid, getSyntheses, getDecisions } from "@/lib/noa/queries";
 import { DecisionView } from "../../decision-view";
 import type { ScreeningCriterion, ScreeningAnswer } from "@/lib/noa/synthesis";
 
@@ -31,6 +31,11 @@ export default async function ScreeningDecisionPage({ params }: { params: Promis
 
   const noaSynthesis = syntheses.find((s) => s.authored_by === "noa") ?? null;
 
+  const decisions = await getDecisions(candidate.id);
+  // "reporte" postpones the decision — it isn't final, so the CTAs must stay
+  // visible. Only "retenu"/"non_retenu" close out the stage for good.
+  const stageDecision = decisions.filter((d) => d.stage === "screening" && d.status !== "reporte").pop() ?? null;
+
   return (
     <DecisionView
       candidate={candidate}
@@ -42,6 +47,7 @@ export default async function ScreeningDecisionPage({ params }: { params: Promis
       ]}
       noaSynthesis={noaSynthesis}
       hasTranscript={Boolean(interview.transcript)}
+      decision={stageDecision}
     />
   );
 }
