@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SignupState = {
   error?: string;
+  message?: string;
 };
 
 export async function signup(_prevState: SignupState, formData: FormData): Promise<SignupState> {
@@ -24,9 +25,25 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
 
   const supabase = await createClient();
 
+  // Stash the signup answers in the auth user's metadata: if email
+  // confirmation is required, signUp() won't give us a session (so we can't
+  // call the RPC yet, since it relies on auth.uid()). The /auth/callback
+  // route reads this metadata to create the company + recruiter rows once
+  // the user actually confirms their email and gets a session.
   const { error: signUpError } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        company_name: companyName,
+        siret: siret || null,
+        team_size: teamSize || null,
+        main_objective: mainObjective || null,
+        job_title: jobTitle || null,
+      },
+    },
   });
 
   if (signUpError) {
@@ -36,18 +53,17 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
     return { error: signUpError.message };
   }
 
-  // signUp() doesn't guarantee an active session (e.g. email confirmation
-  // required). Make sure we have one before calling the RPC, which relies on
-  // auth.uid().
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session) {
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      return { error: "Compte créé. Merci de vérifier votre email avant de continuer." };
-    }
+    // Email confirmation is required: no session yet, so we can't create the
+    // company/recruiter rows here. /auth/callback handles it once the user
+    // clicks the confirmation link.
+    return {
+      message: "Compte créé. Merci de vérifier votre boîte mail et de cliquer sur le lien de confirmation pour continuer.",
+    };
   }
 
   const { error: rpcError } = await supabase.rpc("create_company_and_recruiter", {
