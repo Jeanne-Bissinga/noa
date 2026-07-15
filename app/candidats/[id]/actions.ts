@@ -246,7 +246,7 @@ export async function decideStage(candidateId: string, stage: "screening" | "top
 
     revalidatePath("/candidats");
     revalidatePath(`/candidats/${candidateId}`);
-    redirect(`/candidats/${candidateId}/transition?type=topgrading`);
+    redirect(`/candidats/${candidateId}`);
   } else {
     const fields = STATUS_FIELDS["Decision finale"];
     await supabase
@@ -256,7 +256,7 @@ export async function decideStage(candidateId: string, stage: "screening" | "top
 
     revalidatePath("/candidats");
     revalidatePath(`/candidats/${candidateId}`);
-    redirect(`/candidats/${candidateId}/transition?type=final`);
+    redirect(`/candidats/${candidateId}`);
   }
 }
 
