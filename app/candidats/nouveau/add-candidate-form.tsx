@@ -18,6 +18,8 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
   const [cvDone, setCvDone] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelected = (selected: File | null) => {
@@ -138,7 +140,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Prénom"
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#99BAF8] placeholder:text-gray-300 transition-colors"
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#99BAF8] placeholder:text-gray-300 transition-colors text-black"
                     />
                   </div>
                   <div>
@@ -149,7 +151,29 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Nom de famille"
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#99BAF8] placeholder:text-gray-300 transition-colors"
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#99BAF8] placeholder:text-gray-300 transition-colors text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-1.5">Poste</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Ex. Développeur Full Stack"
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#99BAF8] placeholder:text-gray-300 transition-colors text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-1.5">Localisation</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Ex. Paris"
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#99BAF8] placeholder:text-gray-300 transition-colors text-black"
                     />
                   </div>
                 </div>
