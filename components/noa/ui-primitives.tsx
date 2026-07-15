@@ -99,7 +99,7 @@ export const InputField = ({
       value={value}
       defaultValue={defaultValue}
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] transition-all bg-white placeholder-gray-300"
+      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] transition-all bg-white placeholder-gray-300 text-black"
     />
     {hint && <p className="text-xs text-gray-400">{hint}</p>}
   </div>
