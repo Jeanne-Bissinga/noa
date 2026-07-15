@@ -79,6 +79,17 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
   });
 
   if (rpcError) {
+    // 23503 = foreign key violation. The only way recruiters_user_id_fkey
+    // can fail here is if auth.uid() doesn't match a real auth.users row
+    // anymore - a leftover browser session for an account that was deleted
+    // (e.g. from the Supabase dashboard). Clear it so the next attempt
+    // starts from a clean, unauthenticated state instead of repeating.
+    if (rpcError.code === "23503") {
+      await supabase.auth.signOut();
+      return {
+        error: "Votre session précédente n'était plus valide et vient d'être nettoyée. Merci de réessayer l'inscription.",
+      };
+    }
     return { error: rpcError.message };
   }
 
