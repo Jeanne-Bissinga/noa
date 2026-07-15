@@ -38,6 +38,19 @@ export default function SignupPage() {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
+        {state?.message ? (
+          <div className="w-full max-w-lg py-8">
+            <div className="lg:hidden mb-8"><NoaLogo /></div>
+            <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Vérifiez votre boîte mail</h2>
+            <div className="mt-4 px-4 py-3 rounded-xl bg-[#75DA9F]/10 border border-[#75DA9F]/30 text-[#1e8f52] text-sm">
+              {state.message}
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-5">
+              Déjà confirmé ?{" "}
+              <Link href="/connexion" className="text-[#3a6fd4] hover:underline">Se connecter</Link>
+            </p>
+          </div>
+        ) : (
         <form action={formAction} className="w-full max-w-lg py-8">
           <div className="lg:hidden mb-8"><NoaLogo /></div>
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Créer mon compte</h2>
@@ -119,6 +132,7 @@ export default function SignupPage() {
             <Link href="/connexion" className="text-[#3a6fd4] hover:underline">Se connecter</Link>
           </p>
         </form>
+        )}
       </div>
     </div>
   );
