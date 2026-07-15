@@ -151,7 +151,7 @@ export function CandidateDetail({
                     href={`/candidats/${candidate.id}/${step.key}/decision`}
                     className="text-xs font-semibold text-[#3a6fd4] hover:underline flex items-center gap-1"
                   >
-                    Voir / prendre la décision <ChevronRight size={12} />
+                    Voir plus <ChevronRight size={12} />
                   </Link>
                 </div>
               </Card>
