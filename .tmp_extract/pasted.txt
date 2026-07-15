@@ -1,0 +1,34 @@
+Nous développons Noa, un produit qui aide les managers de PME tech sans équipe RH à prendre des décisions de recrutement fiables. Nous avons un prototype Figma Make (code fourni en pj), actuellement statique (données fictives/en dur), que nous voulons connecter à une vraie base de données pour le rendre fonctionnel.
+
+Objectif
+
+Prends le code du prototype Figma Make ci-joint et rends-le dynamique : remplace les données statiques par des appels à une vraie base de données, en t'appuyant sur le modèle de données ci-dessous comme structure de référence. Le rendu visuel et les parcours existants du prototype doivent être conservés à l'identique, seule la source des données change.
+
+Modèle de base à respecter (diagramme de classes fourni)
+
+Company (1) → Recruiter (1) : une entreprise a un recruteur (relation 1-1 pour le MVP, mais vérifie dans le code si une gestion multi-recruteurs par entreprise est déjà présente dans le prototype — si oui, adapte le modèle en conséquence et signale l'écart).
+Company (1) → Candidate (0..*) : une entreprise peut avoir zéro ou plusieurs candidats.
+
+Entités à déduire et compléter à partir du code du prototype
+
+En analysant le code, identifie et connecte à la base de données notamment :
+
+Company : nom, SIRET, secteur, taille d'équipe, valeurs/fonctionnement.
+Recruiter : prénom, nom, email professionnel, rôle (admin/recruteur), entreprise associée.
+Mission (fiche de poste) : titre, motif du recrutement, mission macro, résultats attendus (métrique/délai/seuil), compétences (techniques/relationnelles/comportementales), statut, entreprise associée.
+Candidate : nom, CV, pièces jointes, mission associée, statut dans le process (screening, Topgrading, décision), source.
+Interview : candidat associé, type (screening/Topgrading), format, durée, statut d'enregistrement, transcription.
+EvaluationGrid : critères, réponses (Oui/Partiel/Non), mission associée.
+InterviewGuide : questions et sujets à aborder, distinct de la grille, lié à un entretien.
+Synthesis : synthèse générée par Noa (à partir de la transcription, avec conseil d'aide à la décision) et synthèse du recruteur (issue de la grille remplie manuellement), à bien distinguer comme deux objets liés au même candidat/entretien.
+Decision : statut (retenu / non retenu / décision reportée), motif si non retenu, candidat et étape associés.
+
+Ce qui doit devenir fonctionnel, pas seulement affiché
+
+Les formulaires du prototype (création de compte, fiche de poste, ajout de candidat, grilles d'évaluation) doivent écrire réellement en base, pas simuler une soumission.
+Les listes et fiches (missions, candidats, synthèses) doivent lire les données depuis la base, pas depuis des tableaux statiques codés en dur.
+Les statuts (candidat, mission, décision) doivent changer réellement en base au clic sur les actions correspondantes (Retenir / Ne pas retenir / Décider plus tard), pas uniquement à l'écran.
+
+## Stack technique imposée
+
+Utilise **Supabase** pour la base de données (Postgres), l'authentification et le stockage des fichiers (CV, pièces jointes), plutôt qu'une stack assemblée manuellement (type Neon + Better Auth + Drizzle). Déploiement sur **Vercel**.
