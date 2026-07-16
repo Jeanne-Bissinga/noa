@@ -399,6 +399,8 @@ export async function finishInterview(candidateId: string, type: InterviewType, 
 
   revalidatePath(`/candidats/${candidateId}`);
   revalidatePath(`/candidats/${candidateId}/synthese`);
+  // L'entretien passe à "termine" : une décision est désormais en attente.
+  revalidatePath("/dashboard");
   redirect(`/candidats/${candidateId}/${type}/decision`);
 }
 
@@ -422,6 +424,10 @@ export async function decideStage(candidateId: string, stage: "screening" | "top
     reason: reason ?? null,
     decided_by: recruiter.id,
   });
+
+  // Vaut pour les trois issues ci-dessous, y compris "reporte" : la décision
+  // reste en attente, mais l'étape suivante peut en ouvrir une nouvelle.
+  revalidatePath("/dashboard");
 
   if (action === "non_retenu") {
     const fields = STATUS_FIELDS["Non retenu"];
@@ -492,5 +498,6 @@ export async function decideFinal(candidateId: string, action: "non_retenu" | "r
 
   revalidatePath("/candidats");
   revalidatePath(`/candidats/${candidateId}`);
+  revalidatePath("/dashboard");
   redirect("/candidats");
 }

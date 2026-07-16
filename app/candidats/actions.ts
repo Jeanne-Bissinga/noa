@@ -5,15 +5,31 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentRecruiter, getCandidate, getMission } from "@/lib/noa/queries";
-import { STATUS_FIELDS } from "@/lib/noa/labels";
+import { STATUS_FIELDS, canMoveCandidate } from "@/lib/noa/labels";
 import { extractCandidateProfile, CV_SUPPORTED_MIME, type CandidateProfileExtract } from "@/lib/noa/ai";
-import type { CandidateStatus } from "@/lib/noa/types";
+import type { CandidateStatus, DecisionStage } from "@/lib/noa/types";
+
+// Un retour en arrière annule les étapes à partir de celle visée : leurs
+// décisions ne tiennent plus. Sans ça, l'écran de décision afficherait
+// "Décision déjà prise" et masquerait ses boutons, laissant le candidat
+// bloqué — le kanban ne pouvant plus le faire avancer.
+const STAGES_REOPENED_BY: Record<CandidateStatus, DecisionStage[]> = {
+  Screening: ["screening", "topgrading", "final"],
+  Topgrading: ["topgrading", "final"],
+  "Decision finale": ["final"],
+  // Issues terminales : jamais atteintes par un retour en arrière.
+  "Non retenu": [],
+  Recrute: [],
+};
 
 // ─── Kanban: move a candidate to a new column ──────────────────────────────
 // Status-field mapping lives in lib/noa/labels.ts (STATUS_FIELDS) so it can be
 // shared with the screening/topgrading/final decision Server Actions in
 // app/candidats/[id]/actions.ts without violating the "use server" file's
 // "only export async functions" rule.
+//
+// Le kanban ne sert qu'aux corrections : voir canMoveCandidate. Toute
+// progression passe par decideStage / decideFinal, qui tracent la décision.
 export async function moveCandidate(candidateId: string, newStatus: CandidateStatus) {
   const recruiter = await getCurrentRecruiter();
   if (!recruiter) {
@@ -24,6 +40,15 @@ export async function moveCandidate(candidateId: string, newStatus: CandidateSta
   if (!candidate || candidate.company_id !== recruiter.company_id) {
     throw new Error("Candidat introuvable.");
   }
+
+  // Le board applique déjà la règle, mais il ne protège rien : la Server
+  // Action est appelable directement.
+  const check = canMoveCandidate(candidate.status, newStatus);
+  if (!check.ok) {
+    throw new Error(check.reason);
+  }
+
+  if (candidate.status === newStatus) return;
 
   const supabase = await createClient();
   const fields = STATUS_FIELDS[newStatus];
@@ -41,8 +66,16 @@ export async function moveCandidate(candidateId: string, newStatus: CandidateSta
     throw new Error(error.message);
   }
 
+  // Retour en arrière : les décisions des étapes réouvertes sont caduques.
+  const reopened = STAGES_REOPENED_BY[newStatus];
+  if (reopened.length) {
+    await supabase.from("decisions").delete().eq("candidate_id", candidateId).in("stage", reopened);
+  }
+
   revalidatePath("/candidats");
   revalidatePath(`/candidats/${candidateId}`);
+  // Le dashboard compte les décisions en attente à partir de ces champs.
+  revalidatePath("/dashboard");
   if (candidate.mission_id) {
     revalidatePath(`/missions/${candidate.mission_id}`);
   }
@@ -162,5 +195,6 @@ export async function createCandidate(
 
   revalidatePath("/candidats");
   revalidatePath(`/missions/${mission.id}`);
+  revalidatePath("/dashboard");
   redirect(`/candidats/${data.id}/transition?type=screening`);
 }
