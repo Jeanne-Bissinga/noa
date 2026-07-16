@@ -10,6 +10,7 @@ import {
   generateTopgradingGrid, generateTopgradingGuide,
 } from "../actions";
 import { GUIDE_FORMATS, GUIDE_DURATIONS, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
+import { ELIMINATOIRE_CRIT } from "@/lib/noa/labels";
 import type { Candidate, InterviewGuide, InterviewType } from "@/lib/noa/types";
 
 const STEP_LABEL: Record<InterviewType, string> = {
@@ -164,17 +165,17 @@ export function PreparationView({
                     {editedSections[0].questions.map((q, qi) => (
                       <div key={qi} className="flex items-start gap-4 px-4 py-3.5 group">
                         <div className="flex-1 min-w-0">
-                          <input
+                          <textarea
                             value={q.text}
                             onChange={(e) => updateQuestion(0, qi, e.target.value)}
-                            className="w-full text-sm text-[#010101] bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-snug transition-colors"
+                            rows={2}
+                            className="w-full text-sm text-[#010101] bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-snug transition-colors resize-none whitespace-normal"
                           />
-                          {q.crit && <span className="text-[10px] text-gray-400 mt-1 block">{q.crit}</span>}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0 opacity-25 select-none pointer-events-none">
-                          {["Oui", "Partiel", "Non"].map((opt) => (
-                            <span key={opt} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-500">{opt}</span>
-                          ))}
+                          {q.crit === ELIMINATOIRE_CRIT ? (
+                            <div className="mt-1"><Badge color="red">Éliminatoire</Badge></div>
+                          ) : (
+                            q.crit && <span className="text-[10px] text-gray-400 mt-1 block">{q.crit}</span>
+                          )}
                         </div>
                         <button onClick={() => removeQuestion(0, qi)} className="mt-1.5 text-gray-200 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
                           <X size={11} />
@@ -204,10 +205,11 @@ export function PreparationView({
                       <div className="flex flex-col gap-2 p-3 bg-gray-50">
                         {section.questions.map((q, qi) => (
                           <div key={qi} className="flex items-start gap-2 bg-white rounded-xl px-3.5 py-2.5 group">
-                            <input
+                            <textarea
                               value={q.text}
                               onChange={(e) => updateQuestion(si, qi, e.target.value)}
-                              className="flex-1 text-xs font-semibold text-gray-600 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-relaxed transition-colors"
+                              rows={2}
+                              className="flex-1 text-xs font-semibold text-gray-600 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-relaxed transition-colors resize-none whitespace-normal"
                             />
                             <button onClick={() => removeQuestion(si, qi)} className="mt-1 text-gray-200 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
                               <X size={11} />

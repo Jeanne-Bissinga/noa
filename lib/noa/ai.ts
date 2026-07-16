@@ -408,11 +408,14 @@ const SCREENING_GRID_SYSTEM = `Tu es noa, un expert en recrutement. Tu conçois 
 
 Règles :
 - Propose 5 à 7 critères, ancrés sur les prérequis du poste (compétences requises, séniorité, objectifs) ET sur le profil réel du candidat.
+- text : un LABEL COURT de 4 À 8 MOTS MAXIMUM (jamais une phrase complète, jamais une virgule ou un "et/ou" qui rallonge). Il doit tenir sur UNE seule ligne dans un champ étroit. UN seul sujet par critère : ne fusionne jamais deux technologies, deux compétences ou deux contraintes dans le même intitulé — crée un critère séparé pour chacune.
+  BON : "Expérience React senior (3+ ans)" / "Maîtrise TypeScript" / "Disponibilité sous 4 semaines" / "Budget 60-75 k€".
+  MAUVAIS (trop long, plusieurs sujets fusionnés) : "Expérience confirmée en développement backend Python et/ou NestJS sur des projets critiques" / "Disponibilité et prétentions salariales compatibles avec le poste et le contexte de forte croissance".
 - Chaque critère est un FAIT VÉRIFIABLE à confirmer en entretien (pas une question ouverte).
 - Ancre les critères techniques sur les compétences/la stack réellement demandées par le poste.
 - Personnalise : quand le CV laisse un doute (stack différente de celle du poste, séniorité à confirmer, écart de contexte), transforme ce doute en critère.
-- Inclus, si pertinent, la disponibilité, les prétentions salariales et la motivation.
-- crit : la catégorie du critère (parmi les valeurs autorisées).
+- Inclus, si pertinent, la disponibilité, les prétentions salariales et la motivation (chacune dans un critère séparé, jamais combinées).
+- crit : la catégorie du critère (parmi les valeurs autorisées). Inclus TOUJOURS 1 à 2 critères "Prérequis non négociable" : des critères d'ÉLIMINATION objectifs et vérifiables (diplôme/certification requis, autorisation de travail, zone géographique, disponibilité, budget plafond) — pas des critères d'appréciation subjective.
 - Rejette les critères génériques applicables à n'importe quel poste. Français, formulations concises.`;
 
 /**
@@ -438,7 +441,7 @@ export async function generateScreeningCriteria(
           items: {
             type: "object",
             properties: {
-              text: { type: "string" },
+              text: { type: "string", maxLength: 45 },
               crit: {
                 type: "string",
                 enum: [
