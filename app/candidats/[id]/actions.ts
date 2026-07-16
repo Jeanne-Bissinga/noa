@@ -54,12 +54,54 @@ async function getOrCreateInterview(candidateId: string, type: InterviewType) {
 }
 
 // ─── Get-or-initialize the evaluation_grids row, seeded with fixed questions ─
-async function getOrCreateEvaluationGrid(interviewId: string, type: InterviewType, missionId: string | null) {
+/**
+ * Critères semés à la création de la grille. On les génère depuis la campagne
+ * et le profil du candidat : SCREENING_CRITERIA/TOPGRADING_EPISODES sont des
+ * critères de dev front (React, TypeScript) qui n'ont de sens que pour ce
+ * poste-là. Les semer tels quels revient à évaluer tout candidat sur une grille
+ * étrangère à sa campagne — d'où des "Non" en cascade. Repli sur le statique
+ * seulement si l'IA échoue, pour ne jamais bloquer l'ouverture de l'entretien.
+ */
+async function seedGridCriteria(type: InterviewType, candidate: Candidate, recruiter: RecruiterWithCompany) {
+  try {
+    const { job, cand } = await buildScreeningContext(candidate, recruiter);
+
+    if (type === "screening") {
+      const suggestions = await generateScreeningCriteria(job, cand);
+      if (!suggestions.length) throw new Error("aucun critère généré");
+      // probes vide : les relances statiques sont indexées sur les critères
+      // React et n'auraient aucun rapport avec les critères générés ici. Le
+      // guide d'entretien (interview_guides) porte les vraies relances.
+      return suggestions.map((s, i) => ({ id: String(i + 1), q: s.text, crit: s.crit, probes: [] }));
+    }
+
+    const episodes = await generateTopgradingEpisodes(job, cand);
+    if (!episodes.length) throw new Error("aucun épisode généré");
+    return episodes.map((ep, si) => ({
+      co: ep.company,
+      period: ep.period,
+      role: ep.role,
+      qs: ep.questions.map((q, qi) => ({ id: `${si}-${qi}`, q, probes: [] })),
+    }));
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Génération de la grille ${type} échouée, repli sur la grille statique : ${err?.message ?? String(e)}`);
+    return type === "screening" ? SCREENING_CRITERIA : TOPGRADING_EPISODES;
+  }
+}
+
+async function getOrCreateEvaluationGrid(
+  interviewId: string,
+  type: InterviewType,
+  candidate: Candidate,
+  recruiter: RecruiterWithCompany,
+) {
   const supabase = await createClient();
   const existing = await getEvaluationGrid(interviewId);
   if (existing) return existing;
 
-  const criteria = type === "screening" ? SCREENING_CRITERIA : TOPGRADING_EPISODES;
+  const criteria = await seedGridCriteria(type, candidate, recruiter);
+  const missionId = candidate.mission_id;
 
   const { data, error } = await supabase
     .from("evaluation_grids")
@@ -80,9 +122,9 @@ async function getOrCreateEvaluationGrid(interviewId: string, type: InterviewTyp
 }
 
 export async function ensureInterviewAndGrid(candidateId: string, type: InterviewType) {
-  const { candidate } = await assertOwnedCandidate(candidateId);
+  const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   const interview = await getOrCreateInterview(candidateId, type);
-  const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate.mission_id);
+  const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate, recruiter);
   return { interview, grid };
 }
 
@@ -228,7 +270,7 @@ export async function savePreparation(
   format: string,
   duration: string,
 ) {
-  const { candidate } = await assertOwnedCandidate(candidateId);
+  const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   const supabase = await createClient();
 
   const interview = await getOrCreateInterview(candidateId, step);
@@ -259,23 +301,29 @@ export async function savePreparation(
 
   // Also refresh the evaluation grid's criteria with the recruiter's edits,
   // so the interview screen reflects what was prepared.
-  const grid = await getOrCreateEvaluationGrid(interview.id, step, candidate.mission_id);
+  //
+  // Les id sont dérivés de l'index, jamais de SCREENING_CRITERIA : indexer sur
+  // la grille statique (6 critères) donnait un id dupliqué dès le 7e critère
+  // (SCREENING_CRITERIA[6] absent -> String(6), déjà porté par le 6e), et deux
+  // critères de même id écrasent leur réponse dans `answers`. Idem pour les
+  // relances : celles du statique sont propres aux critères React.
+  const grid = await getOrCreateEvaluationGrid(interview.id, step, candidate, recruiter);
   const editedCriteria =
     step === "screening"
       ? gridSections[0]?.questions.map((q, i) => ({
-          id: SCREENING_CRITERIA[i]?.id ?? String(i),
+          id: String(i + 1),
           q: q.text,
           crit: q.crit,
-          probes: SCREENING_CRITERIA[i]?.probes ?? [],
+          probes: [],
         }))
       : gridSections.map((section, si) => ({
           co: section.title,
           period: section.period,
           role: section.subtitle,
           qs: section.questions.map((q, qi) => ({
-            id: TOPGRADING_EPISODES[si]?.qs[qi]?.id ?? `${si}-${qi}`,
+            id: `${si}-${qi}`,
             q: q.text,
-            probes: TOPGRADING_EPISODES[si]?.qs[qi]?.probes ?? [],
+            probes: [],
           })),
         }));
 
@@ -347,7 +395,7 @@ export async function finishInterview(candidateId: string, type: InterviewType, 
   const supabase = await createClient();
 
   const interview = await getOrCreateInterview(candidateId, type);
-  const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate.mission_id);
+  const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate, recruiter);
   const { job, cand } = await buildScreeningContext(candidate, recruiter);
 
   // noa détermine seul les réponses de la grille à partir de la transcription.
