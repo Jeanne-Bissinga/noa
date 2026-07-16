@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { FileText, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn } from "@/components/noa/ui-primitives";
+import { RecordingGuidance } from "@/components/noa/recording-guidance";
 import { TranscriptCapture } from "@/components/noa/transcript-capture";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { finishInterview } from "../actions";
@@ -18,6 +19,7 @@ export function ScreeningGridView({
   initialTranscript: string | null;
 }) {
   const [transcript, setTranscript] = useState(initialTranscript ?? "");
+  const [notes, setNotes] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -29,8 +31,11 @@ export function ScreeningGridView({
   const handleAnalyze = () => {
     setPending(true);
     setError(null);
+    const fullTranscript = notes.trim()
+      ? `${transcript.trim()}\n\nNotes complémentaires du recruteur :\n${notes.trim()}`
+      : transcript;
     startTransition(async () => {
-      const result = await finishInterview(candidate.id, "screening", transcript);
+      const result = await finishInterview(candidate.id, "screening", fullTranscript);
       if (result?.error) {
         setError(result.error);
         setPending(false);
@@ -56,7 +61,7 @@ export function ScreeningGridView({
           </div>
         </div>
 
-        <TranscriptCapture candidateId={candidate.id} type="screening" value={transcript} onChange={setTranscript} accent="blue" />
+        <RecordingGuidance accent="blue" />
 
         {/* Guide d'entretien (lecture seule) */}
         <Card className="p-6 mb-6">
@@ -110,6 +115,22 @@ export function ScreeningGridView({
               </div>
             ))}
           </div>
+        </Card>
+
+        <TranscriptCapture candidateId={candidate.id} type="screening" value={transcript} onChange={setTranscript} accent="blue" />
+
+        <Card className="p-4 mb-6">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Notes complémentaires (optionnel)</p>
+          <p className="text-xs text-gray-500 leading-relaxed mb-3">
+            Si vous avez pris des notes pendant l&apos;entretien et souhaitez les transmettre à noa en plus de la transcription, ajoutez-les ici.
+          </p>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={notes ? 4 : 2}
+            placeholder="Vos notes personnelles pendant l'entretien…"
+            className="w-full text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:ring-2 focus:border-[#99BAF8] focus:ring-[#99BAF8]/20 placeholder-gray-300 resize-none transition-colors"
+          />
         </Card>
 
         {error && (

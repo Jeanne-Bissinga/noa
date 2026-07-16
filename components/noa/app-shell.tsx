@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Search, Bell, Settings, LogOut, Briefcase, Users, BookOpen, BarChart2,
+  Search, Bell, Settings, LogOut, Briefcase, Users, BarChart2,
 } from "lucide-react";
 import { NoaLogo } from "@/components/noa/ui-primitives";
 import { signOut } from "@/app/(app)/actions";
 
+// Ressources masquée pour l'instant (page pas prête) : la route reste, seule
+// l'entrée de nav est retirée. Réajouter { label: "Ressources", icon: BookOpen, href: "/ressources" } pour la ré-activer.
 const NAV = [
   { label: "Dashboard", icon: BarChart2, href: "/dashboard" },
   { label: "Campagnes de recrutement", icon: Briefcase, href: "/missions" },
   { label: "Candidats", icon: Users, href: "/candidats" },
-  { label: "Ressources", icon: BookOpen, href: "/ressources" },
 ];
 
 const Sidebar = () => {

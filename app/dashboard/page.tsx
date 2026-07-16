@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  Briefcase, Users, BarChart2, AlertTriangle, Plus, ChevronRight, BookOpen,
+  Briefcase, Users, BarChart2, AlertTriangle, Plus, ChevronRight,
 } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Badge, Avatar } from "@/components/noa/ui-primitives";
@@ -193,11 +193,10 @@ export default async function DashboardPage() {
         {/* Actions rapides */}
         <div>
           <h2 className="font-bold text-[#010101] text-sm mb-3">Actions rapides</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {[
               { label: "Ajouter un candidat", desc: "Importer un CV", icon: <Users size={15} />, color: "text-[#6b4ec4] bg-[#CCB8FF]/12", href: "/candidats/nouveau" },
               { label: "Nouvelle mission", desc: "Créer une fiche de poste", icon: <Briefcase size={15} />, color: "text-[#3a6fd4] bg-[#99BAF8]/12", href: "/missions/nouvelle" },
-              { label: "Ressources", desc: "Méthode A-Player", icon: <BookOpen size={15} />, color: "text-[#1e8f52] bg-[#75DA9F]/12", href: "/ressources" },
             ].map((a) => (
               <Link
                 key={a.label}
