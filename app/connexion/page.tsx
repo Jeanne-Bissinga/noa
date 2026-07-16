@@ -8,8 +8,13 @@ import { login, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const [state, formAction, pending] = useActionState(login, initialState);
+  const incompleteProfile = searchParams?.error === "profil_incomplet";
 
   return (
     <div className="min-h-screen bg-[#f8f9fb] flex">
@@ -42,6 +47,12 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Se connecter</h2>
           <p className="text-gray-400 text-sm mb-8">Accédez à votre espace noa.</p>
 
+          {incompleteProfile && !state?.error && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-500 text-sm">
+              Votre profil n'a pas pu être retrouvé. Merci de recréer un compte via "Créer un compte" ci-dessous.
+            </div>
+          )}
+
           {state?.error && (
             <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-500 text-sm">
               {state.error}
@@ -55,7 +66,7 @@ export default function LoginPage() {
                 type="email"
                 name="email"
                 placeholder="marie.leroy@techco.fr"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] placeholder-gray-300 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] placeholder-gray-300 transition-all text-black"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -67,7 +78,7 @@ export default function LoginPage() {
                 type="password"
                 name="password"
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] placeholder-gray-300 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] placeholder-gray-300 transition-all text-black"
               />
             </div>
           </div>

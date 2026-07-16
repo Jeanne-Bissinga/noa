@@ -50,7 +50,7 @@ export function TopgradingGridView({
   return (
     <AppLayout headerTitle={name}>
       <div className="max-w-2xl mx-auto">
-        <BackLink href={`/candidats/${candidate.id}/screening/decision`} />
+        <BackLink href={`/candidats/${candidate.id}`} />
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">

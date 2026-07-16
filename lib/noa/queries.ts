@@ -20,6 +20,13 @@ import type {
 /**
  * Returns the recruiter row (+ joined company) for the currently logged-in
  * user, or null if there is no session or no recruiter/company yet.
+ *
+ * Self-heals a specific edge case: if signup happened before a session was
+ * available (email confirmation required) and, for whatever reason, the
+ * confirmation callback didn't create the company/recruiter rows yet, we
+ * retry it here using the signup answers stashed in the auth user's
+ * metadata. This keeps any authenticated user from getting stuck without a
+ * recruiter row as long as that metadata exists.
  */
 export async function getCurrentRecruiter(): Promise<RecruiterWithCompany | null> {
   const supabase = await createClient();
@@ -35,9 +42,34 @@ export async function getCurrentRecruiter(): Promise<RecruiterWithCompany | null
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (!error && data) return data as unknown as RecruiterWithCompany;
 
-  return data as unknown as RecruiterWithCompany;
+  const metadata = user.user_metadata ?? {};
+  if (!metadata.company_name || !metadata.first_name || !metadata.last_name) {
+    return null;
+  }
+
+  const { error: rpcError } = await supabase.rpc("create_company_and_recruiter", {
+    p_company_name: metadata.company_name,
+    p_siret: metadata.siret ?? null,
+    p_sector: null,
+    p_team_size: metadata.team_size ?? null,
+    p_main_objective: metadata.main_objective ?? null,
+    p_first_name: metadata.first_name,
+    p_last_name: metadata.last_name,
+    p_email: user.email ?? "",
+    p_job_title: metadata.job_title ?? null,
+  });
+
+  if (rpcError) return null;
+
+  const { data: healed } = await supabase
+    .from("recruiters")
+    .select("*, company:companies(*)")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return (healed as unknown as RecruiterWithCompany) ?? null;
 }
 
 /**
@@ -45,12 +77,20 @@ export async function getCurrentRecruiter(): Promise<RecruiterWithCompany | null
  * - redirects to /connexion if there is no authenticated user
  * - redirects to /onboarding if the recruiter/company exists but onboarding
  *   hasn't been completed yet
+ *
+ * If a session exists but no recruiter row can be found or self-healed (an
+ * account created before signup started stashing metadata, e.g.), we route
+ * through /auth/logout to force a real sign-out before landing on
+ * /connexion. Server Components can't write cookies, so signOut() can't be
+ * called directly here - redirecting to /connexion while still
+ * authenticated would otherwise bounce right back to /dashboard via the
+ * middleware, looping forever.
  */
 export async function requireRecruiter(): Promise<RecruiterWithCompany> {
   const recruiter = await getCurrentRecruiter();
 
   if (!recruiter) {
-    redirect("/connexion");
+    redirect(`/auth/logout?next=${encodeURIComponent("/connexion?error=profil_incomplet")}`);
   }
 
   if (!recruiter.company || recruiter.company.onboarding_completed === false) {

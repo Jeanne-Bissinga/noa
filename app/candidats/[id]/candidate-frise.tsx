@@ -26,15 +26,16 @@ function stepDest(candidateId: string, step: "Screening" | "Topgrading", sub: "p
   return `/candidats/${candidateId}/${stepParam}/decision`;
 }
 
-// Given a stage's DB status, infer which sub-step (prep / interview / decision)
-// is currently active. There's no dedicated "sub-step" column, so we derive it
-// from the coarse status: "pending"/"none" -> prep, "current" -> interview,
-// "done" -> decision (i.e. the interview happened, recruiter still needs to decide
-// unless the overall candidate has moved past this stage).
-function subStepFor(status: StageStatus): "prep" | "interview" | "decision" {
-  if (status === "done") return "decision";
-  if (status === "current") return "interview";
-  return "prep";
+// Given a stage's actual prep/interview progress, infer which sub-step
+// (prep / interview / decision) is currently active. A stage being "current"
+// only means it's the active stage overall — it says nothing about whether
+// the recruiter already prepared or ran the interview, so we look at the
+// real `interviews` record instead: it's only created once the recruiter
+// either finishes preparation or jumps straight to the interview.
+function subStepFor(started: boolean, interviewDone: boolean): "prep" | "interview" | "decision" {
+  if (!started) return "prep";
+  if (!interviewDone) return "interview";
+  return "decision";
 }
 
 const SUB_STEPS: { key: "prep" | "interview" | "decision"; label: string }[] = [
@@ -45,11 +46,16 @@ const SUB_STEPS: { key: "prep" | "interview" | "decision"; label: string }[] = [
 
 export function CandidateFrise({
   candidateId, screening, topgrading, decision,
+  screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidateId: string;
   screening: StageStatus;
   topgrading: StageStatus;
   decision: StageStatus;
+  screeningStarted: boolean;
+  screeningInterviewDone: boolean;
+  topgradingStarted: boolean;
+  topgradingInterviewDone: boolean;
 }) {
   const steps = [
     { label: "Screening" as const, status: screening },
@@ -65,11 +71,12 @@ export function CandidateFrise({
         {steps.map((step, i) => {
           const done = step.status === "done";
           const cur = step.status === "current";
+          const curBg = step.label === "Topgrading" ? "bg-[#CCB8FF] text-[#6b4ec4]" : "bg-[#99BAF8] text-[#010101]";
           return (
             <div key={step.label} className="flex items-center">
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  done ? "bg-[#75DA9F] text-white" : cur ? "bg-[#99BAF8] text-[#010101]" : "bg-gray-100 text-gray-300"
+                  done ? "bg-[#75DA9F] text-white" : cur ? curBg : "bg-gray-100 text-gray-300"
                 }`}>
                   {done ? <Check size={13} /> : i + 1}
                 </div>
@@ -88,11 +95,16 @@ export function CandidateFrise({
       {/* ── Sous-frise étape en cours (Screening / Topgrading) ── */}
       {activeStep && (activeStep.label === "Screening" || activeStep.label === "Topgrading") && (() => {
         const stepKey = activeStep.label;
-        const curSub = subStepFor(activeStep.status);
+        const curSub = stepKey === "Screening"
+          ? subStepFor(screeningStarted, screeningInterviewDone)
+          : subStepFor(topgradingStarted, topgradingInterviewDone);
         const curSubIdx = SUB_STEPS.findIndex((s) => s.key === curSub);
         const accentBg = stepKey === "Screening" ? "bg-[#99BAF8]/8 border-[#99BAF8]/20" : "bg-[#CCB8FF]/8 border-[#CCB8FF]/20";
         const accentText = stepKey === "Screening" ? "text-[#3a6fd4]" : "text-[#6b4ec4]";
         const accentCircle = stepKey === "Screening" ? "bg-[#99BAF8] text-white" : "bg-[#CCB8FF] text-[#6b4ec4]";
+        const accentBtn = stepKey === "Screening"
+          ? "bg-[#99BAF8] text-[#010101] hover:bg-[#85abf5] active:bg-[#7099e8]"
+          : "bg-[#CCB8FF] text-[#6b4ec4] hover:bg-[#bfa3f5] active:bg-[#a98cf0]";
 
         return (
           <div className={`rounded-xl border ${accentBg} p-4`}>
@@ -140,19 +152,19 @@ export function CandidateFrise({
 
             <div className="flex gap-2 flex-wrap">
               {curSub === "prep" && (
-                <LinkBtn href={stepDest(candidateId, stepKey, "prep")} variant="primary" size="sm">
+                <Link href={stepDest(candidateId, stepKey, "prep")} className={`inline-flex items-center gap-2 font-semibold rounded-xl transition-all cursor-pointer px-3 py-1.5 text-xs ${accentBtn}`}>
                   <FileText size={13} />Préparer l'entretien
-                </LinkBtn>
+                </Link>
               )}
               {curSub === "interview" && (
-                <LinkBtn href={stepDest(candidateId, stepKey, "interview")} variant="primary" size="sm">
+                <Link href={stepDest(candidateId, stepKey, "interview")} className={`inline-flex items-center gap-2 font-semibold rounded-xl transition-all cursor-pointer px-3 py-1.5 text-xs ${accentBtn}`}>
                   Commencer l'entretien <ChevronRight size={14} />
-                </LinkBtn>
+                </Link>
               )}
               {curSub === "decision" && (
-                <LinkBtn href={stepDest(candidateId, stepKey, "decision")} variant="primary" size="sm">
+                <Link href={stepDest(candidateId, stepKey, "decision")} className={`inline-flex items-center gap-2 font-semibold rounded-xl transition-all cursor-pointer px-3 py-1.5 text-xs ${accentBtn}`}>
                   Prendre une décision <ChevronRight size={14} />
-                </LinkBtn>
+                </Link>
               )}
               {curSub === "prep" && (
                 <LinkBtn href={stepDest(candidateId, stepKey, "interview")} variant="secondary" size="sm">

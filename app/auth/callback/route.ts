@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         if (!existingRecruiter) {
           const metadata = user.user_metadata ?? {}
           if (metadata.company_name && metadata.first_name && metadata.last_name) {
-            await supabase.rpc('create_company_and_recruiter', {
+            const { error: rpcError } = await supabase.rpc('create_company_and_recruiter', {
               p_company_name: metadata.company_name,
               p_siret: metadata.siret ?? null,
               p_sector: null,
@@ -41,6 +41,14 @@ export async function GET(request: NextRequest) {
               p_email: user.email ?? '',
               p_job_title: metadata.job_title ?? null,
             })
+
+            // 23503 = foreign key violation: auth.uid() doesn't match a real
+            // auth.users row (a stale session for a deleted account). Clear
+            // it instead of leaving the user stuck with a ghost session.
+            if (rpcError?.code === '23503') {
+              await supabase.auth.signOut()
+              return NextResponse.redirect(`${origin}/connexion?error=profil_incomplet`)
+            }
           }
         }
       }

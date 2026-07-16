@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Check, FileText } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
-import { Card, Avatar, Badge } from "@/components/noa/ui-primitives";
+import { Card, Avatar, Badge, BackLink } from "@/components/noa/ui-primitives";
 import { CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { CvModal } from "./cv-modal";
 import { CandidateFrise } from "./candidate-frise";
@@ -12,11 +12,16 @@ import type { Candidate, CandidateExperience, CandidateSkill } from "@/lib/noa/t
 
 export function CandidateDetail({
   candidate, experiences, skills, cvSignedUrl,
+  screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidate: Candidate;
   experiences: CandidateExperience[];
   skills: CandidateSkill[];
   cvSignedUrl: string | null;
+  screeningStarted: boolean;
+  screeningInterviewDone: boolean;
+  topgradingStarted: boolean;
+  topgradingInterviewDone: boolean;
 }) {
   const [cvOpen, setCvOpen] = useState(false);
 
@@ -49,9 +54,8 @@ export function CandidateDetail({
         />
       )}
       <div className="max-w-2xl mx-auto">
-        <Link href="/candidats" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-500 text-xs font-medium mb-5 transition-colors group w-fit">
-          Retour
-        </Link>
+        <BackLink href={`/candidats`} />
+        
 
         {/* ── En-tête ── */}
         <Card className="p-5 mb-4">
@@ -114,6 +118,10 @@ export function CandidateDetail({
             screening={candidate.screening_status}
             topgrading={candidate.topgrading_status}
             decision={candidate.decision_status}
+            screeningStarted={screeningStarted}
+            screeningInterviewDone={screeningInterviewDone}
+            topgradingStarted={topgradingStarted}
+            topgradingInterviewDone={topgradingInterviewDone}
           />
         </Card>
 
@@ -143,7 +151,7 @@ export function CandidateDetail({
                     href={`/candidats/${candidate.id}/${step.key}/decision`}
                     className="text-xs font-semibold text-[#3a6fd4] hover:underline flex items-center gap-1"
                   >
-                    Voir / prendre la décision <ChevronRight size={12} />
+                    Voir plus <ChevronRight size={12} />
                   </Link>
                 </div>
               </Card>

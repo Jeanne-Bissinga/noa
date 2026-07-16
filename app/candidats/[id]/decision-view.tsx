@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, Btn } from "@/components/noa/ui-primitives";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { decideStage } from "./actions";
-import type { Candidate, Synthesis } from "@/lib/noa/types";
+import type { Candidate, Decision, Synthesis } from "@/lib/noa/types";
 
 type Stat = { label: string; value: string; tone: "green" | "yellow" | "red" };
 
@@ -15,6 +15,11 @@ const TONE_CLASSES: Record<Stat["tone"], string> = {
   green: "bg-[#75DA9F]/10 text-[#1e8f52]",
   yellow: "bg-[#FEE831]/20 text-[#8a6a00]",
   red: "bg-red-50 text-red-500",
+};
+
+const DECIDED_META: Record<"retenu" | "non_retenu", { text: string; className: string }> = {
+  retenu: { text: "Retenu pour la suite", className: "bg-[#75DA9F]/10 text-[#1e8f52] border-[#75DA9F]/25" },
+  non_retenu: { text: "Non retenu", className: "bg-red-50 text-red-500 border-red-100" },
 };
 
 const STAGE_META = {
@@ -35,13 +40,14 @@ const STAGE_META = {
 } as const;
 
 export function DecisionView({
-  candidate, stage, stats, noaSynthesis, hasTranscript,
+  candidate, stage, stats, noaSynthesis, hasTranscript, decision,
 }: {
   candidate: Candidate;
   stage: "screening" | "topgrading";
   stats: Stat[];
   noaSynthesis: Synthesis | null;
   hasTranscript: boolean;
+  decision: Decision | null;
 }) {
   const [question, setQuestion] = useState("");
   const [pendingAction, setPendingAction] = useState<"non_retenu" | "reporte" | "retenu" | null>(null);
@@ -164,18 +170,25 @@ export function DecisionView({
           )}
         </Card>
 
-        {/* CTAs */}
-        <div className="flex items-center gap-3">
-          <Btn variant="danger" onClick={() => handleDecide("non_retenu")} disabled={pendingAction !== null}>
-            <X size={15} />{pendingAction === "non_retenu" ? "…" : "Ne pas retenir"}
-          </Btn>
-          <Btn variant="secondary" onClick={() => handleDecide("reporte")} disabled={pendingAction !== null}>
-            {pendingAction === "reporte" ? "…" : "Décider plus tard"}
-          </Btn>
-          <Btn variant="primary" size="lg" className="ml-auto" onClick={() => handleDecide("retenu")} disabled={pendingAction !== null}>
-            <Check size={15} />{pendingAction === "retenu" ? "…" : "Retenir pour la suite"}
-          </Btn>
-        </div>
+        {/* CTAs — masqués si la décision pour cette étape a déjà été actée */}
+        {decision ? (
+          <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${DECIDED_META[decision.status as "retenu" | "non_retenu"].className}`}>
+            {decision.status === "retenu" ? <Check size={15} /> : <X size={15} />}
+            Décision déjà prise : {DECIDED_META[decision.status as "retenu" | "non_retenu"].text}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Btn variant="danger" onClick={() => handleDecide("non_retenu")} disabled={pendingAction !== null}>
+              <X size={15} />{pendingAction === "non_retenu" ? "…" : "Ne pas retenir"}
+            </Btn>
+            <Btn variant="secondary" onClick={() => handleDecide("reporte")} disabled={pendingAction !== null}>
+              {pendingAction === "reporte" ? "…" : "Décider plus tard"}
+            </Btn>
+            <Btn variant="primary" size="lg" className="ml-auto" onClick={() => handleDecide("retenu")} disabled={pendingAction !== null}>
+              <Check size={15} />{pendingAction === "retenu" ? "…" : "Retenir pour la suite"}
+            </Btn>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

@@ -74,6 +74,8 @@ export async function createCandidate(
 
   const firstName = String(formData.get("firstName") ?? "").trim();
   const lastName = String(formData.get("lastName") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const location = String(formData.get("location") ?? "").trim();
   const cvFile = formData.get("cvFile") as File | null;
 
   if (!firstName || !lastName) {
@@ -119,6 +121,8 @@ export async function createCandidate(
       mission_id: mission.id,
       first_name: firstName,
       last_name: lastName,
+      title: title || null,
+      location: location || null,
       cv_url: path,
       title: profile?.title || null,
       location: profile?.location || null,
