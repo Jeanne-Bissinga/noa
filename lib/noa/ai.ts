@@ -865,6 +865,15 @@ Règles :
 - advice : 1 à 2 phrases de recommandation claire pour la décision (poursuivre, approfondir un point précis, écarter), avec la raison.
 - N'invente aucun fait absent de la grille remplie et de la transcription. Français, ton professionnel et direct.`;
 
+// Le modèle referme parfois un champ par une pseudo-balise (`</advice>`) dans le
+// texte lui-même. On ne retire que ces balises de champ, connues : un filtre plus
+// large sur `<...>` abîmerait du texte légitime (« CA < 10M », « <5 ans »).
+const FIELD_TAG = /<\/?(?:advice|content|synthese|synthesis)>/gi;
+
+function stripFieldTags(text: string): string {
+  return text.replace(FIELD_TAG, "").trim();
+}
+
 /**
  * Rédige la synthèse (content + advice) d'un entretien à partir de la grille
  * remplie, de la transcription (optionnelle) et du contexte. Lève en cas d'échec ;
@@ -887,7 +896,7 @@ Grille d'entretien remplie par le recruteur :
 ${input.filledGrid || "(grille vide)"}
 ${input.transcript?.trim() ? `\nTranscription de l'entretien (collée par le recruteur depuis un outil externe) :\n${input.transcript.trim()}` : ""}`;
 
-  return generateStructured<{ content: string; advice: string }>({
+  const result = await generateStructured<{ content: string; advice: string }>({
     system: SYNTHESIS_SYSTEM,
     user,
     toolName: "enregistrer_synthese",
@@ -903,4 +912,9 @@ ${input.transcript?.trim() ? `\nTranscription de l'entretien (collée par le rec
       additionalProperties: false,
     },
   });
+
+  return {
+    content: stripFieldTags(result.content ?? ""),
+    advice: stripFieldTags(result.advice ?? ""),
+  };
 }

@@ -28,7 +28,11 @@ export default async function TopgradingDecisionPage({ params }: { params: Promi
   const answered = allQuestions.filter((q) => (answers[q.id] ?? "").trim().length > 0).length;
   const unanswered = total - answered;
 
-  const noaSynthesis = syntheses.find((s) => s.authored_by === "noa") ?? null;
+  // `pop()`, pas `find()` : getSyntheses trie par created_at croissant et
+  // finishInterview INSÈRE une ligne à chaque analyse au lieu de remplacer la
+  // précédente. `find()` renvoyait donc la toute première synthèse, et relancer
+  // une analyse n'avait aucun effet visible. La dernière fait foi.
+  const noaSynthesis = syntheses.filter((s) => s.authored_by === "noa").pop() ?? null;
 
   const decisions = await getDecisions(candidate.id);
   // "reporte" postpones the decision — it isn't final, so the CTAs must stay
@@ -44,6 +48,14 @@ export default async function TopgradingDecisionPage({ params }: { params: Promi
         { label: "Points nuancés", value: "-", tone: "yellow" },
         { label: "Points d'attention", value: `${unanswered}`, tone: "red" },
       ]}
+      gridRows={episodes.flatMap((ep) =>
+        ep.qs.map((q) => ({
+          id: q.id,
+          question: q.q,
+          group: [ep.co, ep.role, ep.period].filter(Boolean).join(" · "),
+          answer: answers[q.id] ?? null,
+        })),
+      )}
       noaSynthesis={noaSynthesis}
       hasTranscript={Boolean(interview.transcript)}
       decision={stageDecision}

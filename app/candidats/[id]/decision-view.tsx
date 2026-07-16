@@ -5,16 +5,35 @@ import Link from "next/link";
 import { FileText, Zap, Check, X } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, Btn } from "@/components/noa/ui-primitives";
-import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
+import { CANDIDATE_AVATAR_COLOR, ELIMINATOIRE_CRIT, initials as initialsOf } from "@/lib/noa/labels";
 import { decideStage } from "./actions";
 import type { Candidate, Decision, Synthesis } from "@/lib/noa/types";
 
 type Stat = { label: string; value: string; tone: "green" | "yellow" | "red" };
 
+/**
+ * Une ligne de la grille telle que noa l'a remplie. `answer` porte les deux
+ * formes de grille : "Oui"/"Partiel"/"Non" en screening, une note libre en
+ * topgrading (`group` porte alors l'épisode du parcours).
+ */
+export type GridRow = {
+  id: string;
+  question: string;
+  crit?: string;
+  group?: string;
+  answer: string | null;
+};
+
 const TONE_CLASSES: Record<Stat["tone"], string> = {
   green: "bg-[#75DA9F]/10 text-[#1e8f52]",
   yellow: "bg-[#FEE831]/20 text-[#8a6a00]",
   red: "bg-red-50 text-red-500",
+};
+
+const ANSWER_CLASSES: Record<string, string> = {
+  Oui: "bg-[#75DA9F]/10 text-[#1e8f52] border-[#75DA9F]/25",
+  Partiel: "bg-[#FEE831]/20 text-[#8a6a00] border-[#FEE831]/40",
+  Non: "bg-red-50 text-red-500 border-red-100",
 };
 
 const DECIDED_META: Record<"retenu" | "non_retenu", { text: string; className: string }> = {
@@ -40,11 +59,12 @@ const STAGE_META = {
 } as const;
 
 export function DecisionView({
-  candidate, stage, stats, noaSynthesis, hasTranscript, decision,
+  candidate, stage, stats, gridRows = [], noaSynthesis, hasTranscript, decision,
 }: {
   candidate: Candidate;
   stage: "screening" | "topgrading";
   stats: Stat[];
+  gridRows?: GridRow[];
   noaSynthesis: Synthesis | null;
   hasTranscript: boolean;
   decision: Decision | null;
@@ -81,16 +101,18 @@ export function DecisionView({
           <span className="text-[10px] text-gray-400 italic">Proposition d'analyse. La décision vous appartient.</span>
         </div>
 
-        {/* Votre évaluation */}
+        {/* Grille d'évaluation remplie par noa */}
         <Card className="p-6 mb-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center">
               <FileText size={11} className="text-gray-500" />
             </div>
-            <h3 className="font-semibold text-[#010101] text-sm">Votre évaluation</h3>
-            <span className="ml-auto text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">Remplie pendant l'entretien</span>
+            <h3 className="font-semibold text-[#010101] text-sm">Grille d'évaluation</h3>
+            <span className="ml-auto text-[10px] text-[#3a6fd4] bg-[#99BAF8]/15 px-2 py-0.5 rounded-full font-medium">Remplie par noa</span>
           </div>
-          <p className="text-xs text-gray-400 mb-5">Issue de la grille que vous avez complétée pendant l'entretien.</p>
+          <p className="text-xs text-gray-400 mb-5">
+            Évaluée automatiquement à partir de la transcription, du profil du candidat et de la campagne de recrutement.
+          </p>
           <div className="grid grid-cols-3 gap-3">
             {stats.map((s) => (
               <div key={s.label} className={`rounded-2xl p-4 text-center ${TONE_CLASSES[s.tone]}`}>
@@ -99,6 +121,42 @@ export function DecisionView({
               </div>
             ))}
           </div>
+
+          {gridRows.length > 0 && (
+            <div className="mt-5 border-t border-gray-100 pt-1">
+              {gridRows.map((row, i) => {
+                const isVerdict = row.answer !== null && row.answer in ANSWER_CLASSES;
+                const showGroup = row.group && row.group !== gridRows[i - 1]?.group;
+                return (
+                  <div key={row.id}>
+                    {showGroup && (
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-4 pb-1">{row.group}</p>
+                    )}
+                    <div className={`py-3.5 ${i < gridRows.length - 1 ? "border-b border-gray-50" : ""}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm text-[#010101] leading-snug">{row.question}</p>
+                        {isVerdict && (
+                          <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${ANSWER_CLASSES[row.answer!]}`}>
+                            {row.answer}
+                          </span>
+                        )}
+                      </div>
+                      {row.crit === ELIMINATOIRE_CRIT ? (
+                        <div className="mt-1.5"><Badge color="red">Éliminatoire</Badge></div>
+                      ) : (
+                        row.crit && <span className="text-[10px] text-gray-400 mt-0.5 block">{row.crit}</span>
+                      )}
+                      {!isVerdict && (
+                        <p className="text-xs text-gray-500 leading-relaxed mt-1.5">
+                          {row.answer?.trim() || "(non abordé dans l'entretien)"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
         {/* Analyse noa */}
