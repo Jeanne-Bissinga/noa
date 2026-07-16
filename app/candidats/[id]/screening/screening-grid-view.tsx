@@ -5,7 +5,7 @@ import { FileText, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn } from "@/components/noa/ui-primitives";
 import { TranscriptCapture } from "@/components/noa/transcript-capture";
-import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
+import { CANDIDATE_AVATAR_COLOR, ELIMINATOIRE_CRIT, initials as initialsOf } from "@/lib/noa/labels";
 import { finishInterview } from "../actions";
 import type { Candidate } from "@/lib/noa/types";
 import type { ScreeningCriterion } from "@/lib/noa/synthesis";
@@ -72,7 +72,11 @@ export function ScreeningGridView({
             {criteria.map((q, i) => (
               <div key={q.id} className={`py-3.5 ${i < criteria.length - 1 ? "border-b border-gray-50" : ""}`}>
                 <p className="text-sm text-[#010101] leading-snug">{q.q}</p>
-                {q.crit && <span className="text-[10px] text-gray-400 mt-0.5 block">{q.crit}</span>}
+                {q.crit === ELIMINATOIRE_CRIT ? (
+                  <div className="mt-1"><Badge color="red">Éliminatoire</Badge></div>
+                ) : (
+                  q.crit && <span className="text-[10px] text-gray-400 mt-0.5 block">{q.crit}</span>
+                )}
                 {q.probes && q.probes.length > 0 && (
                   <ul className="flex flex-col gap-1 mt-2">
                     {q.probes.map((probe, pi) => (

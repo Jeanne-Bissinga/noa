@@ -190,7 +190,7 @@ export const PREP_META: Record<
     goal:
       "Le Screening est un entretien court (20–30 min) visant à valider rapidement l'adéquation du profil avec les prérequis du poste : compétences techniques, disponibilité, attentes salariales et motivation.",
     gridIntro:
-      "Même grille que celle utilisée pendant l'entretien. Pour chaque critère, vous cocherez Oui / Partiel / Non. Modifiez les intitulés avant de commencer.",
+      "noa évaluera automatiquement chaque critère (Oui / Partiel / Non) à partir de la transcription de l'entretien. Modifiez les intitulés si besoin avant de commencer.",
     gridSections: [
       {
         title: "Grille de screening",
@@ -269,7 +269,7 @@ export const PREP_META: Record<
     goal:
       "Le Topgrading est un entretien approfondi (60–90 min) basé sur le parcours chronologique du candidat. L'objectif est d'identifier ses patterns de performance, comportements récurrents, réalisations mesurables et axes de développement.",
     gridIntro:
-      "La grille reprend exactement les épisodes et questions de la grille d'évaluation Topgrading. Pour chaque poste, notez librement les réponses.",
+      "noa documentera automatiquement chaque question à partir de la transcription de l'entretien. Modifiez les intitulés si besoin avant de commencer.",
     gridSections: TOPGRADING_EPISODES.map((ep) => ({
       title: ep.co,
       subtitle: ep.role,
