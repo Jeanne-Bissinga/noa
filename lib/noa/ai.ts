@@ -264,6 +264,8 @@ export type CandidateExperienceExtract = {
 };
 
 export type CandidateProfileExtract = {
+  firstName: string;
+  lastName: string;
   title: string;
   location: string;
   email: string;
@@ -272,13 +274,61 @@ export type CandidateProfileExtract = {
   skills: string[];
 };
 
-// Types MIME que Claude lit nativement (PDF + images). DOCX non pris en charge.
-export const CV_SUPPORTED_MIME = /^(application\/pdf|image\/(jpeg|png|gif|webp))$/;
+// Claude lit nativement le PDF et les images. Le DOCX, non : on en extrait le
+// texte avec mammoth avant de l'envoyer (cf. cvContentBlock). Le .doc binaire
+// (Word 97-2003) reste hors de portée — mammoth ne gère que l'OOXML.
+export const CV_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+export const CV_SUPPORTED_MIME = new RegExp(
+  `^(application/pdf|image/(jpeg|png|gif|webp)|${CV_DOCX_MIME.replace(/[.+]/g, "\\$&")})$`,
+);
+
+// Un CV tient très largement dans cette limite ; elle n'existe que pour qu'un
+// document aberrant ne parte pas en entier dans le prompt.
+const CV_TEXT_MAX_CHARS = 100_000;
+
+/**
+ * Construit le bloc de contenu envoyé à Claude selon le type de CV :
+ * PDF et images partent tels quels, le DOCX est converti en texte au préalable.
+ */
+async function cvContentBlock(input: { base64: string; mediaType: string }) {
+  if (input.mediaType === CV_DOCX_MIME) {
+    // Import différé : mammoth ne sert qu'aux DOCX, inutile de le charger sinon.
+    const mammoth = (await import("mammoth")).default;
+    const { value } = await mammoth.extractRawText({ buffer: Buffer.from(input.base64, "base64") });
+
+    let text = value.trim();
+    if (!text) {
+      // Word sans texte brut (CV entièrement en images/zones de texte) : mieux
+      // vaut lever et laisser l'appelant proposer la saisie manuelle que
+      // demander à Claude d'extraire un profil depuis une chaîne vide.
+      throw new Error("Document Word sans texte exploitable.");
+    }
+    if (text.length > CV_TEXT_MAX_CHARS) {
+      console.warn(`[noa] CV Word tronqué à ${CV_TEXT_MAX_CHARS} caractères (${text.length} au total).`);
+      text = text.slice(0, CV_TEXT_MAX_CHARS);
+    }
+
+    return { type: "text" as const, text: `CV du candidat (texte extrait du document Word) :\n\n${text}` };
+  }
+
+  if (input.mediaType.startsWith("image/")) {
+    return {
+      type: "image" as const,
+      source: { type: "base64" as const, media_type: input.mediaType as "image/png", data: input.base64 },
+    };
+  }
+
+  return {
+    type: "document" as const,
+    source: { type: "base64" as const, media_type: "application/pdf" as const, data: input.base64 },
+  };
+}
 
 const CV_SYSTEM = `Tu es noa, un assistant de recrutement expert. Tu extrais le profil d'un candidat à partir de son CV.
 
 Règles :
 - N'invente RIEN. Si une information est absente du CV, laisse une chaîne vide (ou une liste vide).
+- firstName / lastName : prénom et nom de famille du candidat. Sépare-les correctement même si le CV les écrit sur une seule ligne ou en majuscules ; restitue-les en casse normale (ex. "MARIE DUPONT" → firstName "Marie", lastName "Dupont"). Ne confonds pas le nom du candidat avec celui d'une entreprise ou d'une école.
 - title : l'intitulé de poste le plus récent ou principal du candidat.
 - location : ville ou zone géographique.
 - email : email du candidat s'il figure sur le CV.
@@ -288,22 +338,14 @@ Règles :
 - Français.`;
 
 /**
- * Extrait un profil structuré depuis le CV (PDF ou image, base64).
+ * Extrait un profil structuré depuis le CV (PDF, image ou DOCX, base64).
  * Lève en cas d'échec ; l'appelant crée alors la fiche sans profil enrichi.
  */
 export async function extractCandidateProfile(input: {
   base64: string;
   mediaType: string;
 }): Promise<CandidateProfileExtract> {
-  const fileBlock = input.mediaType.startsWith("image/")
-    ? {
-        type: "image" as const,
-        source: { type: "base64" as const, media_type: input.mediaType as "image/png", data: input.base64 },
-      }
-    : {
-        type: "document" as const,
-        source: { type: "base64" as const, media_type: "application/pdf" as const, data: input.base64 },
-      };
+  const fileBlock = await cvContentBlock(input);
 
   return generateStructured<CandidateProfileExtract>({
     system: CV_SYSTEM,
@@ -314,6 +356,8 @@ export async function extractCandidateProfile(input: {
     schema: {
       type: "object",
       properties: {
+        firstName: { type: "string" },
+        lastName: { type: "string" },
         title: { type: "string" },
         location: { type: "string" },
         email: { type: "string" },
@@ -334,7 +378,7 @@ export async function extractCandidateProfile(input: {
         },
         skills: { type: "array", items: { type: "string" } },
       },
-      required: ["title", "location", "email", "summary", "experiences", "skills"],
+      required: ["firstName", "lastName", "title", "location", "email", "summary", "experiences", "skills"],
       additionalProperties: false,
     },
   });

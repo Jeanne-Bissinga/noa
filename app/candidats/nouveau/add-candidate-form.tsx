@@ -4,7 +4,8 @@ import { useActionState, useRef, useState } from "react";
 import { Briefcase, ChevronRight, Check, Upload, Plus, Zap, FileText } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink } from "@/components/noa/ui-primitives";
-import { createCandidate, type CreateCandidateState } from "../actions";
+import { createCandidate, extractCvProfile, type CreateCandidateState } from "../actions";
+import type { CandidateProfileExtract } from "@/lib/noa/ai";
 import type { Mission } from "@/lib/noa/types";
 
 const initialState: CreateCandidateState = {};
@@ -20,23 +21,57 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
   const [lastName, setLastName] = useState("");
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
+  // Profil complet extrait par noa (expériences, compétences, résumé…) : les 4
+  // champs ci-dessus n'en montrent qu'une partie, le reste est resoumis tel quel
+  // à la création pour ne pas relancer une extraction.
+  const [profile, setProfile] = useState<CandidateProfileExtract | null>(null);
+  const [extractError, setExtractError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelected = (selected: File | null) => {
+  const handleFileSelected = async (selected: File | null) => {
     if (!selected) return;
     setFile(selected);
     setParsing(true);
     setCvDone(false);
-    // Fake "noa parsing" animation kept for UX flavor, the real submission
-    // only happens once the recruiter validates the (real) name fields below
-    // and clicks "Créer la fiche candidat".
-    setTimeout(() => {
-      setParsing(false);
-      setCvDone(true);
-    }, 1400);
+    setProfile(null);
+    setExtractError(null);
+
+    const payload = new FormData();
+    payload.append("cvFile", selected);
+
+    try {
+      const result = await extractCvProfile(payload);
+      if ("error" in result) {
+        setExtractError(result.error);
+        if (result.rejected) {
+          // Fichier refusé : on le retire du formulaire plutôt que de laisser le
+          // recruteur remplir la fiche pour rien. Réinitialiser value permet de
+          // resélectionner le même fichier après l'avoir converti.
+          setFile(null);
+          setParsing(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
+      } else {
+        setProfile(result.profile);
+        // Préremplissage : le recruteur relit et corrige, il n'a plus à saisir.
+        setFirstName(result.profile.firstName);
+        setLastName(result.profile.lastName);
+        setTitle(result.profile.title);
+        setLocation(result.profile.location);
+      }
+    } catch {
+      setExtractError("noa n'a pas réussi à lire ce CV. Complétez la fiche à la main.");
+    }
+
+    // Le CV reste importable même si l'extraction échoue : la saisie manuelle
+    // prend le relais, elle ne doit jamais être bloquée par noa.
+    setParsing(false);
+    setCvDone(true);
   };
 
-  const canSubmit = Boolean(mission) && cvDone && firstName.trim() && lastName.trim() && !pending;
+  const prefilled = Boolean(profile && (profile.firstName || profile.lastName || profile.title || profile.location));
+  const canSubmit = Boolean(mission) && cvDone && firstName.trim() && lastName.trim() && !pending && !parsing;
 
   return (
     <AppLayout headerTitle="Ajouter un candidat">
@@ -81,7 +116,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
                 ref={fileInputRef}
                 type="file"
                 name="cvFile"
-                accept=".pdf,.doc,.docx,image/*"
+                accept=".pdf,.docx,image/*"
                 className="hidden"
                 onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
               />
@@ -112,7 +147,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-[#010101]">Déposer le CV ici</div>
-                    <div className="text-xs text-gray-400 mt-1">PDF, Word ou image · 10 Mo max</div>
+                    <div className="text-xs text-gray-400 mt-1">PDF, Word (.docx) ou image · 10 Mo max</div>
                   </div>
                   <span className="inline-flex items-center gap-2 font-semibold rounded-xl transition-all px-5 py-2.5 text-sm bg-white border border-gray-200 text-[#010101] hover:bg-gray-50 mt-1">
                     Parcourir les fichiers
@@ -121,16 +156,38 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
               )}
             </div>
 
+            {/* Refus de format/taille : affiché ici et non dans le bloc identité,
+                qui n'est pas rendu quand aucun CV n'a été retenu. */}
+            {extractError && !cvDone && (
+              <p className="mt-3 text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">{extractError}</p>
+            )}
+
             {(cvDone || parsing) && (
               <div className="mt-5 pt-5 border-t border-gray-100">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs font-semibold text-[#010101]">Identité du candidat</span>
                   {cvDone && (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-[#1e8f52] bg-[#75DA9F]/12 border border-[#75DA9F]/25 px-2 py-0.5 rounded-full">
-                      <Zap size={9} />À compléter
-                    </span>
+                    prefilled ? (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-[#1e8f52] bg-[#75DA9F]/12 border border-[#75DA9F]/25 px-2 py-0.5 rounded-full">
+                        <Zap size={9} />Prérempli par noa
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+                        <Zap size={9} />À compléter
+                      </span>
+                    )
                   )}
                 </div>
+
+                {prefilled && (
+                  <p className="text-[11px] text-gray-400 mb-3">Vérifiez les informations extraites du CV avant de créer la fiche.</p>
+                )}
+
+                {extractError && (
+                  <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">{extractError}</p>
+                )}
+
+                {profile && <input type="hidden" name="profile" value={JSON.stringify(profile)} />}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-1.5">Prénom</label>
