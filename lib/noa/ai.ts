@@ -868,7 +868,7 @@ Règles :
 // Le modèle referme parfois un champ par une pseudo-balise (`</advice>`) dans le
 // texte lui-même. On ne retire que ces balises de champ, connues : un filtre plus
 // large sur `<...>` abîmerait du texte légitime (« CA < 10M », « <5 ans »).
-const FIELD_TAG = /<\/?(?:advice|content|synthese|synthesis)>/gi;
+const FIELD_TAG = /<\/?(?:advice|content|synthese|synthesis|answer|reponse)>/gi;
 
 function stripFieldTags(text: string): string {
   return text.replace(FIELD_TAG, "").trim();
@@ -917,4 +917,57 @@ ${input.transcript?.trim() ? `\nTranscription de l'entretien (collée par le rec
     content: stripFieldTags(result.content ?? ""),
     advice: stripFieldTags(result.advice ?? ""),
   };
+}
+
+// ─── Question libre sur l'entretien (page Synthèse) ─────────────────────────
+const QUESTION_SYSTEM = `Tu es noa, un expert en recrutement. Le recruteur te pose une question sur un entretien qu'il vient de mener. Tu réponds à partir de la transcription de cet entretien, croisée avec le poste et le profil du candidat.
+
+Règles :
+- Réponds en 1 à 3 phrases maximum : court et synthétique, le recruteur survole. Pas de préambule ("D'après la transcription...", "Voici..."), pas de titre, pas de liste à puces sauf si la question demande explicitement une énumération (ex : "les 3 points forts") — dans ce cas, une ligne par élément, sans autre développement.
+- Appuie-toi sur les propos réels du candidat dans la transcription. Cite-les brièvement entre guillemets quand la question porte sur ce qu'il a dit exactement.
+- N'invente rien. Si la transcription ne permet pas de répondre, dis-le en une phrase (ex : « Ce point n'a pas été abordé pendant l'entretien. ») plutôt que de spéculer.
+- Reste factuel : tu rapportes et synthétises, la décision appartient au recruteur.
+- Français, ton professionnel et direct.`;
+
+/**
+ * Répond à une question libre du recruteur sur un entretien, à partir de la
+ * transcription. Lève en cas d'échec ; l'appelant affiche un disclaimer (il n'y
+ * a pas de repli possible, la réponse ne peut venir que du modèle).
+ */
+export async function answerInterviewQuestion(input: {
+  type: "screening" | "topgrading";
+  question: string;
+  transcript: string;
+  job: JobSpecContext;
+  candidate: CandidateContext;
+}): Promise<string> {
+  const stepLabel = input.type === "screening" ? "Screening" : "Topgrading";
+  const user = `Type d'entretien : ${stepLabel}
+${jobSpecLines(input.job)}
+
+${candidateLines(input.candidate)}
+
+Transcription de l'entretien (collée par le recruteur depuis un outil externe) :
+${input.transcript.trim()}
+
+Question du recruteur :
+${input.question.trim()}`;
+
+  const result = await generateStructured<{ answer: string }>({
+    system: QUESTION_SYSTEM,
+    user,
+    toolName: "repondre_question",
+    toolDescription: "Enregistre la réponse courte à la question du recruteur.",
+    maxTokens: 512,
+    schema: {
+      type: "object",
+      properties: {
+        answer: { type: "string" },
+      },
+      required: ["answer"],
+      additionalProperties: false,
+    },
+  });
+
+  return stripFieldTags(result.answer ?? "");
 }

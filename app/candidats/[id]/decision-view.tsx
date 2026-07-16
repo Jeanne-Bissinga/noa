@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { FileText, Zap, Check, X } from "lucide-react";
+import { FileText, Zap, Check, X, ArrowRight, ChevronRight, AlertTriangle } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, Btn } from "@/components/noa/ui-primitives";
 import { CANDIDATE_AVATAR_COLOR, ELIMINATOIRE_CRIT, initials as initialsOf } from "@/lib/noa/labels";
-import { decideStage } from "./actions";
+import { decideStage, askAboutInterview } from "./actions";
 import type { Candidate, Decision, Synthesis } from "@/lib/noa/types";
 
 type Stat = { label: string; value: string; tone: "green" | "yellow" | "red" };
@@ -70,18 +70,35 @@ export function DecisionView({
   decision: Decision | null;
 }) {
   const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [askError, setAskError] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
   const [pendingAction, setPendingAction] = useState<"non_retenu" | "reporte" | "retenu" | null>(null);
   const [, startTransition] = useTransition();
 
   const meta = STAGE_META[stage];
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = CANDIDATE_AVATAR_COLOR[candidate.status] ?? meta.avatarColor;
+  const transcriptHref = `/candidats/${candidate.id}/transcription?step=${stage}`;
 
   const handleDecide = (action: "non_retenu" | "reporte" | "retenu") => {
     setPendingAction(action);
     startTransition(async () => {
       await decideStage(candidate.id, stage, action);
     });
+  };
+
+  // La réponse n'est pas persistée : elle vit le temps de la consultation.
+  const handleAsk = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!question.trim() || asking) return;
+    setAsking(true);
+    setAskError(null);
+    setAnswer(null);
+    const res = await askAboutInterview(candidate.id, stage, question);
+    if (res.error) setAskError(res.error);
+    else setAnswer(res.answer ?? null);
+    setAsking(false);
   };
 
   return (
@@ -100,6 +117,16 @@ export function DecisionView({
           </div>
           <span className="text-[10px] text-gray-400 italic">Proposition d'analyse. La décision vous appartient.</span>
         </div>
+
+        {/* Accès direct à la transcription intégrale, au-dessus du bloc d'évaluation */}
+        {hasTranscript && (
+          <Link
+            href={transcriptHref}
+            className="flex items-center gap-1.5 text-xs font-semibold text-[#3a6fd4] hover:underline mb-4 w-fit"
+          >
+            <FileText size={13} />Voir la transcription complète<ChevronRight size={11} />
+          </Link>
+        )}
 
         {/* Grille d'évaluation remplie par noa */}
         <Card className="p-6 mb-4">
@@ -195,7 +222,7 @@ export function DecisionView({
           )}
         </div>
 
-        {/* Question libre, stub illustratif, pas de recherche réelle sans transcription */}
+        {/* Question libre : noa répond depuis la transcription */}
         <Card className="p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center">
@@ -206,20 +233,46 @@ export function DecisionView({
           {hasTranscript ? (
             <>
               <p className="text-xs text-gray-400 mb-3 leading-relaxed">Interrogez un moment précis de l'entretien. La réponse est recherchée dans la transcription et croisée avec le profil du candidat.</p>
-              <div className="flex gap-2">
+              <form onSubmit={handleAsk} className="flex gap-2">
                 <input
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ex : qu'a-t-il dit exactement sur son expérience de mentoring ?"
-                  className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#99BAF8] focus:ring-2 focus:ring-[#99BAF8]/20 placeholder-gray-300 transition-all"
+                  className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#99BAF8] focus:ring-2 focus:ring-[#99BAF8]/20 placeholder-gray-300 text-black transition-all"
                 />
-                <Link
-                  href={`/candidats/${candidate.id}/transcription?step=${stage}`}
-                  className="px-4 py-2.5 bg-[#010101] text-white text-xs font-semibold rounded-xl hover:bg-gray-900 transition-all flex-shrink-0"
+                <button
+                  type="submit"
+                  disabled={!question.trim() || asking}
+                  aria-label="Obtenir la réponse de noa"
+                  className="w-10 h-10 flex items-center justify-center bg-[#010101] text-white rounded-xl hover:bg-gray-900 transition-all flex-shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#010101]"
                 >
-                  Voir la transcription
-                </Link>
-              </div>
+                  <ArrowRight size={15} className={asking ? "animate-pulse" : ""} />
+                </button>
+              </form>
+
+              {asking && (
+                <p className="text-xs text-gray-400 mt-3 animate-pulse">noa relit la transcription…</p>
+              )}
+
+              {answer && !asking && (
+                <div className="mt-3 bg-white rounded-xl border border-gray-100 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap size={11} className="text-[#8a6a00]" />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Réponse noa</p>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{answer}</p>
+                  <Link href={transcriptHref} className="flex items-center gap-1.5 text-xs font-semibold text-[#3a6fd4] hover:underline mt-3 w-fit">
+                    <FileText size={12} />Vérifier dans la transcription<ChevronRight size={11} />
+                  </Link>
+                </div>
+              )}
+
+              {askError && !asking && (
+                <div className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3">
+                  <AlertTriangle size={13} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-500 leading-relaxed">{askError}</p>
+                </div>
+              )}
             </>
           ) : (
             <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-3">
