@@ -47,7 +47,7 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#75DA9F] mb-0.5">Contexte</p>
-            <p className="text-sm font-semibold">{mission.title} · {mission.reason ? REASON_LABEL[mission.reason] ?? mission.reason : "—"}</p>
+            <p className="text-sm font-semibold">{mission.title} · {mission.reason ? REASON_LABEL[mission.reason] ?? mission.reason : "-"}</p>
             <p className="text-xs text-white/50 mt-0.5">{recruiter.company.name} · créée le {formatDate(mission.created_at)}</p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
                     {SKILL_CATEGORY_LABEL[cat.category]}
                   </span>
                   {cat.items.length === 0 ? (
-                    <p className="text-xs text-gray-300">—</p>
+                    <p className="text-xs text-gray-300">-</p>
                   ) : (
                     <ul className="flex flex-col gap-1">
                       {cat.items.map((item) => (

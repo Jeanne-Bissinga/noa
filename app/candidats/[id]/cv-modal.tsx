@@ -94,7 +94,7 @@ export function CvModal({
                         <ul className="flex flex-col gap-1">
                           {exp.bullets.map((b, j) => (
                             <li key={j} className="flex items-start gap-1.5 text-[10px] text-gray-500 leading-relaxed">
-                              <span className="text-gray-300 flex-shrink-0 mt-0.5">—</span>{b}
+                              <span className="text-gray-300 flex-shrink-0 mt-0.5">•</span>{b}
                             </li>
                           ))}
                         </ul>

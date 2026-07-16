@@ -91,7 +91,7 @@ export default function CampaignWhyPage() {
   const [autreDetail, setAutreDetail] = useState("");
   const [loadingStep, setLoadingStep] = useState(0);
 
-  // Purely cosmetic staged-loading animation while the server action runs —
+  // Purely cosmetic staged-loading animation while the server action runs,
   // the actual mission insert happens in the server action itself.
   const handleSubmitClick = () => {
     setLoadingStep(0);

@@ -41,7 +41,7 @@ export default async function CandidateSynthesisPage({
   const avatarColor = "bg-[#99BAF8]/20 text-[#3a6fd4]";
 
   return (
-    <AppLayout headerTitle={`Synthèse — ${stepType ? STEP_LABEL[stepType] : name}`}>
+    <AppLayout headerTitle={`Synthèse, ${stepType ? STEP_LABEL[stepType] : name}`}>
       <div className="max-w-2xl mx-auto">
         <BackLink href={`/candidats/${candidate.id}`} />
 

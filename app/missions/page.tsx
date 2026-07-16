@@ -42,7 +42,7 @@ export default async function MissionsPage() {
                       <div>
                         <h3 className="font-semibold text-[#010101]">{m.title}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-400">{m.reason ? REASON_LABEL[m.reason] ?? m.reason : "—"}</span>
+                          <span className="text-xs text-gray-400">{m.reason ? REASON_LABEL[m.reason] ?? m.reason : "-"}</span>
                           <span className="text-gray-200">·</span>
                           <span className="text-xs text-gray-400">Créée le {formatDate(m.created_at)}</span>
                         </div>

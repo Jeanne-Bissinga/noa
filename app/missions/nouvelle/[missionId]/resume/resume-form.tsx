@@ -9,7 +9,7 @@ import type { Mission } from "@/lib/noa/types";
 
 const initialState: SaveMissionTextState = {};
 
-export function ResumeForm({ mission }: { mission: Mission }) {
+export function ResumeForm({ mission, noaFallback = false }: { mission: Mission; noaFallback?: boolean }) {
   const boundAction = saveMissionText.bind(null, mission.id);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
   const [editing, setEditing] = useState(!mission.mission_text);
@@ -22,14 +22,18 @@ export function ResumeForm({ mission }: { mission: Mission }) {
         <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={1} /></div>
 
         <div className="flex items-center gap-2.5 mb-1.5">
-          <div className="w-7 h-7 rounded-lg bg-[#99BAF8]/15 flex items-center justify-center">
-            <Zap size={14} className="text-[#3a6fd4]" />
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${noaFallback ? "bg-amber-100" : "bg-[#99BAF8]/15"}`}>
+            <Zap size={14} className={noaFallback ? "text-amber-500" : "text-[#3a6fd4]"} />
           </div>
-          <p className="text-xs font-bold uppercase tracking-widest text-[#3a6fd4]">Proposé par noa</p>
+          <p className={`text-xs font-bold uppercase tracking-widest ${noaFallback ? "text-amber-500" : "text-[#3a6fd4]"}`}>
+            {noaFallback ? "Votre texte" : "Proposé par noa"}
+          </p>
         </div>
         <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Mission du poste</h1>
         <p className="text-gray-400 text-sm mb-7">
-          noa a rédigé une mission à partir de votre contexte. Validez-la ou réécrivez-la — elle sera utilisée tout au long du recrutement.
+          {noaFallback
+            ? "noa n'a pas pu rédiger la mission pour le moment, voici le texte que vous avez saisi. Complétez-le ou réécrivez-le, il sera utilisé tout au long du recrutement."
+            : "noa a rédigé une mission à partir de votre contexte. Validez-la ou réécrivez-la, elle sera utilisée tout au long du recrutement."}
         </p>
 
         {state?.error && (
@@ -64,7 +68,7 @@ export function ResumeForm({ mission }: { mission: Mission }) {
                   className="w-full text-sm text-[#010101] leading-relaxed bg-gray-50 rounded-xl border border-gray-200 p-3 focus:outline-none focus:border-[#99BAF8] resize-none"
                 />
                 <div className="bg-[#99BAF8]/6 border border-[#99BAF8]/20 rounded-xl p-3.5 text-xs text-gray-500 leading-relaxed">
-                  <p className="font-semibold text-[#3a6fd4] mb-1">Méthode — 1 à 5 phrases</p>
+                  <p className="font-semibold text-[#3a6fd4] mb-1">Méthode, 1 à 5 phrases</p>
                   <p>Résumez la raison d'être du poste et son impact stratégique. Soyez précis et mesurable.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">

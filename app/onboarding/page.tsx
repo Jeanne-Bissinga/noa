@@ -80,7 +80,7 @@ export default function OnboardingPage() {
     const finalHrChallenges = step === 5 ? selected : hrChallenges;
     const finalCultureValues = [valeursFondamentales, cultureTravail.length ? cultureTravail.join(", ") : null]
       .filter(Boolean)
-      .join(" — ");
+      .join(", ");
 
     setError(null);
     startTransition(async () => {

@@ -12,7 +12,7 @@ function composeFinalSpecText({
   skillsByCategory: { label: string; items: string[] }[];
 }) {
   const objectivesText = objectives
-    .map((o) => `• ${o.label}${[o.threshold, o.deadline].filter(Boolean).length ? " — " + [o.threshold, o.deadline].filter(Boolean).join(" · ") : ""}`)
+    .map((o) => `• ${o.label}${[o.threshold, o.deadline].filter(Boolean).length ? ", " + [o.threshold, o.deadline].filter(Boolean).join(" · ") : ""}`)
     .join("\n");
 
   const skillsText = skillsByCategory
@@ -20,17 +20,17 @@ function composeFinalSpecText({
     .map((c) => `${c.label} : ${c.items.join(", ")}`)
     .join("\n");
 
-  return `${missionTitle} — ${companyName}
+  return `${missionTitle}, ${companyName}
 ${reasonLabel} · ${dateLabel}
 
 MISSION
-${missionText || "—"}
+${missionText || "-"}
 
 RÉSULTATS ATTENDUS
-${objectivesText || "—"}
+${objectivesText || "-"}
 
 COMPÉTENCES REQUISES
-${skillsText || "—"}`;
+${skillsText || "-"}`;
 }
 
 export default async function JobFinalPage({ params }: { params: Promise<{ missionId: string }> }) {
@@ -59,7 +59,7 @@ export default async function JobFinalPage({ params }: { params: Promise<{ missi
     items: skills.filter((s) => s.category === category).map((s) => s.name),
   }));
 
-  const reasonLabel = mission.reason ? REASON_LABEL[mission.reason] ?? mission.reason : "—";
+  const reasonLabel = mission.reason ? REASON_LABEL[mission.reason] ?? mission.reason : "-";
   const dateLabel = formatDate(mission.created_at);
 
   const finalSpecText = mission.final_spec_text

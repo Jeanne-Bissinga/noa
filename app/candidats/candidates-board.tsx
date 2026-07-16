@@ -107,7 +107,7 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
                         <Avatar initials={initials(c.first_name, c.last_name)} color={CANDIDATE_AVATAR_COLOR[c.status]} size="sm" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-[#010101] group-hover:text-[#3a6fd4] transition-colors leading-tight truncate">{c.first_name} {c.last_name}</p>
-                          <p className="text-[10px] text-gray-400 truncate mt-0.5">{c.title ?? "—"}</p>
+                          <p className="text-[10px] text-gray-400 truncate mt-0.5">{c.title ?? "-"}</p>
                         </div>
                       </div>
                       {c.score !== null ? (

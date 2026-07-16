@@ -29,7 +29,7 @@ export default async function DecisionFinalePage({ params }: { params: Promise<{
   );
 
   // Persist the computed score onto the candidate as soon as it's computed
-  // (idempotent — recomputed every time this page loads until a decision is made).
+  // (idempotent, recomputed every time this page loads until a decision is made).
   if (score !== null && score !== candidate.score) {
     const supabase = await createClient();
     await supabase.from("candidates").update({ score, updated_at: new Date().toISOString() }).eq("id", candidate.id);

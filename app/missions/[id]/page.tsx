@@ -89,7 +89,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
             <div className="flex items-center gap-2 mt-2">
               <Badge color={MISSION_STATUS_COLOR[mission.status]}>{MISSION_STATUS_LABEL[mission.status]}</Badge>
               <span className="text-xs text-gray-400">
-                {mission.reason ? REASON_LABEL[mission.reason] ?? mission.reason : "—"} · Créée le {formatDate(mission.created_at)}
+                {mission.reason ? REASON_LABEL[mission.reason] ?? mission.reason : "-"} · Créée le {formatDate(mission.created_at)}
               </span>
             </div>
           </div>

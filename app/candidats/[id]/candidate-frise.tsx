@@ -108,7 +108,7 @@ export function CandidateFrise({
 
         return (
           <div className={`rounded-xl border ${accentBg} p-4`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${accentText} mb-4`}>Sous-étapes — {stepKey}</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${accentText} mb-4`}>Sous-étapes, {stepKey}</p>
 
             <div className="flex items-start gap-0 mb-4">
               {SUB_STEPS.map((sub, si) => {

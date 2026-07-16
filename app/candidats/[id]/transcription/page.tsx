@@ -32,13 +32,13 @@ export default async function CandidateTranscriptPage({
   const avatarColor = "bg-[#99BAF8]/20 text-[#3a6fd4]";
 
   return (
-    <AppLayout headerTitle={`Entretien — ${stepType ? STEP_LABEL[stepType] : name}`}>
+    <AppLayout headerTitle={`Entretien, ${stepType ? STEP_LABEL[stepType] : name}`}>
       <div className="max-w-2xl mx-auto">
         <BackLink href={stepType ? `/candidats/${candidate.id}/synthese?step=${stepType}` : `/candidats/${candidate.id}`} />
 
         <div className="mb-3 flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Lecture seule</span>
-          <span className="text-[10px] text-gray-300">— Cet entretien ne peut pas être modifié</span>
+          <span className="text-[10px] text-gray-300">, cet entretien ne peut pas être modifié</span>
         </div>
 
         <Card className="p-5">
@@ -46,7 +46,7 @@ export default async function CandidateTranscriptPage({
             <Avatar initials={initials(candidate.first_name, candidate.last_name)} color={avatarColor} size="md" />
             <div>
               <p className="text-sm font-bold text-[#010101]">{name}</p>
-              <p className="text-[10px] text-gray-400">{stepType ? STEP_LABEL[stepType] : "—"}</p>
+              <p className="text-[10px] text-gray-400">{stepType ? STEP_LABEL[stepType] : "-"}</p>
             </div>
           </div>
 
