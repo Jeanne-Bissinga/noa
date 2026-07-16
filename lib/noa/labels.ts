@@ -119,3 +119,7 @@ export const formatDate = (iso: string) =>
 
 export const initials = (firstName: string, lastName: string) =>
   `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+
+// Catégorie de critère de screening (lib/noa/ai.ts) marquant un prérequis
+// éliminatoire, affichée comme badge "Éliminatoire" dans les grilles/guides.
+export const ELIMINATOIRE_CRIT = "Prérequis non négociable";
