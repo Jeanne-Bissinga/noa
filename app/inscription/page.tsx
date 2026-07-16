@@ -18,7 +18,7 @@ export default function SignupPage() {
         <NoaLogo scale={0.85} />
         <div>
           <h1 className="text-white font-bold text-4xl leading-tight mb-5" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Recruter avec méthode,<br />sans expertise RH.
+            Recruter avec méthode,<br />Décider avec confiance.
           </h1>
           <p className="text-white/50 text-base leading-relaxed max-w-sm">
             noa guide chaque étape de vos recrutements grâce à une méthodologie éprouvée, pensée pour les managers de PME tech.

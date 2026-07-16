@@ -651,6 +651,118 @@ export async function generateTopgradingGuideSections(
   return result.sections ?? [];
 }
 
+// ─── Évaluation automatique de la grille à partir de la transcription ──────
+// Le recruteur n'a plus rien à remplir pendant l'entretien : il consulte le
+// guide, enregistre via un outil externe, colle la transcription, et noa
+// détermine lui-même les réponses de la grille d'évaluation.
+const SCREENING_EVAL_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la transcription d'un entretien de screening et de la grille de critères à évaluer, tu détermines pour CHAQUE critère si le candidat l'a validé.
+
+Règles :
+- Pour chaque critère, réponds "Oui" (clairement validé par les propos du candidat dans la transcription), "Partiel" (évoqué mais incomplet, ambigu ou nuancé) ou "Non" (non abordé dans la transcription, ou clairement pas validé).
+- Base-toi UNIQUEMENT sur ce qui est dit dans la transcription. Si un critère n'est pas abordé, réponds "Non".
+- N'invente rien, ne suppose rien. Sois factuel et rigoureux, pas complaisant envers le candidat.
+- Réponds pour TOUS les critères fournis, sans exception.`;
+
+/**
+ * Détermine, à partir de la transcription de l'entretien, la réponse
+ * (Oui/Partiel/Non) de chaque critère de la grille de screening. Lève en cas
+ * d'échec ; l'appelant décide du repli (pas de fallback rule-based possible
+ * sans saisie manuelle : à retenter).
+ */
+export async function evaluateScreeningGrid(
+  criteria: { id: string; q: string; crit?: string }[],
+  transcript: string,
+  job: JobSpecContext,
+  candidate: CandidateContext,
+): Promise<Record<string, "Oui" | "Partiel" | "Non">> {
+  const criteriaText = criteria.map((c) => `- [${c.id}] ${c.q}${c.crit ? ` (${c.crit})` : ""}`).join("\n");
+  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCritères à évaluer (tous, sans exception) :\n${criteriaText}\n\nTranscription de l'entretien :\n${transcript}`;
+
+  const result = await generateStructured<{ evaluations: { id: string; answer: "Oui" | "Partiel" | "Non" }[] }>({
+    system: SCREENING_EVAL_SYSTEM,
+    user,
+    toolName: "evaluer_grille_screening",
+    toolDescription: "Enregistre l'évaluation Oui/Partiel/Non pour chaque critère de la grille.",
+    maxTokens: 2048,
+    schema: {
+      type: "object",
+      properties: {
+        evaluations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              answer: { type: "string", enum: ["Oui", "Partiel", "Non"] },
+            },
+            required: ["id", "answer"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["evaluations"],
+      additionalProperties: false,
+    },
+  });
+
+  const answers: Record<string, "Oui" | "Partiel" | "Non"> = {};
+  for (const ev of result.evaluations ?? []) answers[ev.id] = ev.answer;
+  return answers;
+}
+
+const TOPGRADING_EVAL_SYSTEM = `Tu es noa, un expert en recrutement spécialiste du Topgrading. À partir de la transcription d'un entretien Topgrading et des questions de la grille (organisées par épisode du parcours), tu rédiges pour CHAQUE question une note factuelle de ce que le candidat a répondu.
+
+Règles :
+- Pour chaque question, résume en 1 à 3 phrases factuelles ce que le candidat a dit (exemples concrets, chiffres, contexte), comme le ferait un recruteur qui prend des notes en direct.
+- Si la question n'a pas été abordée dans la transcription, réponds exactement "(non abordé dans l'entretien)".
+- Base-toi UNIQUEMENT sur la transcription. N'invente rien.
+- Réponds pour TOUTES les questions fournies, sans exception.`;
+
+/**
+ * Rédige, à partir de la transcription de l'entretien, la note de chaque
+ * question de la grille Topgrading. Lève en cas d'échec ; l'appelant décide du repli.
+ */
+export async function evaluateTopgradingGrid(
+  episodes: { co: string; qs: { id: string; q: string }[] }[],
+  transcript: string,
+  job: JobSpecContext,
+  candidate: CandidateContext,
+): Promise<Record<string, string>> {
+  const questionsText = episodes.flatMap((ep) => ep.qs.map((q) => `- [${q.id}] (${ep.co}) ${q.q}`)).join("\n");
+  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nQuestions à documenter (toutes, sans exception) :\n${questionsText}\n\nTranscription de l'entretien :\n${transcript}`;
+
+  const result = await generateStructured<{ notes: { id: string; note: string }[] }>({
+    system: TOPGRADING_EVAL_SYSTEM,
+    user,
+    toolName: "evaluer_grille_topgrading",
+    toolDescription: "Enregistre la note résumée pour chaque question de la grille.",
+    maxTokens: 3072,
+    schema: {
+      type: "object",
+      properties: {
+        notes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              note: { type: "string" },
+            },
+            required: ["id", "note"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["notes"],
+      additionalProperties: false,
+    },
+  });
+
+  const notes: Record<string, string> = {};
+  for (const n of result.notes ?? []) notes[n.id] = n.note;
+  return notes;
+}
+
 // ─── Synthèse post-entretien (D, partagée screening + topgrading) ───────────
 const SYNTHESIS_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la grille d'entretien remplie par le recruteur (et, si elle est fournie, de la transcription de l'entretien), du poste et du profil du candidat, tu rédiges une SYNTHÈSE d'aide à la décision.
 

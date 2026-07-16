@@ -19,7 +19,6 @@ export default async function TopgradingPage({ params }: { params: Promise<{ id:
     <TopgradingGridView
       candidate={candidate}
       episodes={grid.criteria as TopgradingEpisode[]}
-      initialNotes={grid.answers as Record<string, string>}
       initialTranscript={interview.transcript}
     />
   );

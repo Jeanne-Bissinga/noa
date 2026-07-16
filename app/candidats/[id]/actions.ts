@@ -16,6 +16,8 @@ import {
   generateTopgradingEpisodes,
   generateTopgradingGuideSections,
   generateInterviewSynthesis,
+  evaluateScreeningGrid,
+  evaluateTopgradingGrid,
   type JobSpecContext,
   type CandidateContext,
 } from "@/lib/noa/ai";
@@ -292,21 +294,6 @@ export async function savePreparation(
   redirect(`/candidats/${candidateId}`);
 }
 
-// ─── Save grid answers (screening Oui/Partiel/Non, or topgrading notes) ────
-export async function saveGridAnswers(candidateId: string, type: InterviewType, answers: Record<string, string>) {
-  await assertOwnedCandidate(candidateId);
-  const supabase = await createClient();
-
-  const interview = await getOrCreateInterview(candidateId, type);
-  const grid = await getEvaluationGrid(interview.id);
-  if (!grid) return;
-
-  await supabase
-    .from("evaluation_grids")
-    .update({ answers, updated_at: new Date().toISOString() })
-    .eq("id", grid.id);
-}
-
 // ─── Save the transcript pasted by the recruiter (from an external recording/
 // transcription tool, since noa doesn't record audio itself) ───────────────
 export async function saveTranscript(candidateId: string, type: InterviewType, transcript: string) {
@@ -344,35 +331,58 @@ function renderFilledGrid(criteria: unknown, answers: Record<string, string>): s
   return lines.join("\n");
 }
 
-// ─── Finish interview -> generate noa synthesis -> redirect to decision ────
-export async function finishInterview(candidateId: string, type: InterviewType, answers: Record<string, string>, transcript?: string) {
+// ─── Finish interview: noa analyse la transcription, remplit lui-même la
+// grille d'évaluation (le recruteur n'a rien à cocher/noter), puis rédige la
+// synthèse -> redirect vers la décision. Le recruteur se contente de
+// consulter le guide et de coller la transcription en amont.
+export type FinishInterviewState = { error?: string };
+
+export async function finishInterview(candidateId: string, type: InterviewType, transcript: string): Promise<FinishInterviewState> {
+  const trimmed = transcript.trim();
+  if (!trimmed) {
+    return { error: "Collez la transcription de l'entretien avant de lancer l'analyse." };
+  }
+
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   const supabase = await createClient();
 
   const interview = await getOrCreateInterview(candidateId, type);
   const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate.mission_id);
+  const { job, cand } = await buildScreeningContext(candidate, recruiter);
+
+  // noa détermine seul les réponses de la grille à partir de la transcription.
+  // Pas de repli automatique possible ici (pas de saisie manuelle à défaut) :
+  // en cas d'échec, on redemande au recruteur de relancer l'analyse.
+  let answers: Record<string, string>;
+  try {
+    if (type === "screening") {
+      answers = await evaluateScreeningGrid(grid.criteria as { id: string; q: string; crit?: string }[], trimmed, job, cand);
+    } else {
+      answers = await evaluateTopgradingGrid(grid.criteria as { co: string; qs: { id: string; q: string }[] }[], trimmed, job, cand);
+    }
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Évaluation de la grille ${type} échouée : ${err?.message ?? String(e)}`);
+    return { error: "noa n'a pas réussi à analyser la transcription. Réessayez dans un instant." };
+  }
 
   await supabase
     .from("evaluation_grids")
     .update({ answers, updated_at: new Date().toISOString() })
     .eq("id", grid.id);
 
-  const transcriptValue = transcript?.trim() || interview.transcript;
-
   await supabase
     .from("interviews")
-    .update({ status: "termine", completed_at: new Date().toISOString(), transcript: transcriptValue || null })
+    .update({ status: "termine", completed_at: new Date().toISOString(), transcript: trimmed })
     .eq("id", interview.id);
 
-  // noa rédige la synthèse à partir de la grille remplie + de la transcription
-  // (si le recruteur l'a collée) + du contexte. Repli sur la synthèse
-  // rule-based (déterministe) en cas d'échec.
+  // noa rédige la synthèse à partir de la grille qu'il vient de remplir et de
+  // la transcription. Repli sur la synthèse rule-based (déterministe) en cas d'échec.
   let content: string;
   let advice: string;
   try {
-    const { job, cand } = await buildScreeningContext(candidate, recruiter);
     const filledGrid = renderFilledGrid(grid.criteria, answers);
-    ({ content, advice } = await generateInterviewSynthesis({ type, filledGrid, transcript: transcriptValue, job, candidate: cand }));
+    ({ content, advice } = await generateInterviewSynthesis({ type, filledGrid, transcript: trimmed, job, candidate: cand }));
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Synthèse ${type} échouée, repli rule-based : ${err?.message ?? String(e)}`);
