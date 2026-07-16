@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getCurrentRecruiter, getCandidate, getInterview, getEvaluationGrid,
+  getCurrentRecruiter, getCandidate, getInterview, getEvaluationGrid, getInterviewGuide,
   getMission, getMissionObjectives, getMissionSkills, getCandidateExperiences, getCandidateSkills,
 } from "@/lib/noa/queries";
 import { STATUS_FIELDS } from "@/lib/noa/labels";
@@ -126,7 +126,10 @@ export async function ensureInterviewAndGrid(candidateId: string, type: Intervie
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   const interview = await getOrCreateInterview(candidateId, type);
   const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate, recruiter);
-  return { interview, grid };
+  // Le guide n'est créé qu'à la préparation (format/durée requis) : pas de
+  // création automatique ici, l'appelant retombe sur le guide statique si absent.
+  const guide = await getInterviewGuide(interview.id);
+  return { interview, grid, guide };
 }
 
 // ─── Contexte poste + candidat pour la préparation du screening ────────────
