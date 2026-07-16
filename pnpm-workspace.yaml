@@ -1,0 +1,18 @@
+# Réglages pnpm (déplacés depuis le champ "pnpm" de package.json,
+# qui n'est plus lu par pnpm >= 11).
+overrides:
+  hono: 4.12.25
+
+# Autoriser l'exécution des scripts de build (postinstall).
+# sharp : requis par l'optimisation d'images de Next.js.
+# msw   : copie le service worker pour les mocks de test.
+allowBuilds:
+  sharp: true
+  msw: true
+  unrs-resolver: true
+
+# Politique supply-chain : on garde la vérification d'âge minimal des
+# paquets, mais on exclut les paquets Supabase officiels (ajoutés
+# volontairement pour le backend et publiés très récemment).
+minimumReleaseAgeExclude:
+  - "@supabase/*"
