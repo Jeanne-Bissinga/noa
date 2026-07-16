@@ -57,6 +57,55 @@ export const STATUS_FIELDS: Record<CandidateStatus, { screening_status: StageSta
   Recrute: { screening_status: "done", topgrading_status: "done", decision_status: "done" },
 };
 
+// ─── Kanban: quels déplacements le drag & drop autorise ────────────────────
+//
+// Faire avancer un candidat EST une décision : elle doit être prise depuis les
+// écrans de décision (decideStage / decideFinal), qui écrivent une ligne dans
+// `decisions` avec son auteur, sa date et son motif. Le kanban n'a pas ce
+// contexte — il ne doit donc jamais avancer un candidat, sans quoi le statut
+// progresse sans trace de décision.
+//
+// Les retours en arrière restent permis : ce sont des corrections, pas des
+// décisions. Ils réouvrent l'étape visée (voir reopenStagesFrom dans
+// app/candidats/actions.ts).
+const CANDIDATE_STATUS_RANK: Record<CandidateStatus, number> = {
+  Screening: 0,
+  Topgrading: 1,
+  "Decision finale": 2,
+  "Non retenu": 3,
+  Recrute: 3,
+};
+
+// Issues terminales : uniquement atteignables via une décision actée.
+const TERMINAL_STATUSES: CandidateStatus[] = ["Non retenu", "Recrute"];
+
+export type MoveCheck = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Dit si le kanban peut appliquer ce changement de statut. Partagé par le
+ * board (pour refuser le drop sans faire clignoter la carte) et par la Server
+ * Action (source de vérité — le board ne protège rien à lui seul).
+ */
+export function canMoveCandidate(from: CandidateStatus, to: CandidateStatus): MoveCheck {
+  if (from === to) return { ok: true };
+
+  if (TERMINAL_STATUSES.includes(to)) {
+    return {
+      ok: false,
+      reason: `« ${to} » est une décision : prenez-la depuis la fiche du candidat pour qu'elle soit tracée.`,
+    };
+  }
+
+  if (CANDIDATE_STATUS_RANK[to] > CANDIDATE_STATUS_RANK[from]) {
+    return {
+      ok: false,
+      reason: `Faire passer un candidat en « ${to} » est une décision : prenez-la depuis sa fiche pour qu'elle soit tracée.`,
+    };
+  }
+
+  return { ok: true };
+}
+
 export const REASON_LABEL: Record<string, string> = {
   scale: "Scale / Croissance",
   replacement: "Remplacement",

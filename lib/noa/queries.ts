@@ -193,6 +193,29 @@ export async function getInterview(
   return data as Interview | null;
 }
 
+/**
+ * Interviews for several candidates at once, to avoid an N+1 on pages that
+ * reason about a whole company's pipeline (the dashboard).
+ */
+export async function getInterviewsForCandidates(candidateIds: string[]): Promise<Interview[]> {
+  if (candidateIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("interviews").select("*").in("candidate_id", candidateIds);
+  return (data ?? []) as Interview[];
+}
+
+/** Decisions for several candidates at once. See getInterviewsForCandidates. */
+export async function getDecisionsForCandidates(candidateIds: string[]): Promise<Decision[]> {
+  if (candidateIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("decisions")
+    .select("*")
+    .in("candidate_id", candidateIds)
+    .order("decided_at", { ascending: true });
+  return (data ?? []) as Decision[];
+}
+
 export async function getEvaluationGrid(interviewId: string): Promise<EvaluationGrid | null> {
   const supabase = await createClient();
   const { data } = await supabase

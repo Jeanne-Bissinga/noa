@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Info } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { LinkBtn, Avatar } from "@/components/noa/ui-primitives";
-import { initials, CANDIDATE_AVATAR_COLOR } from "@/lib/noa/labels";
+import { initials, CANDIDATE_AVATAR_COLOR, canMoveCandidate } from "@/lib/noa/labels";
 import { moveCandidate } from "./actions";
 import type { Candidate, CandidateStatus } from "@/lib/noa/types";
 
@@ -20,10 +20,20 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  const draggedCandidate = dragging ? candidates.find((c) => c.id === dragging) ?? null : null;
+
+  // Une colonne n'accepte le candidat en cours de glissement que si le
+  // déplacement est une correction. Avancer un candidat est une décision, qui
+  // se prend depuis sa fiche.
+  const canDropIn = (colKey: CandidateStatus) =>
+    !draggedCandidate || canMoveCandidate(draggedCandidate.status, colKey).ok;
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDragging(id);
+    setRefusal(null);
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -37,14 +47,22 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
     const current = candidates.find((c) => c.id === id);
     if (!current || current.status === colKey) return;
 
+    const check = canMoveCandidate(current.status, colKey);
+    if (!check.ok) {
+      setRefusal(check.reason);
+      return;
+    }
+
+    setRefusal(null);
     setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, status: colKey } : c)));
 
     startTransition(async () => {
       try {
         await moveCandidate(id, colKey);
-      } catch {
+      } catch (err) {
         // revert optimistic update on failure
         setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, status: current.status } : c)));
+        setRefusal(err instanceof Error ? err.message : "Le déplacement a échoué.");
       }
     });
   };
@@ -62,19 +80,34 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
           </LinkBtn>
         </div>
 
+        {refusal && (
+          <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-[#FEE831]/50 bg-[#FEE831]/10 px-4 py-3">
+            <Info size={14} className="text-[#8a6a00] flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-[#8a6a00] leading-relaxed">{refusal}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-4 gap-3 items-start">
           {CAND_KANBAN_COLS.map((col) => {
             const cards = candidates.filter((c) => c.status === col.key);
-            const isOver = dragOver === col.key;
+            const droppable = canDropIn(col.key);
+            const isOver = dragOver === col.key && droppable;
+            // Pendant un glissement, une colonne qui refuse le candidat
+            // s'efface au lieu de laisser croire qu'elle l'accepte.
+            const isBlocked = draggedCandidate !== null && !droppable && draggedCandidate.status !== col.key;
             return (
               <div
                 key={col.key}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(col.key); }}
+                onDragOver={(e) => {
+                  if (!droppable) return;
+                  e.preventDefault();
+                  setDragOver(col.key);
+                }}
                 onDragLeave={() => setDragOver(null)}
                 onDrop={(e) => handleDrop(e, col.key)}
                 className={`rounded-2xl border p-3 transition-all ${
                   isOver ? "border-[#99BAF8] bg-[#99BAF8]/10 scale-[1.01]" : `${col.border} ${col.bg}`
-                }`}
+                } ${isBlocked ? "opacity-40" : ""}`}
               >
                 <div className="flex items-center gap-2 px-1 mb-3">
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
