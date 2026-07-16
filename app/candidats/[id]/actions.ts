@@ -128,14 +128,22 @@ async function buildScreeningContext(candidate: Candidate, recruiter: RecruiterW
   return { job, cand };
 }
 
-// ─── Génération noa de la grille de screening (B) ──────────────────────────
+// Parse "20 min" -> 20. Retombe sur 30 min si le format est vide/inattendu,
+// pour que le dosage AI reste raisonnable même sans sélection explicite.
+function parseDurationMinutes(duration: string): number {
+  const n = parseInt(duration, 10);
+  return Number.isFinite(n) && n > 0 ? n : 30;
+}
+
+// ─── Génération noa de la grille d'évaluation de screening (B) ─────────────
+// Référentiel de critères, indépendant de la durée de l'entretien.
 export async function generateScreeningGrid(candidateId: string): Promise<PrepGridSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
     const { job, cand } = await buildScreeningContext(candidate, recruiter);
     const criteria = await generateScreeningCriteria(job, cand);
     if (criteria.length) {
-      return [{ title: "Grille de screening", questions: criteria.map((c) => ({ text: c.text, crit: c.crit })) }];
+      return [{ title: "Grille d'évaluation", questions: criteria.map((c) => ({ text: c.text, crit: c.crit })) }];
     }
   } catch (e) {
     const err = e as { message?: string };
@@ -148,12 +156,13 @@ export async function generateScreeningGrid(candidateId: string): Promise<PrepGr
 export async function generateScreeningGuide(
   candidateId: string,
   gridSections: PrepGridSection[],
+  duration: string,
 ): Promise<PrepGuideSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
     const { job, cand } = await buildScreeningContext(candidate, recruiter);
     const criteria = (gridSections[0]?.questions ?? []).map((q) => ({ text: q.text, crit: q.crit ?? "" }));
-    const sections = await generateScreeningGuideSections(criteria, job, cand);
+    const sections = await generateScreeningGuideSections(criteria, job, cand, parseDurationMinutes(duration));
     if (sections.length) return sections;
   } catch (e) {
     const err = e as { message?: string };
@@ -162,7 +171,8 @@ export async function generateScreeningGuide(
   return PREP_META.screening.guideSections;
 }
 
-// ─── Génération noa de la grille de topgrading (B') ────────────────────────
+// ─── Génération noa de la grille d'évaluation de topgrading (B') ───────────
+// Référentiel de critères, indépendant de la durée de l'entretien.
 export async function generateTopgradingGrid(candidateId: string): Promise<PrepGridSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
@@ -187,6 +197,7 @@ export async function generateTopgradingGrid(candidateId: string): Promise<PrepG
 export async function generateTopgradingGuide(
   candidateId: string,
   gridSections: PrepGridSection[],
+  duration: string,
 ): Promise<PrepGuideSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
@@ -197,7 +208,7 @@ export async function generateTopgradingGuide(
       period: s.period ?? "",
       questions: s.questions.map((q) => q.text),
     }));
-    const sections = await generateTopgradingGuideSections(episodes, job, cand);
+    const sections = await generateTopgradingGuideSections(episodes, job, cand, parseDurationMinutes(duration));
     if (sections.length) return sections;
   } catch (e) {
     const err = e as { message?: string };

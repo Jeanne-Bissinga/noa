@@ -71,8 +71,8 @@ export function PreparationView({
     try {
       const sections =
         step === "screening"
-          ? await generateScreeningGuide(candidate.id, editedSections)
-          : await generateTopgradingGuide(candidate.id, editedSections);
+          ? await generateScreeningGuide(candidate.id, editedSections, duration)
+          : await generateTopgradingGuide(candidate.id, editedSections, duration);
       setGuideSections(sections);
       setGuideGenerated(true);
     } finally {
@@ -120,10 +120,10 @@ export function PreparationView({
           <p className="text-sm text-gray-600 leading-relaxed">{meta.goal}</p>
         </Card>
 
-        {/* Grille d'entretien */}
+        {/* Grille d'évaluation */}
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Grille d'entretien</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Grille d'évaluation</p>
             {gridGenerated && (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-[#1e8f52] bg-[#75DA9F]/12 border border-[#75DA9F]/25 px-2 py-0.5 rounded-full">
                 <Zap size={9} />Générée par noa
@@ -145,7 +145,7 @@ export function PreparationView({
                 )}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold">{gridLoading ? "noa génère la grille…" : "Générer la grille d'entretien"}</p>
+                <p className="text-sm font-semibold">{gridLoading ? "noa génère la grille…" : "Générer la grille d'évaluation"}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {gridLoading ? "Analyse du poste et du profil du candidat." : `noa adapte la grille au poste et au profil de ${name}.`}
                 </p>
@@ -260,6 +260,7 @@ export function PreparationView({
                   </button>
                 ))}
               </div>
+              <p className="text-[10px] text-gray-400 mt-2">La durée dose le nombre de relances du guide généré par noa (la grille reste inchangée).</p>
             </div>
           </div>
         </Card>
@@ -277,7 +278,7 @@ export function PreparationView({
 
           {!canGenerateGuide && !guideGenerated && (
             <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-3">
-              {!gridGenerated ? "Générez d'abord la grille d'entretien." : "Renseignez le format et la durée pour générer le guide."}
+              {!gridGenerated ? "Générez d'abord la grille d'évaluation." : "Renseignez le format et la durée pour générer le guide."}
             </p>
           )}
 

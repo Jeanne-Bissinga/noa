@@ -386,7 +386,25 @@ function candidateLines(c: CandidateContext): string {
   return parts.join("\n");
 }
 
-const SCREENING_GRID_SYSTEM = `Tu es noa, un expert en recrutement. Tu conçois la grille d'un entretien de SCREENING (20-30 min) : une liste de critères à valider rapidement pour décider si le candidat passe à l'étape suivante.
+// Dose le volume de RELANCES du guide selon la durée réelle de l'entretien,
+// pour éviter des guides interminables sur des créneaux courts. La grille
+// d'évaluation (critères / épisodes), elle, ne dépend pas de la durée : c'est
+// un référentiel stable, que le recruteur édite lui-même si besoin. Repère :
+// une question + ses relances prend 2 à 4 min en entretien.
+type TimeBudget = {
+  screeningProbes: string;
+  topgradingProbes: string;
+};
+
+function timeBudget(minutes: number): TimeBudget {
+  if (minutes <= 20) return { screeningProbes: "1 à 2", topgradingProbes: "1 à 2" };
+  if (minutes <= 30) return { screeningProbes: "1 à 2", topgradingProbes: "1 à 2" };
+  if (minutes <= 45) return { screeningProbes: "2 à 3", topgradingProbes: "2 à 3" };
+  if (minutes <= 60) return { screeningProbes: "2 à 3", topgradingProbes: "2 à 3" };
+  return { screeningProbes: "2 à 4", topgradingProbes: "2 à 4" };
+}
+
+const SCREENING_GRID_SYSTEM = `Tu es noa, un expert en recrutement. Tu conçois la grille d'ÉVALUATION d'un entretien de SCREENING : une liste de critères à valider rapidement pour décider si le candidat passe à l'étape suivante.
 
 Règles :
 - Propose 5 à 7 critères, ancrés sur les prérequis du poste (compétences requises, séniorité, objectifs) ET sur le profil réel du candidat.
@@ -398,8 +416,9 @@ Règles :
 - Rejette les critères génériques applicables à n'importe quel poste. Français, formulations concises.`;
 
 /**
- * Génère les critères de la grille de screening à partir du cadrage (poste) et
- * du profil candidat. Lève en cas d'échec ; l'appelant retombe sur la grille statique.
+ * Génère les critères de la grille d'évaluation de screening à partir du
+ * cadrage (poste) et du profil candidat. Ce référentiel ne dépend pas de la
+ * durée de l'entretien. Lève en cas d'échec ; l'appelant retombe sur la grille statique.
  */
 export async function generateScreeningCriteria(
   job: JobSpecContext,
@@ -446,23 +465,27 @@ export async function generateScreeningCriteria(
 const SCREENING_GUIDE_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la grille de screening, du poste et du profil du candidat, tu rédiges le GUIDE d'entretien : pour chaque critère, les questions à poser et les relances pour creuser.
 
 Règles :
+- Couvre IMPÉRATIVEMENT chaque critère de la grille par au moins une question, quelle que soit la durée : ne saute jamais un critère.
+- Le nombre de relances par question est indiqué dans le message utilisateur (dosé selon la durée réelle de l'entretien) : c'est le levier d'ajustement au temps disponible, respecte-le — une question + ses relances prend 2 à 4 minutes en entretien.
 - Regroupe les questions en 2 à 4 sections thématiques cohérentes.
-- Pour chaque question : q = la question principale (ouverte), probes = 2 à 4 relances qui creusent la réponse.
+- Pour chaque question : q = la question principale (ouverte), probes = les relances qui creusent la réponse, dans la limite indiquée.
 - Personnalise questions et relances avec le parcours RÉEL du candidat (entreprises, technologies, réalisations de son profil).
-- Couvre chaque critère de la grille par au moins une question.
 - Français, ton professionnel.`;
 
 /**
  * Génère les sections du guide d'entretien (questions + relances) à partir de la
- * grille, du poste et du candidat. Lève en cas d'échec ; l'appelant retombe sur le guide statique.
+ * grille, du poste, du candidat et de la durée de l'entretien (dose le nombre de
+ * relances). Lève en cas d'échec ; l'appelant retombe sur le guide statique.
  */
 export async function generateScreeningGuideSections(
   criteria: ScreeningCriterionSuggestion[],
   job: JobSpecContext,
   candidate: CandidateContext,
+  durationMinutes: number,
 ): Promise<GuideSectionSuggestion[]> {
+  const budget = timeBudget(durationMinutes);
   const criteriaText = criteria.map((c) => `- ${c.text} (${c.crit})`).join("\n");
-  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCritères de la grille de screening :\n${criteriaText || "(aucun)"}`;
+  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCritères de la grille de screening (tous à couvrir) :\n${criteriaText || "(aucun)"}\n\nDurée de l'entretien : ${durationMinutes} min → ${budget.screeningProbes} relances par question.`;
 
   const result = await generateStructured<{ sections: GuideSectionSuggestion[] }>({
     system: SCREENING_GUIDE_SYSTEM,
@@ -513,7 +536,7 @@ export type TopgradingEpisodeSuggestion = {
   questions: string[];
 };
 
-const TOPGRADING_GRID_SYSTEM = `Tu es noa, un expert en recrutement spécialiste de la méthode Topgrading. Tu construis la grille d'un entretien Topgrading : un parcours CHRONOLOGIQUE des expériences réelles du candidat.
+const TOPGRADING_GRID_SYSTEM = `Tu es noa, un expert en recrutement spécialiste de la méthode Topgrading. Tu construis la grille d'ÉVALUATION d'un entretien Topgrading : un parcours CHRONOLOGIQUE des expériences réelles du candidat.
 
 Règles :
 - Crée UN épisode par expérience professionnelle réelle du candidat (fournies ci-dessous), de la plus récente à la plus ancienne.
@@ -523,8 +546,9 @@ Règles :
 - Français, questions ouvertes et concises.`;
 
 /**
- * Génère les épisodes de la grille Topgrading à partir du parcours réel du
- * candidat et du poste. Lève en cas d'échec ; l'appelant retombe sur la grille statique.
+ * Génère les épisodes de la grille d'évaluation Topgrading à partir du
+ * parcours réel du candidat et du poste. Ce référentiel ne dépend pas de la
+ * durée de l'entretien. Lève en cas d'échec ; l'appelant retombe sur la grille statique.
  */
 export async function generateTopgradingEpisodes(
   job: JobSpecContext,
@@ -565,23 +589,27 @@ const TOPGRADING_GUIDE_SYSTEM = `Tu es noa, un expert en recrutement spécialist
 
 Règles :
 - Crée UNE section par épisode. title = le nom de l'entreprise de l'épisode.
-- Pour chaque question : q = la question principale (ouverte), probes = 2 à 4 relances qui creusent (impact chiffré, rôle précis, ce que le manager de l'époque dirait).
+- Couvre IMPÉRATIVEMENT chaque question de chaque épisode, quelle que soit la durée : ne saute jamais une question de la grille.
+- Pour chaque question : q = la question principale (ouverte), probes = les relances qui creusent (impact chiffré, rôle précis, ce que le manager de l'époque dirait).
+- Le nombre de relances par question est indiqué dans le message utilisateur (dosé selon la durée réelle de l'entretien) : c'est le levier d'ajustement au temps disponible, respecte-le.
 - Personnalise questions et relances avec le contexte réel de cette expérience.
-- Couvre chaque question de l'épisode. Français, ton professionnel.`;
+- Français, ton professionnel.`;
 
 /**
- * Génère le guide Topgrading (une section par épisode, questions + relances).
- * Lève en cas d'échec ; l'appelant retombe sur le guide statique.
+ * Génère le guide Topgrading (une section par épisode, questions + relances),
+ * dosé selon la durée de l'entretien. Lève en cas d'échec ; l'appelant retombe sur le guide statique.
  */
 export async function generateTopgradingGuideSections(
   episodes: TopgradingEpisodeSuggestion[],
   job: JobSpecContext,
   candidate: CandidateContext,
+  durationMinutes: number,
 ): Promise<GuideSectionSuggestion[]> {
+  const budget = timeBudget(durationMinutes);
   const episodesText = episodes
     .map((e) => `- ${e.company} (${e.period}, ${e.role}) : ${e.questions.join(" ; ")}`)
     .join("\n");
-  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nÉpisodes du parcours (grille Topgrading) :\n${episodesText || "(aucun)"}`;
+  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nÉpisodes du parcours (grille d'évaluation Topgrading, toutes les questions sont à couvrir) :\n${episodesText || "(aucun)"}\n\nDurée de l'entretien : ${durationMinutes} min → ${budget.topgradingProbes} relances par question.`;
 
   const result = await generateStructured<{ sections: GuideSectionSuggestion[] }>({
     system: TOPGRADING_GUIDE_SYSTEM,
