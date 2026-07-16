@@ -30,8 +30,8 @@ export default function LoginPage({
         </div>
         <div className="flex gap-3">
           {[
-            { n: "94%", label: "de recrutements réussis avec la méthode Topgrading", color: "text-[#75DA9F]" },
-            { n: "3×", label: "plus vite qu'un process traditionnel", color: "text-[#99BAF8]" },
+            { n: "74 %", label: "des entreprises admettent avoir mal recruté", color: "text-[#75DA9F]" },
+            { n: "15×", label: "le salaire annuel : coût d'un mauvais recrutement", color: "text-[#99BAF8]" },
           ].map(s => (
             <div key={s.n} className="flex-1 bg-white/5 rounded-2xl p-5">
               <div className={`text-3xl font-bold mb-1.5 ${s.color}`} style={{ fontFamily: "Poppins, sans-serif" }}>{s.n}</div>
