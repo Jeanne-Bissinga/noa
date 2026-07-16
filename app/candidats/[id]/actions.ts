@@ -16,6 +16,7 @@ import {
   generateTopgradingEpisodes,
   generateTopgradingGuideSections,
   generateInterviewSynthesis,
+  answerInterviewQuestion,
   evaluateScreeningGrid,
   evaluateTopgradingGrid,
   type JobSpecContext,
@@ -353,6 +354,39 @@ export async function saveTranscript(candidateId: string, type: InterviewType, t
     .from("interviews")
     .update({ transcript: transcript.trim() || null })
     .eq("id", interview.id);
+}
+
+// ─── Question libre du recruteur sur un entretien (page Synthèse) ──────────
+// Pas de redirect ni de revalidate : la réponse n'est pas persistée, elle est
+// rendue côté client dans la carte "Poser une question".
+export type AskQuestionState = { answer?: string; error?: string };
+
+const ASK_ERROR = "noa n'a pas réussi à répondre à cette question. Réessayez dans un instant.";
+
+export async function askAboutInterview(candidateId: string, type: InterviewType, question: string): Promise<AskQuestionState> {
+  const trimmed = question.trim();
+  if (!trimmed) {
+    return { error: "Saisissez une question avant de lancer la recherche." };
+  }
+
+  const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
+
+  const interview = await getInterview(candidateId, type);
+  const transcript = interview?.transcript?.trim();
+  if (!transcript) {
+    return { error: "Aucune transcription n'est disponible pour cet entretien." };
+  }
+
+  try {
+    const { job, cand } = await buildScreeningContext(candidate, recruiter);
+    const answer = await answerInterviewQuestion({ type, question: trimmed, transcript, job, candidate: cand });
+    if (!answer.trim()) return { error: ASK_ERROR };
+    return { answer };
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Question libre sur l'entretien ${type} échouée : ${err?.message ?? String(e)}`);
+    return { error: ASK_ERROR };
+  }
 }
 
 // Rend la grille remplie en texte lisible pour la synthèse. Gère les deux formes :
