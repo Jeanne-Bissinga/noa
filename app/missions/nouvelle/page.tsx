@@ -164,11 +164,18 @@ export default function CampaignWhyPage() {
             <div className="flex flex-col gap-4">
               <InputField label="Titre du poste" placeholder="Ex : Développeur Full-Stack Senior" required name="title" />
               <Textarea
-                label="Missions macro du poste"
-                placeholder="Décrivez en quelques lignes les grandes responsabilités. Pas besoin d'être exhaustif, noa enrichira la description ensuite."
-                rows={4}
-                hint="3 à 5 lignes suffisent pour démarrer."
-                name="missionText"
+                label="Point de départ"
+                placeholder="Ex : L'équipe commerciale peine à convertir les leads entrants, le CA stagne depuis 2 trimestres."
+                rows={3}
+                hint="La situation actuelle : pourquoi ce poste est nécessaire maintenant."
+                name="startingPoint"
+              />
+              <Textarea
+                label="Objectif(s) à X mois / an"
+                placeholder="Ex : Doubler le chiffre d'affaires en 2 ans en structurant une vraie stratégie commerciale."
+                rows={3}
+                hint="Des résultats datés, pas d'intentions vagues."
+                name="targetObjective"
               />
             </div>
           </Card>

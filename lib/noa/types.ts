@@ -61,6 +61,8 @@ export interface Mission {
   reason_detail: string | null;
   status: MissionStatus;
   process_step: number;
+  starting_point: string | null;
+  target_objective: string | null;
   mission_text: string | null;
   final_spec_text: string | null;
   created_at: string;

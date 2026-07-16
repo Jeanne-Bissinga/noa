@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { FileText, Target, Award, Edit3 } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
-import { Card, BackLink, StepBar } from "@/components/noa/ui-primitives";
+import { Card, Badge, BackLink, StepBar } from "@/components/noa/ui-primitives";
 import { requireRecruiter, getMission, getMissionObjectives, getMissionSkills } from "@/lib/noa/queries";
 import { REASON_LABEL, formatDate } from "@/lib/noa/labels";
 import type { MissionSkillCategory } from "@/lib/noa/types";
@@ -87,18 +87,31 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
             {objectives.length === 0 ? (
               <p className="text-sm text-gray-400">Aucun objectif défini.</p>
             ) : (
-              <div className="flex flex-col gap-2.5">
-                {objectives.map((o, i) => (
-                  <div key={o.id} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-[#75DA9F]/15 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[#1e8f52] text-[9px] font-bold">{i + 1}</span>
-                    </div>
-                    <div className="flex-1 flex items-center justify-between gap-2">
-                      <span className="text-sm text-[#010101] font-medium">{o.label}</span>
-                      <span className="text-xs text-gray-400 whitespace-nowrap">{[o.threshold, o.deadline].filter(Boolean).join(" · ")}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      <th className="text-left pb-2 pl-1 pr-2 w-6">#</th>
+                      <th className="text-left pb-2 pr-3">KPI</th>
+                      <th className="text-left pb-2 pr-3">Métrique</th>
+                      <th className="text-left pb-2 pr-3">Seuil de réussite</th>
+                      <th className="text-left pb-2 pr-1">Délai</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {objectives.map((o, i) => (
+                      <tr key={o.id} className="align-top">
+                        <td className="py-2.5 pl-1 pr-2 text-gray-300 text-xs font-bold">{i + 1}</td>
+                        <td className="py-2.5 pr-3 text-sm text-[#010101] font-medium leading-snug">{o.label}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-500 leading-snug">{o.metric || "-"}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-600 font-medium leading-snug">{o.threshold || "-"}</td>
+                        <td className="py-2.5 pr-1 whitespace-nowrap">
+                          {o.deadline ? <Badge color="green">{o.deadline}</Badge> : <span className="text-xs text-gray-300">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </Card>
