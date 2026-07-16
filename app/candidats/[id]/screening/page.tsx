@@ -13,13 +13,14 @@ export default async function ScreeningPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
-  const { grid } = await ensureInterviewAndGrid(candidate.id, "screening");
+  const { interview, grid } = await ensureInterviewAndGrid(candidate.id, "screening");
 
   return (
     <ScreeningGridView
       candidate={candidate}
       criteria={grid.criteria as ScreeningCriterion[]}
       initialAnswers={grid.answers as Record<string, ScreeningAnswer>}
+      initialTranscript={interview.transcript}
     />
   );
 }

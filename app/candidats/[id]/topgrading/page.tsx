@@ -13,13 +13,14 @@ export default async function TopgradingPage({ params }: { params: Promise<{ id:
     notFound();
   }
 
-  const { grid } = await ensureInterviewAndGrid(candidate.id, "topgrading");
+  const { interview, grid } = await ensureInterviewAndGrid(candidate.id, "topgrading");
 
   return (
     <TopgradingGridView
       candidate={candidate}
       episodes={grid.criteria as TopgradingEpisode[]}
       initialNotes={grid.answers as Record<string, string>}
+      initialTranscript={interview.transcript}
     />
   );
 }

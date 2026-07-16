@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { Mic, AlertTriangle, ChevronRight, Eye } from "lucide-react";
+import { ChevronRight, Eye } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn } from "@/components/noa/ui-primitives";
+import { TranscriptCapture } from "@/components/noa/transcript-capture";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { saveGridAnswers, finishInterview } from "../actions";
 import type { Candidate } from "@/lib/noa/types";
 import type { TopgradingEpisode } from "@/lib/noa/synthesis";
 
 export function TopgradingGridView({
-  candidate, episodes, initialNotes,
+  candidate, episodes, initialNotes, initialTranscript,
 }: {
   candidate: Candidate;
   episodes: TopgradingEpisode[];
   initialNotes: Record<string, string>;
+  initialTranscript: string | null;
 }) {
   const [notes, setNotes] = useState<Record<string, string>>(initialNotes ?? {});
-  const [recording, setRecording] = useState(false);
+  const [transcript, setTranscript] = useState(initialTranscript ?? "");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [interviewDone, setInterviewDone] = useState(false);
   const [pending, setPending] = useState(false);
@@ -43,7 +45,7 @@ export function TopgradingGridView({
   const handleGoToSynthesis = () => {
     setPending(true);
     startTransition(async () => {
-      await finishInterview(candidate.id, "topgrading", notes);
+      await finishInterview(candidate.id, "topgrading", notes, transcript);
     });
   };
 
@@ -66,36 +68,7 @@ export function TopgradingGridView({
           <Btn variant="secondary" size="sm"><Eye size={13} />Voir le CV</Btn>
         </div>
 
-        {/* Bandeau enregistrement */}
-        <div className={`rounded-2xl border p-4 mb-5 transition-all ${recording ? "bg-red-50 border-red-200" : "bg-[#010101] border-[#010101]"}`}>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setRecording((r) => !r)}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${recording ? "bg-red-500" : "bg-white/10 hover:bg-white/20"}`}
-            >
-              {recording ? <span className="w-3 h-3 rounded-sm bg-white" /> : <Mic size={17} className="text-white" />}
-            </button>
-            <div className="flex-1">
-              {recording ? (
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <p className="text-sm font-semibold text-red-700">Enregistrement en cours…</p>
-                </div>
-              ) : (
-                <p className="text-sm font-semibold text-white">Enregistrer l'entretien</p>
-              )}
-              <p className={`text-xs mt-0.5 ${recording ? "text-red-500" : "text-white/50"}`}>
-                {recording ? "Cliquez pour arrêter l'enregistrement." : "La transcription ne peut pas être générée sans enregistrement."}
-              </p>
-            </div>
-          </div>
-          {!recording && (
-            <div className="flex items-start gap-2 mt-3 pt-3 border-t border-white/10">
-              <AlertTriangle size={12} className="text-[#FEE831] flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-white/70">Informez le candidat qu'il est enregistré avant de démarrer l'entretien.</p>
-            </div>
-          )}
-        </div>
+        <TranscriptCapture candidateId={candidate.id} type="topgrading" value={transcript} onChange={setTranscript} accent="violet" />
 
         {/* Contexte */}
         <div className="bg-[#CCB8FF]/10 border border-[#CCB8FF]/25 rounded-2xl p-4 mb-5">
@@ -168,8 +141,7 @@ export function TopgradingGridView({
               <ChevronRight size={15} />
             </Btn>
           ) : (
-            <Btn variant="secondary" onClick={() => { setRecording(false); setInterviewDone(true); }}>
-              {recording && <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />}
+            <Btn variant="secondary" onClick={() => setInterviewDone(true)}>
               Finir l'entretien
               <ChevronRight size={15} />
             </Btn>

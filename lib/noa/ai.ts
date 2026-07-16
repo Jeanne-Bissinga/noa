@@ -624,20 +624,23 @@ export async function generateTopgradingGuideSections(
 }
 
 // ─── Synthèse post-entretien (D, partagée screening + topgrading) ───────────
-const SYNTHESIS_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la grille d'entretien remplie par le recruteur, du poste et du profil du candidat, tu rédiges une SYNTHÈSE d'aide à la décision.
+const SYNTHESIS_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la grille d'entretien remplie par le recruteur (et, si elle est fournie, de la transcription de l'entretien), du poste et du profil du candidat, tu rédiges une SYNTHÈSE d'aide à la décision.
 
 Règles :
-- content : 3 à 5 phrases synthétisant la performance du candidat sur les critères évalués (points forts, points de vigilance, adéquation avec le poste). Factuel, appuyé sur les réponses de la grille.
+- Si une transcription est fournie, appuie-toi en priorité sur les propos réels du candidat qu'elle contient ; la grille reste le fil conducteur des critères évalués.
+- content : 3 à 5 phrases synthétisant la performance du candidat sur les critères évalués (points forts, points de vigilance, adéquation avec le poste). Factuel, appuyé sur la grille et la transcription le cas échéant.
 - advice : 1 à 2 phrases de recommandation claire pour la décision (poursuivre, approfondir un point précis, écarter), avec la raison.
-- N'invente aucun fait absent de la grille remplie. Français, ton professionnel et direct.`;
+- N'invente aucun fait absent de la grille remplie et de la transcription. Français, ton professionnel et direct.`;
 
 /**
  * Rédige la synthèse (content + advice) d'un entretien à partir de la grille
- * remplie et du contexte. Lève en cas d'échec ; l'appelant retombe sur la synthèse rule-based.
+ * remplie, de la transcription (optionnelle) et du contexte. Lève en cas d'échec ;
+ * l'appelant retombe sur la synthèse rule-based.
  */
 export async function generateInterviewSynthesis(input: {
   type: "screening" | "topgrading";
   filledGrid: string;
+  transcript?: string | null;
   job: JobSpecContext;
   candidate: CandidateContext;
 }): Promise<{ content: string; advice: string }> {
@@ -648,7 +651,8 @@ ${jobSpecLines(input.job)}
 ${candidateLines(input.candidate)}
 
 Grille d'entretien remplie par le recruteur :
-${input.filledGrid || "(grille vide)"}`;
+${input.filledGrid || "(grille vide)"}
+${input.transcript?.trim() ? `\nTranscription de l'entretien (collée par le recruteur depuis un outil externe) :\n${input.transcript.trim()}` : ""}`;
 
   return generateStructured<{ content: string; advice: string }>({
     system: SYNTHESIS_SYSTEM,

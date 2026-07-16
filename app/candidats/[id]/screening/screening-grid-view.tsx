@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { Mic, AlertTriangle, FileText, ChevronRight, Edit3 } from "lucide-react";
+import { FileText, ChevronRight, Edit3 } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn } from "@/components/noa/ui-primitives";
+import { TranscriptCapture } from "@/components/noa/transcript-capture";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { saveGridAnswers, finishInterview } from "../actions";
 import type { Candidate } from "@/lib/noa/types";
 import type { ScreeningCriterion, ScreeningAnswer } from "@/lib/noa/synthesis";
 
 export function ScreeningGridView({
-  candidate, criteria, initialAnswers,
+  candidate, criteria, initialAnswers, initialTranscript,
 }: {
   candidate: Candidate;
   criteria: ScreeningCriterion[];
   initialAnswers: Record<string, ScreeningAnswer>;
+  initialTranscript: string | null;
 }) {
   const [answers, setAnswers] = useState<Record<string, ScreeningAnswer>>(initialAnswers ?? {});
-  const [recording, setRecording] = useState(false);
+  const [transcript, setTranscript] = useState(initialTranscript ?? "");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [interviewDone, setInterviewDone] = useState(false);
   const [pending, setPending] = useState(false);
@@ -57,13 +59,12 @@ export function ScreeningGridView({
 
   const handleFinishInterview = () => {
     setInterviewDone(true);
-    setRecording(false);
   };
 
   const handleGoToSynthesis = () => {
     setPending(true);
     startTransition(async () => {
-      await finishInterview(candidate.id, "screening", answers);
+      await finishInterview(candidate.id, "screening", answers, transcript);
     });
   };
 
@@ -85,36 +86,7 @@ export function ScreeningGridView({
           </div>
         </div>
 
-        {/* Bandeau enregistrement */}
-        <div className={`rounded-2xl border p-4 mb-5 transition-all ${recording ? "bg-red-50 border-red-200" : "bg-[#010101] border-[#010101]"}`}>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setRecording((r) => !r)}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${recording ? "bg-red-500" : "bg-white/10 hover:bg-white/20"}`}
-            >
-              {recording ? <span className="w-3 h-3 rounded-sm bg-white" /> : <Mic size={17} className="text-white" />}
-            </button>
-            <div className="flex-1">
-              {recording ? (
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <p className="text-sm font-semibold text-red-700">Enregistrement en cours…</p>
-                </div>
-              ) : (
-                <p className="text-sm font-semibold text-white">Enregistrer l'entretien</p>
-              )}
-              <p className={`text-xs mt-0.5 ${recording ? "text-red-500" : "text-white/50"}`}>
-                {recording ? "Cliquez pour arrêter l'enregistrement." : "La transcription ne peut pas être générée sans enregistrement."}
-              </p>
-            </div>
-          </div>
-          {!recording && (
-            <div className="flex items-start gap-2 mt-3 pt-3 border-t border-white/10">
-              <AlertTriangle size={12} className="text-[#FEE831] flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-white/70">Informez le candidat qu'il est enregistré avant de démarrer l'entretien.</p>
-            </div>
-          )}
-        </div>
+        <TranscriptCapture candidateId={candidate.id} type="screening" value={transcript} onChange={setTranscript} accent="blue" />
 
         {/* Grille */}
         <Card className="p-6 mb-4">
@@ -197,7 +169,6 @@ export function ScreeningGridView({
             </Btn>
           ) : (
             <Btn variant="secondary" onClick={handleFinishInterview} disabled={!allAnswered}>
-              {recording && <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />}
               Finir l'entretien
               <ChevronRight size={15} />
             </Btn>
