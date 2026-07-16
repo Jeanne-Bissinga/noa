@@ -1,6 +1,6 @@
 // Deterministic, rule-based "noa synthesis" text generator.
 //
-// This intentionally does NOT call any LLM/AI API — it is plain string
+// This intentionally does NOT call any LLM/AI API, it is plain string
 // templating over the grid's criteria/answers, per the approved phase-4 plan.
 //
 // Two grid shapes are supported (see lib/noa/queries + the screening/topgrading
@@ -28,7 +28,7 @@ function isTopgradingCriteria(criteria: unknown): criteria is TopgradingEpisode[
  * Generates a French, rule-based synthesis (content + advice) from a grid's
  * criteria/answers. Works for both the screening shape (Oui/Partiel/Non per
  * criterion) and the topgrading shape (free-text notes per question, across
- * episodes) — the output style adapts to the shape it detects.
+ * episodes), the output style adapts to the shape it detects.
  */
 export function generateNoaSynthesis(
   criteria: unknown,
@@ -109,7 +109,7 @@ function generateTopgradingSynthesis(
   }
   if (unanswered.length > 0) {
     parts.push(
-      `Points de vigilance : aucune note prise sur ${unanswered.map(({ ep, q }) => `« ${q.q} » (${ep.co})`).join(" ; ")} — à reprendre si besoin lors de la décision.`,
+      `Points de vigilance : aucune note prise sur ${unanswered.map(({ ep, q }) => `« ${q.q} » (${ep.co})`).join(" ; ")}, à reprendre si besoin lors de la décision.`,
     );
   }
 

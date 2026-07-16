@@ -56,7 +56,7 @@ export function FinalDecisionView({ candidate, score }: { candidate: Candidate; 
           <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-5 font-semibold">Note globale</p>
           <div className="inline-flex items-end gap-1.5 mb-3">
             <span className="text-8xl font-bold text-[#010101] leading-none" style={{ fontFamily: "Poppins, sans-serif" }}>
-              {score ?? "—"}
+              {score ?? "-"}
             </span>
             <span className="text-3xl text-gray-200 font-light mb-2">/100</span>
           </div>

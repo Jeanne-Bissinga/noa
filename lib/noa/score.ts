@@ -2,11 +2,11 @@
 // grids (screening + topgrading), used by /candidats/[id]/decision-finale.
 //
 // Formula:
-//   - Screening grid: each criterion answer contributes points — Oui = 1,
+//   - Screening grid: each criterion answer contributes points, Oui = 1,
 //     Partiel = 0.5, Non = 0 (unanswered = 0). Score_screening = sum / count * 100.
 //   - Topgrading grid: since Topgrading uses free-text notes (no Oui/Partiel/Non),
 //     we treat a non-empty note as "answered" (1 point) and an empty note as
-//     "unanswered" (0 points) — a completion-quality proxy for how thoroughly
+//     "unanswered" (0 points), a completion-quality proxy for how thoroughly
 //     the candidate's answers were probed and documented.
 //     Score_topgrading = answered / total * 100.
 //   - Final score = average of the two stage scores that have data (if only one

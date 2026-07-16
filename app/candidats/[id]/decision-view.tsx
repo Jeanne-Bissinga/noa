@@ -131,7 +131,7 @@ export function DecisionView({
           )}
         </div>
 
-        {/* Question libre — stub illustratif, pas de recherche réelle sans transcription */}
+        {/* Question libre, stub illustratif, pas de recherche réelle sans transcription */}
         <Card className="p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center">
@@ -159,7 +159,7 @@ export function DecisionView({
             </>
           ) : (
             <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-3">
-              Aucune transcription n'est disponible pour cet entretien — cette fonctionnalité nécessite un enregistrement transcrit.
+              Aucune transcription n'est disponible pour cet entretien, cette fonctionnalité nécessite un enregistrement transcrit.
             </p>
           )}
         </Card>

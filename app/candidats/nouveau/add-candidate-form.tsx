@@ -25,7 +25,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
     setFile(selected);
     setParsing(true);
     setCvDone(false);
-    // Fake "noa parsing" animation kept for UX flavor — the real submission
+    // Fake "noa parsing" animation kept for UX flavor, the real submission
     // only happens once the recruiter validates the (real) name fields below
     // and clicks "Créer la fiche candidat".
     setTimeout(() => {
@@ -166,7 +166,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
                 className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-200 opacity-60 cursor-not-allowed transition-all text-left"
               >
                 <Plus size={14} className="text-gray-400" />
-                <span className="text-xs text-gray-400">Ajouter une pièce jointe (portfolio, lettre de motivation…) — bientôt disponible</span>
+                <span className="text-xs text-gray-400">Ajouter une pièce jointe (portfolio, lettre de motivation…), bientôt disponible</span>
               </button>
             </div>
           </Card>

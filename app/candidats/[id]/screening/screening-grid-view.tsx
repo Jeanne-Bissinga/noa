@@ -78,7 +78,7 @@ export function ScreeningGridView({
             <div>
               <h1 className="text-xl font-bold text-[#010101] leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-400">{candidate.title ?? "—"}</span>
+                <span className="text-sm text-gray-400">{candidate.title ?? "-"}</span>
                 <Badge color="blue">Screening</Badge>
               </div>
             </div>
@@ -161,7 +161,7 @@ export function ScreeningGridView({
                       <ul className="flex flex-col gap-1.5">
                         {q.probes.map((probe, pi) => (
                           <li key={pi} className="flex items-start gap-2 text-xs text-gray-600">
-                            <span className="text-[#99BAF8] flex-shrink-0 mt-0.5">—</span>
+                            <span className="text-[#99BAF8] flex-shrink-0 mt-0.5">•</span>
                             {probe}
                           </li>
                         ))}

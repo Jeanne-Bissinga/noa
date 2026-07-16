@@ -72,7 +72,7 @@ export function ResourcesView() {
             Recruter des A-Players, étape par étape
           </h1>
           <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
-            Des ressources pratiques pour chaque phase du recrutement structuré — de la définition du poste à la décision finale.
+            Des ressources pratiques pour chaque phase du recrutement structuré, de la définition du poste à la décision finale.
           </p>
         </div>
 

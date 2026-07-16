@@ -70,7 +70,7 @@ export function FinalSpecView({
               </div>
               <h3 className="font-semibold text-[#010101] text-sm">Mission</h3>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">{mission.mission_text || "—"}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{mission.mission_text || "-"}</p>
           </Card>
 
           <Card className="p-6">
@@ -81,7 +81,7 @@ export function FinalSpecView({
               <h3 className="font-semibold text-[#010101] text-sm">Résultats attendus</h3>
             </div>
             {objectives.length === 0 ? (
-              <p className="text-sm text-gray-400">—</p>
+              <p className="text-sm text-gray-400">-</p>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {objectives.map((o, i) => (
@@ -111,7 +111,7 @@ export function FinalSpecView({
                 <div key={cat.category}>
                   <div className="text-[10px] font-bold px-2 py-1 rounded-lg mb-2 inline-block bg-gray-100 text-gray-500">{cat.label}</div>
                   {cat.items.length === 0 ? (
-                    <p className="text-xs text-gray-300">—</p>
+                    <p className="text-xs text-gray-300">-</p>
                   ) : (
                     <ul className="flex flex-col gap-1">
                       {cat.items.map((item) => (

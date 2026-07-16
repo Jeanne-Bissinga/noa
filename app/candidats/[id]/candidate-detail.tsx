@@ -63,7 +63,7 @@ export function CandidateDetail({
                   <h1 className="text-lg font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
                   <Badge color={CANDIDATE_BADGE[candidate.status]}>{candidate.status}</Badge>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">{[candidate.title, candidate.location].filter(Boolean).join(" · ") || "—"}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{[candidate.title, candidate.location].filter(Boolean).join(" · ") || "-"}</p>
               </div>
             </div>
             <button
@@ -94,7 +94,7 @@ export function CandidateDetail({
                       <ul className="flex flex-col gap-1">
                         {exp.bullets.map((b, j) => (
                           <li key={j} className="flex items-start gap-1.5 text-[10px] text-gray-500 leading-relaxed">
-                            <span className="text-gray-300 flex-shrink-0 mt-0.5">—</span>{b}
+                            <span className="text-gray-300 flex-shrink-0 mt-0.5">•</span>{b}
                           </li>
                         ))}
                       </ul>
@@ -135,7 +135,7 @@ export function CandidateDetail({
                   </div>
                 </Link>
 
-                {/* Décision réelle — pointe vers les routes de décision par étape
+                {/* Décision réelle, pointe vers les routes de décision par étape
                     (au lieu du toggle local factice du prototype qui ne persistait rien). */}
                 <div className="border-t border-gray-100 mt-3 pt-3 flex items-center justify-between">
                   <p className="text-xs text-gray-400">Décision pour cette étape</p>
@@ -165,7 +165,7 @@ export function CandidateDetail({
                   <div className={`h-full rounded-full ${candidate.score >= 75 ? "bg-[#75DA9F]" : candidate.score >= 50 ? "bg-[#99BAF8]" : "bg-red-400"}`} style={{ width: `${candidate.score}%` }} />
                 </div>
                 <p className="text-xs text-gray-400">
-                  {candidate.score >= 75 ? "Profil très solide — recommandé à l'embauche" : candidate.score >= 50 ? "Profil correct — à discuter en équipe" : "Profil insuffisant — non retenu"}
+                  {candidate.score >= 75 ? "Profil très solide, recommandé à l'embauche" : candidate.score >= 50 ? "Profil correct, à discuter en équipe" : "Profil insuffisant, non retenu"}
                 </p>
               </div>
             </div>

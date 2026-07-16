@@ -136,7 +136,7 @@ export function TopgradingGridView({
                           <ul className="flex flex-col gap-1.5">
                             {item.probes.map((probe, pi) => (
                               <li key={pi} className="flex items-start gap-2 text-xs text-gray-600">
-                                <span className="text-[#CCB8FF] flex-shrink-0 mt-0.5">—</span>
+                                <span className="text-[#CCB8FF] flex-shrink-0 mt-0.5">•</span>
                                 {probe}
                               </li>
                             ))}

@@ -36,7 +36,7 @@ export default async function TopgradingDecisionPage({ params }: { params: Promi
       stage="topgrading"
       stats={[
         { label: "Points forts", value: `${answered}`, tone: "green" },
-        { label: "Points nuancés", value: "—", tone: "yellow" },
+        { label: "Points nuancés", value: "-", tone: "yellow" },
         { label: "Points d'attention", value: `${unanswered}`, tone: "red" },
       ]}
       noaSynthesis={noaSynthesis}

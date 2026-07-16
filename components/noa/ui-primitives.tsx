@@ -47,7 +47,7 @@ export const Btn = ({
   </button>
 );
 
-// Same visual treatment as Btn, but renders a navigable <Link> — use this
+// Same visual treatment as Btn, but renders a navigable <Link>, use this
 // instead of nesting <Btn> inside <Link> (which nests a <button> in an <a>).
 export const LinkBtn = ({
   children, href, variant = "primary", className = "", size = "md",

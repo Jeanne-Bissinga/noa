@@ -138,7 +138,7 @@ export default async function DashboardPage() {
                   <Avatar initials={initials(c.first_name, c.last_name)} color={CANDIDATE_AVATAR_COLOR[c.status] ?? "bg-gray-100 text-gray-500"} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm text-[#010101] truncate group-hover:text-[#3a6fd4] transition-colors">{c.first_name} {c.last_name}</div>
-                    <div className="text-[10px] text-gray-400 truncate">{c.title ?? "—"}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{c.title ?? "-"}</div>
                   </div>
                   <Badge color={CANDIDATE_BADGE[c.status] ?? "gray"}>{c.status}</Badge>
                 </Link>
