@@ -21,19 +21,20 @@ export async function createMission(
   const reason = String(formData.get("reason") ?? "").trim();
   const reasonDetail = String(formData.get("reasonDetail") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
-  const missionText = String(formData.get("missionText") ?? "").trim();
+  const startingPoint = String(formData.get("startingPoint") ?? "").trim();
+  const targetObjective = String(formData.get("targetObjective") ?? "").trim();
 
   if (!reason || !title) {
     return { error: "Merci de sélectionner un motif et de renseigner un titre de poste." };
   }
 
-  // noa rédige la mission du poste à partir du contexte de l'étape 1. En cas
-  // d'échec de l'API, on retombe sur le texte brut du recruteur pour ne jamais
-  // casser le flux de création.
-  let generatedMission = missionText;
+  // noa rédige le résumé exécutif à partir du point de départ et de l'objectif
+  // de l'étape 1. En cas d'échec de l'API, on retombe sur un texte brut
+  // assemblé à partir des deux champs pour ne jamais casser le flux de création.
+  let generatedMission = [startingPoint, targetObjective].filter(Boolean).join(" ");
   let noaSucceeded = false;
   try {
-    const noaText = await generateMissionText({ reason, reasonDetail, title, missionText });
+    const noaText = await generateMissionText({ reason, reasonDetail, title, startingPoint, targetObjective });
     if (noaText) {
       generatedMission = noaText;
       noaSucceeded = true;
@@ -61,6 +62,8 @@ export async function createMission(
       title,
       reason,
       reason_detail: reasonDetail || null,
+      starting_point: startingPoint || null,
+      target_objective: targetObjective || null,
       mission_text: generatedMission || null,
       status: "brouillon",
       process_step: 0,

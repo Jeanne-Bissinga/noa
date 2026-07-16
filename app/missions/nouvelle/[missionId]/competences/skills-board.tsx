@@ -6,52 +6,31 @@ import { AppLayout } from "@/components/noa/app-shell";
 import { Card, LinkBtn, BackLink, StepBar } from "@/components/noa/ui-primitives";
 import { toggleSkill, addCustomSkill, fillSkillSuggestions } from "../actions";
 import type { Mission, MissionSkill, MissionSkillCategory } from "@/lib/noa/types";
+import type { SkillSuggestions } from "@/lib/noa/ai";
 
-const SKILLS_CATALOGUE: { category: MissionSkillCategory; title: string; badge: string; catalogue: string[] }[] = [
-  {
-    category: "technique",
-    title: "Compétences techniques",
-    badge: "bg-[#99BAF8]/15 text-[#3a6fd4] border-[#99BAF8]/20",
-    catalogue: [
-      "TypeScript / JavaScript avancé", "React & Next.js", "Node.js / API REST",
-      "PostgreSQL ou équivalent", "Tests unitaires (Jest, Vitest)", "CI/CD (GitHub Actions, Docker)",
-      "GraphQL", "Redis", "AWS / GCP", "Kubernetes", "Python", "Architecture microservices",
-      "Docker", "MongoDB", "Terraform", "Elasticsearch",
-    ],
-  },
-  {
-    category: "relationnelle",
-    title: "Compétences relationnelles",
-    badge: "bg-[#CCB8FF]/15 text-[#6b4ec4] border-[#CCB8FF]/20",
-    catalogue: [
-      "Communication claire avec des non-techniques", "Autonomie sur des sujets complexes",
-      "Feedback constructif en code review", "Facilitation de décisions techniques en équipe",
-      "Écoute active", "Gestion des conflits", "Influence sans autorité", "Présentation en comité",
-      "Négociation", "Intelligence émotionnelle", "Travail en équipe cross-fonctionnelle",
-    ],
-  },
-  {
-    category: "comportementale",
-    title: "Compétences comportementales",
-    badge: "bg-[#75DA9F]/15 text-[#1e8f52] border-[#75DA9F]/20",
-    catalogue: [
-      "Orienté livraison et résultats", "Curiosité et veille technologique",
-      "Fiabilité dans les engagements", "Capacité à gérer l'ambiguïté",
-      "Initiative", "Résilience", "Vision long terme", "Exemplarité",
-      "Ownership", "Adaptabilité", "Rigueur", "Esprit critique",
-    ],
-  },
+// Uniquement les métadonnées d'affichage par catégorie : les compétences
+// elles-mêmes viennent du pool noa (jusqu'à 8 par catégorie, cf.
+// generateSkillSuggestions) et de mission_skills (sélection retenue par le
+// recruteur), jamais d'un catalogue générique statique.
+const SKILLS_META: { category: MissionSkillCategory; title: string; badge: string }[] = [
+  { category: "technique", title: "Compétences techniques", badge: "bg-[#99BAF8]/15 text-[#3a6fd4] border-[#99BAF8]/20" },
+  { category: "relationnelle", title: "Compétences relationnelles", badge: "bg-[#CCB8FF]/15 text-[#6b4ec4] border-[#CCB8FF]/20" },
+  { category: "comportementale", title: "Compétences comportementales", badge: "bg-[#75DA9F]/15 text-[#1e8f52] border-[#75DA9F]/20" },
 ];
 
 export function SkillsBoard({ mission, skills: initialSkills }: { mission: Mission; skills: MissionSkill[] }) {
   const [skills, setSkills] = useState<MissionSkill[]>(initialSkills);
+  const [pool, setPool] = useState<SkillSuggestions | null>(null);
   const [filling, setFilling] = useState(false);
   const [customInputs, setCustomInputs] = useState<Record<MissionSkillCategory, string>>({
     technique: "", relationnelle: "", comportementale: "",
   });
   const [, startTransition] = useTransition();
 
-  const isEmpty = skills.length === 0;
+  // Tant que le pool n'a pas été demandé et qu'aucune compétence n'existe
+  // encore, on reste sur l'accroche "Laisser noa suggérer" plutôt que sur la
+  // grille par catégorie.
+  const isEmpty = skills.length === 0 && !pool;
 
   const handleToggle = (category: MissionSkillCategory, name: string) => {
     const existing = skills.find((s) => s.category === category && s.name === name);
@@ -89,11 +68,15 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
     });
   };
 
+  // Ne pré-sélectionne (insère en base) que les compétences indispensables ;
+  // le pool complet (indispensables + complémentaires, jusqu'à 8/catégorie)
+  // est gardé en état local pour afficher aussi les suggestions à cocher.
   const handleFillSuggestions = () => {
     setFilling(true);
     startTransition(async () => {
-      const created = await fillSkillSuggestions(mission.id);
-      setSkills((prev) => [...prev, ...created]);
+      const { inserted, pool: freshPool } = await fillSkillSuggestions(mission.id);
+      setSkills((prev) => [...prev, ...inserted]);
+      setPool(freshPool);
       setFilling(false);
     });
   };
@@ -128,8 +111,29 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
           </div>
         ) : (
           <div className="flex flex-col gap-4 mb-8">
-            {SKILLS_CATALOGUE.map((cat) => {
+            {!pool && (
+              <div className="flex justify-end -mb-1">
+                <button
+                  onClick={handleFillSuggestions}
+                  disabled={filling}
+                  title="Affiche jusqu'à 8 compétences suggérées par catégorie, dont celles jugées indispensables déjà cochées"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[#3a6fd4] bg-[#99BAF8]/10 hover:bg-[#99BAF8]/20 px-3 py-2 rounded-xl transition-all disabled:opacity-60"
+                >
+                  <Zap size={12} />
+                  {filling ? "noa suggère…" : "Voir les suggestions noa"}
+                </button>
+              </div>
+            )}
+            {SKILLS_META.map((cat) => {
               const catSkills = skills.filter((s) => s.category === cat.category);
+              const selectedNames = new Set(catSkills.map((s) => s.name));
+              const poolItems = pool?.[cat.category] ?? [];
+              // Suggestions du pool non retenues : affichées non cochées, à choisir.
+              const unselectedPool = poolItems.filter((p) => !selectedNames.has(p.name));
+              // Compétences retenues qui ne viennent pas du pool (ajout manuel,
+              // ou sélection d'une session précédente) : toujours affichées.
+              const poolNames = new Set(poolItems.map((p) => p.name));
+              const customSelected = catSkills.filter((s) => !poolNames.has(s.name));
               const checkedCount = catSkills.length;
               return (
                 <Card key={cat.category} className="p-5">
@@ -142,33 +146,38 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
 
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap gap-1.5">
-                      {cat.catalogue.map((name) => {
-                        const active = catSkills.some((s) => s.name === name);
-                        return (
-                          <button
-                            key={name}
-                            onClick={() => handleToggle(cat.category, name)}
-                            className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
-                              active
-                                ? "bg-[#010101] text-white border-[#010101]"
-                                : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
-                            }`}
-                          >
-                            {active && <Check size={9} className="inline mr-1 mb-0.5" />}
-                            {name}
-                          </button>
-                        );
-                      })}
-                      {catSkills.filter((s) => !cat.catalogue.includes(s.name)).map((s) => (
+                      {catSkills.length === 0 && unselectedPool.length === 0 && (
+                        <p className="text-xs text-gray-300 italic">Aucune compétence pour cette catégorie.</p>
+                      )}
+                      {customSelected.map((s) => (
                         <button
                           key={s.id}
                           onClick={() => handleToggle(cat.category, s.name)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-full border transition-all bg-[#010101] text-white border-[#010101]"
+                          title="Retirer"
+                          className="text-xs font-medium px-3 py-1.5 rounded-full border transition-all bg-[#010101] text-white border-[#010101] hover:bg-gray-800"
                         >
                           <Check size={9} className="inline mr-1 mb-0.5" />
                           {s.name}
                         </button>
                       ))}
+                      {poolItems.map((p) => {
+                        const active = selectedNames.has(p.name);
+                        return (
+                          <button
+                            key={p.name}
+                            onClick={() => handleToggle(cat.category, p.name)}
+                            title={active ? "Retirer" : "Ajouter (suggestion noa)"}
+                            className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
+                              active
+                                ? "bg-[#010101] text-white border-[#010101] hover:bg-gray-800"
+                                : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                            }`}
+                          >
+                            {active && <Check size={9} className="inline mr-1 mb-0.5" />}
+                            {p.name}
+                          </button>
+                        );
+                      })}
                     </div>
                     <div className="flex gap-2 pt-1 border-t border-gray-100">
                       <input

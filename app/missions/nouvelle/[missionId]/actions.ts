@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentRecruiter, getMission, getMissionObjectives } from "@/lib/noa/queries";
-import type { Company, Mission, MissionSkillCategory } from "@/lib/noa/types";
+import { getCurrentRecruiter, getMission, getMissionObjectives, getMissionSkills } from "@/lib/noa/queries";
+import type { Company, Mission, MissionSkill, MissionSkillCategory } from "@/lib/noa/types";
 import {
   generateObjectiveSuggestions,
   generateSkillSuggestions,
@@ -119,20 +119,34 @@ const NOA_OBJ_SUGGESTIONS = [
   { label: "Améliorer la couverture de tests", metric: "Taux de couverture sur les modules critiques", deadline: "2 mois", threshold: "> 80 %" },
 ];
 
-export async function fillObjectiveSuggestions(missionId: string, startPosition: number) {
-  const { mission, recruiter } = await assertOwnedMission(missionId);
-  const supabase = await createClient();
-
-  // noa propose des objectifs à partir du contexte + mission + profil entreprise.
-  // Repli sur des suggestions statiques si l'IA échoue.
-  let suggestions: ObjectiveSuggestion[] = NOA_OBJ_SUGGESTIONS;
+// noa propose des objectifs à partir du contexte + mission + profil entreprise.
+// Repli sur des suggestions statiques si l'IA échoue. Partagé par les actions
+// qui écrivent en base (fillObjectiveSuggestions, regenerateObjectiveSuggestions)
+// et par celle en lecture seule (getObjectiveSuggestions).
+async function suggestObjectives(mission: Mission, recruiter: { company: Company | null }): Promise<ObjectiveSuggestion[]> {
   try {
     const generated = await generateObjectiveSuggestions(missionCtx(mission, recruiter.company));
-    if (generated.length) suggestions = generated;
+    if (generated.length) return generated;
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Suggestions d'objectifs échouées, repli statique : ${err?.message ?? String(e)}`);
   }
+  return NOA_OBJ_SUGGESTIONS;
+}
+
+// Lecture seule : suggestions à afficher au fil de l'eau (ex. sur une carte
+// d'objectif créée manuellement), sans rien écrire en base. C'est le
+// recruteur qui décide, via "Utiliser", lesquelles retenir.
+export async function getObjectiveSuggestions(missionId: string): Promise<ObjectiveSuggestion[]> {
+  const { mission, recruiter } = await assertOwnedMission(missionId);
+  return suggestObjectives(mission, recruiter);
+}
+
+export async function fillObjectiveSuggestions(missionId: string, startPosition: number) {
+  const { mission, recruiter } = await assertOwnedMission(missionId);
+  const supabase = await createClient();
+
+  const suggestions = await suggestObjectives(mission, recruiter);
 
   const { data } = await supabase
     .from("mission_objectives")
@@ -144,6 +158,35 @@ export async function fillObjectiveSuggestions(missionId: string, startPosition:
         deadline: s.deadline,
         threshold: s.threshold,
         position: startPosition + i,
+      })),
+    )
+    .select("*");
+  revalidatePath(`/missions/nouvelle/${mission.id}/resultats`);
+  return data ?? [];
+}
+
+// Remplace tous les objectifs existants par une nouvelle proposition noa,
+// pour "challenger" les KPI quand la vision du recruteur (résumé exécutif) a
+// été revue depuis leur dernière génération. Destructif : le recruteur est
+// prévenu côté UI avant l'appel (confirm()).
+export async function regenerateObjectiveSuggestions(missionId: string) {
+  const { mission, recruiter } = await assertOwnedMission(missionId);
+  const supabase = await createClient();
+
+  const suggestions = await suggestObjectives(mission, recruiter);
+
+  await supabase.from("mission_objectives").delete().eq("mission_id", mission.id);
+
+  const { data } = await supabase
+    .from("mission_objectives")
+    .insert(
+      suggestions.map((s, i) => ({
+        mission_id: mission.id,
+        label: s.label,
+        metric: s.metric,
+        deadline: s.deadline,
+        threshold: s.threshold,
+        position: i,
       })),
     )
     .select("*");
@@ -197,39 +240,75 @@ export async function addCustomSkill(missionId: string, category: MissionSkillCa
 }
 
 const NOA_SKILL_SUGGESTIONS: SkillSuggestions = {
-  technique: ["TypeScript / JavaScript avancé", "React & Next.js", "Node.js / API REST", "PostgreSQL ou équivalent"],
-  relationnelle: ["Communication claire avec des non-techniques", "Autonomie sur des sujets complexes", "Feedback constructif en code review"],
-  comportementale: ["Orienté livraison et résultats", "Curiosité et veille technologique", "Fiabilité dans les engagements"],
+  technique: [
+    { name: "TypeScript / JavaScript avancé", essential: true },
+    { name: "React & Next.js", essential: true },
+    { name: "Node.js / API REST", essential: true },
+    { name: "PostgreSQL ou équivalent", essential: false },
+  ],
+  relationnelle: [
+    { name: "Communication claire avec des non-techniques", essential: true },
+    { name: "Autonomie sur des sujets complexes", essential: true },
+    { name: "Feedback constructif en code review", essential: false },
+  ],
+  comportementale: [
+    { name: "Orienté livraison et résultats", essential: true },
+    { name: "Curiosité et veille technologique", essential: true },
+    { name: "Fiabilité dans les engagements", essential: false },
+  ],
 };
 
-export async function fillSkillSuggestions(missionId: string) {
-  const { mission, recruiter } = await assertOwnedMission(missionId);
-  const supabase = await createClient();
-
-  // noa propose des compétences à partir du contexte + mission + objectifs
-  // + profil entreprise. Repli sur des suggestions statiques si l'IA échoue.
-  let suggestions: SkillSuggestions = NOA_SKILL_SUGGESTIONS;
+// noa propose des compétences (indispensables + complémentaires) à partir du
+// contexte + mission + objectifs + profil entreprise. Repli sur des
+// suggestions statiques si l'IA échoue. Partagé par fillSkillSuggestions
+// (écrit en base) et getSkillSuggestions (lecture seule).
+async function suggestSkills(mission: Mission, recruiter: { company: Company | null }): Promise<SkillSuggestions> {
   try {
     const objectives = await getMissionObjectives(mission.id);
     const generated = await generateSkillSuggestions(missionCtx(mission, recruiter.company), objectives);
     if (generated.technique.length || generated.relationnelle.length || generated.comportementale.length) {
-      suggestions = generated;
+      return generated;
     }
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Suggestions de compétences échouées, repli statique : ${err?.message ?? String(e)}`);
   }
+  return NOA_SKILL_SUGGESTIONS;
+}
+
+// Lecture seule : le pool complet (indispensables + complémentaires, jusqu'à
+// 8 par catégorie) à afficher comme suggestions cochables, sans rien écrire
+// en base tant que le recruteur n'a pas coché/décoché lui-même.
+export async function getSkillSuggestions(missionId: string): Promise<SkillSuggestions> {
+  const { mission, recruiter } = await assertOwnedMission(missionId);
+  return suggestSkills(mission, recruiter);
+}
+
+// Ne pré-sélectionne (n'insère en base) que les compétences que noa juge
+// indispensables (essential=true) ; les complémentaires restent de simples
+// suggestions à cocher, affichées côté client à partir du pool retourné.
+export async function fillSkillSuggestions(missionId: string): Promise<{ inserted: MissionSkill[]; pool: SkillSuggestions }> {
+  const { mission, recruiter } = await assertOwnedMission(missionId);
+  const supabase = await createClient();
+
+  const suggestions = await suggestSkills(mission, recruiter);
+  const existing = await getMissionSkills(mission.id);
 
   const rows: { mission_id: string; category: MissionSkillCategory; name: string; position: number }[] = [];
   (Object.keys(suggestions) as MissionSkillCategory[]).forEach((category) => {
-    suggestions[category].forEach((name, i) => {
-      rows.push({ mission_id: mission.id, category, name, position: i });
+    const existingInCategory = existing.filter((s) => s.category === category);
+    const existingNames = new Set(existingInCategory.map((s) => s.name));
+    const essentials = suggestions[category].filter((s) => s.essential && !existingNames.has(s.name));
+    essentials.forEach((s, i) => {
+      rows.push({ mission_id: mission.id, category, name: s.name, position: existingInCategory.length + i });
     });
   });
 
+  if (!rows.length) return { inserted: [], pool: suggestions };
+
   const { data } = await supabase.from("mission_skills").insert(rows).select("*");
   revalidatePath(`/missions/nouvelle/${mission.id}/competences`);
-  return data ?? [];
+  return { inserted: (data as MissionSkill[]) ?? [], pool: suggestions };
 }
 
 // ─── Validation de la fiche de poste ───────────────────────────────────────

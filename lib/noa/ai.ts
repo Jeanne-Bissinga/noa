@@ -53,21 +53,44 @@ Intitulé du poste : ${ctx.title}
 Mission du poste : ${ctx.missionText || "(non renseignée)"}${companyLines(ctx.company)}`;
 }
 
-const MISSION_SYSTEM = `Tu es noa, un assistant de recrutement expert. À partir du contexte fourni par le recruteur, tu rédiges la "mission du poste" : 1 à 5 phrases décrivant la raison d'être du poste et son impact stratégique.
+// Contexte brut saisi à l'étape "Pourquoi ce recrutement ?", avant que noa ne
+// le transforme en résumé exécutif (missions.mission_text). Distinct de
+// MissionContext, qui lui porte le résumé déjà rédigé (utilisé par les
+// générateurs des étapes suivantes : objectifs, compétences).
+export type MissionDraftContext = {
+  reason: string;
+  reasonDetail: string;
+  title: string;
+  startingPoint: string;
+  targetObjective: string;
+};
+
+const MISSION_SYSTEM = `Tu es noa, un assistant de recrutement expert, méthode Scorecard (Topgrading). À partir du point de départ et de l'objectif fournis par le recruteur, tu rédiges la MISSION du poste : 1 à 3 phrases (jamais plus de 5) décrivant sa raison d'être.
+
+Structure à respecter (imite exactement ce gabarit) :
+[Verbes d'action à l'infinitif + périmètre concret du poste], en collaboration avec [équipe / interlocuteurs concernés], pour [finalité / impact recherché].
 
 Règles :
-- Formule l'impact attendu en termes concrets et si possible mesurables.
-- Précise le périmètre d'action.
-- Évite les formulations vagues et les listes de tâches.
+- Ouvre par 2 à 4 verbes d'action à l'infinitif qui décrivent concrètement ce que fait le poste au quotidien (ex : concevoir, développer, maintenir, piloter, structurer, coordonner...), jamais une formulation abstraite.
+- Précise le périmètre : technologies, produit, processus ou domaine concerné — reprends ce que le recruteur a fourni, n'invente pas de détails absents du contexte.
+- Mentionne, si le contexte le permet, l'équipe ou les interlocuteurs avec qui le poste collabore ("en collaboration avec...").
+- Termine par la finalité recherchée ("pour..."). Sur un poste business/stratégique, chiffre et date cet impact quand c'est naturel (ex : "doubler le CA en 2 ans"). Sur un poste technique/opérationnel/junior, une finalité concrète et qualitative suffit (ex : "accélérer la roadmap et améliorer l'expérience utilisateur") — les chiffres précis (KPI, seuils, délais) seront définis séparément à l'étape suivante, ne les invente pas ici.
+- Concret toujours, vague jamais : rejette les formulations qui pourraient s'appliquer à n'importe quel poste (ex : "développer les ventes", "améliorer les choses").
 - Écris en français, à la 3e personne, ton professionnel et direct.
-- Réponds UNIQUEMENT avec le texte de la mission, sans préambule, sans titre, sans guillemets.`;
+- Réponds UNIQUEMENT avec le texte de la mission, sans préambule, sans titre, sans guillemets.
+
+Calibrage (imite le bon, évite le mauvais) :
+- Bon (poste business) : « Développer et piloter la stratégie commerciale pour doubler le CA en 2 ans. »
+- Bon (poste technique/junior) : « Concevoir, développer et maintenir des fonctionnalités produit robustes en React/Node.js, en collaboration avec l'équipe produit, pour accélérer la roadmap et améliorer l'expérience utilisateur. »
+- Mauvais : « Développer les ventes » → pas de verbe d'action concret ni de périmètre, trop vague.`;
 
 /**
- * Rédige la "mission du poste" à partir du contexte défini à l'étape 1 de la
- * création de mission. Retourne le texte généré, ou "" en cas d'échec, l'appelant
- * décide du fallback (typiquement : garder le texte brut du recruteur).
+ * Rédige le résumé exécutif du poste à partir du point de départ et de
+ * l'objectif saisis à l'étape "Pourquoi ce recrutement ?". Retourne le texte
+ * généré, ou "" en cas d'échec, l'appelant décide du fallback (typiquement :
+ * garder le texte brut du recruteur).
  */
-export async function generateMissionText(ctx: MissionContext): Promise<string> {
+export async function generateMissionText(ctx: MissionDraftContext): Promise<string> {
   // Instancié ici (pas au niveau module) : le constructeur lève si la clé est
   // absente, et on veut que cette erreur soit capturée par l'appelant (fallback)
   // plutôt qu'au moment de l'import du module.
@@ -77,7 +100,8 @@ export async function generateMissionText(ctx: MissionContext): Promise<string> 
     REASON_LABEL[ctx.reason] ?? ctx.reason
   }${ctx.reasonDetail ? ` (${ctx.reasonDetail})` : ""}
 Intitulé du poste : ${ctx.title}
-Missions macro esquissées par le recruteur : ${ctx.missionText || "(non renseignées)"}`;
+Point de départ (situation actuelle) : ${ctx.startingPoint || "(non renseigné)"}
+Objectif visé (avec échéance) : ${ctx.targetObjective || "(non renseigné)"}`;
 
   const response = await client.messages.create(
     {
@@ -142,15 +166,16 @@ export type ObjectiveSuggestion = {
   threshold: string;
 };
 
-const OBJECTIVES_SYSTEM = `Tu es noa, un assistant de recrutement expert. À partir du contexte, de la mission du poste et du profil de l'entreprise, tu proposes les résultats attendus (objectifs) pour les 6 premiers mois.
+const OBJECTIVES_SYSTEM = `Tu es noa, un assistant de recrutement expert. À partir du contexte, du résumé exécutif du poste et du profil de l'entreprise, tu proposes les résultats attendus (KPI) pour les 6 premiers mois.
 
 Règles :
-- Propose 3 à 4 objectifs, ancrés sur la mission ET le secteur, la taille et l'objectif de l'entreprise. Chaque objectif doit être spécifique à CE poste dans CETTE entreprise.
+- Propose 5 à 7 objectifs, ancrés sur le résumé exécutif ET le motif du recrutement, le secteur, la taille et l'objectif de l'entreprise. Chaque objectif doit être spécifique à CE poste dans CETTE entreprise.
 - Un objectif est un RÉSULTAT chiffré, jamais une tâche ni une activité.
+- Règle d'or : si ce n'est pas mesurable, ce n'est pas un résultat.
 - label : intitulé clair et concret du résultat visé.
 - metric : la métrique précise qui mesure ce résultat.
-- deadline : un délai réaliste (ex : "3 mois", "6 mois").
-- threshold : TOUJOURS un chiffre ou un critère vérifiable (jamais "à définir" ni un adjectif seul).
+- deadline : un délai réaliste, cohérent avec les jalons de bilan à 30, 60 ou 90 jours (ex : "30 jours", "60 jours", "90 jours"), ou au-delà si l'objectif le justifie.
+- threshold : TOUJOURS un chiffre ou un critère vérifiable (jamais "à définir" ni un adjectif seul). Chaque objectif doit pouvoir être évalué sans ambiguïté lors des bilans 30-60-90 jours.
 
 Calibrage (imite le bon, évite le mauvais) :
 - Bon : « Doubler le CA en 2 ans en pilotant la stratégie commerciale » (résultat chiffré, mesurable).
@@ -197,17 +222,23 @@ export async function generateObjectiveSuggestions(
 }
 
 // ─── Compétences (étape 4 « Compétences ») ─────────────────────────────────
+// essential=true : compétence indispensable, noa la pré-sélectionne d'emblée.
+// essential=false : suggestion complémentaire, affichée mais laissée au choix
+// du recruteur (case non cochée).
+export type SkillItem = { name: string; essential: boolean };
 export type SkillSuggestions = {
-  technique: string[];
-  relationnelle: string[];
-  comportementale: string[];
+  technique: SkillItem[];
+  relationnelle: SkillItem[];
+  comportementale: SkillItem[];
 };
 
 const SKILLS_SYSTEM = `Tu es noa, un assistant de recrutement expert. À partir du contexte, de la mission, des objectifs et du profil de l'entreprise, tu proposes les compétences clés du poste.
 
 Règles :
 - Réparties en 3 catégories : techniques, relationnelles, comportementales.
-- 4 à 6 compétences par catégorie, adaptées au poste et aux objectifs.
+- Maximum 8 compétences par catégorie. Parmi elles :
+  - essential=true pour les 4 à 6 compétences réellement INDISPENSABLES au poste (le recruteur les verra pré-sélectionnées).
+  - essential=false pour 2 à 3 compétences complémentaires, pertinentes mais non bloquantes (suggérées, à cocher par le recruteur s'il les retient).
 - Les compétences TECHNIQUES doivent provenir de la stack de l'entreprise (si fournie) ou en découler directement. N'invente pas de technologies non pertinentes pour ce contexte.
 - Les compétences relationnelles et comportementales doivent refléter la mission, la culture et la taille de l'entreprise (ex : autonomie forte en petite structure, coordination transverse en grande équipe).
 - Formulations concises (2 à 6 mots).
@@ -220,7 +251,8 @@ Rejette les compétences génériques applicables à n'importe quel poste. Fran�
 
 /**
  * Propose des compétences par catégorie à partir du contexte + mission + objectifs
- * (étapes 1-3). Lève en cas d'échec ; l'appelant retombe sur des suggestions statiques.
+ * (étapes 1-3), avec une distinction indispensable/complémentaire (essential).
+ * Lève en cas d'échec ; l'appelant retombe sur des suggestions statiques.
  */
 export async function generateSkillSuggestions(
   ctx: MissionContext,
@@ -236,18 +268,32 @@ export async function generateSkillSuggestions(
 Objectifs / résultats attendus :
 ${objectivesText || "(aucun objectif défini)"}`;
 
+  const skillItemSchema = {
+    type: "array",
+    maxItems: 8,
+    items: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        essential: { type: "boolean" },
+      },
+      required: ["name", "essential"],
+      additionalProperties: false,
+    },
+  } as const;
+
   return generateStructured<SkillSuggestions>({
     system: SKILLS_SYSTEM,
     user,
     toolName: "proposer_competences",
-    toolDescription: "Enregistre les compétences clés proposées, réparties par catégorie.",
+    toolDescription: "Enregistre les compétences clés proposées, réparties par catégorie, avec leur caractère indispensable ou non.",
     maxTokens: 2048,
     schema: {
       type: "object",
       properties: {
-        technique: { type: "array", items: { type: "string" } },
-        relationnelle: { type: "array", items: { type: "string" } },
-        comportementale: { type: "array", items: { type: "string" } },
+        technique: skillItemSchema,
+        relationnelle: skillItemSchema,
+        comportementale: skillItemSchema,
       },
       required: ["technique", "relationnelle", "comportementale"],
       additionalProperties: false,

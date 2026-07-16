@@ -68,8 +68,8 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
                   className="w-full text-sm text-[#010101] leading-relaxed bg-gray-50 rounded-xl border border-gray-200 p-3 focus:outline-none focus:border-[#99BAF8] resize-none"
                 />
                 <div className="bg-[#99BAF8]/6 border border-[#99BAF8]/20 rounded-xl p-3.5 text-xs text-gray-500 leading-relaxed">
-                  <p className="font-semibold text-[#3a6fd4] mb-1">Méthode, 1 à 5 phrases</p>
-                  <p>Résumez la raison d'être du poste et son impact stratégique. Soyez précis et mesurable.</p>
+                  <p className="font-semibold text-[#3a6fd4] mb-1">Méthode Scorecard, 1 à 3 phrases</p>
+                  <p>[Verbes d'action + périmètre concret], en collaboration avec [équipe], pour [finalité]. Les KPI précis (chiffres, seuils, délais) se définissent à l'étape suivante, pas ici.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="bg-[#75DA9F]/8 border border-[#75DA9F]/20 rounded-xl p-3">
@@ -78,9 +78,10 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
                     </p>
                     <ul className="flex flex-col gap-1.5">
                       {[
-                        "Formuler l'impact attendu en termes mesurables",
-                        "Préciser le périmètre d'action concret",
-                        `Ex : "Doubler le CA en 2 ans en pilotant la stratégie commerciale"`,
+                        "Ouvrir par des verbes d'action concrets (concevoir, piloter, structurer…)",
+                        "Préciser le périmètre et, si pertinent, l'équipe avec qui collaborer",
+                        `Ex. business : "Développer et piloter la stratégie commerciale pour doubler le CA en 2 ans."`,
+                        `Ex. technique : "Concevoir, développer et maintenir des fonctionnalités produit en React/Node.js, en collaboration avec l'équipe produit, pour accélérer la roadmap."`,
                       ].map((d) => (
                         <li key={d} className="flex items-start gap-1.5 text-xs text-gray-500 leading-relaxed">
                           <div className="w-1 h-1 rounded-full bg-[#75DA9F] mt-1.5 flex-shrink-0" />
@@ -95,8 +96,8 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
                     </p>
                     <ul className="flex flex-col gap-1.5">
                       {[
-                        "Les formulations vagues sans chiffre ni résultat",
-                        "Lister des tâches plutôt que des missions",
+                        "Les formulations vagues, sans verbe d'action ni périmètre",
+                        "Lister des tâches plutôt que décrire une mission",
                         `Ex : "Développer les ventes" → trop vague`,
                       ].map((d) => (
                         <li key={d} className="flex items-start gap-1.5 text-xs text-gray-500 leading-relaxed">
