@@ -2,22 +2,31 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Check, FileText } from "lucide-react";
+import { ChevronRight, Check, X, FileText } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink } from "@/components/noa/ui-primitives";
 import { CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { CvModal } from "./cv-modal";
 import { CandidateFrise } from "./candidate-frise";
-import type { Candidate, CandidateExperience, CandidateSkill } from "@/lib/noa/types";
+import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
+
+// Dernière décision actée (hors "reporté", qui ne clôt rien) pour une étape
+// donnée. STATUS_FIELDS marque les 3 étapes "done" dès que le candidat est
+// "Non retenu", quelle que soit l'étape réelle du refus (cf. lib/noa/labels.ts)
+// — on recroise donc avec `decisions` pour savoir CE QUI s'est vraiment passé.
+function lastDecision(decisions: Decision[], stage: Decision["stage"]): Decision | null {
+  return decisions.filter((d) => d.stage === stage && d.status !== "reporte").pop() ?? null;
+}
 
 export function CandidateDetail({
-  candidate, experiences, skills, cvSignedUrl,
+  candidate, experiences, skills, cvSignedUrl, decisions,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidate: Candidate;
   experiences: CandidateExperience[];
   skills: CandidateSkill[];
   cvSignedUrl: string | null;
+  decisions: Decision[];
   screeningStarted: boolean;
   screeningInterviewDone: boolean;
   topgradingStarted: boolean;
@@ -28,6 +37,10 @@ export function CandidateDetail({
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = CANDIDATE_AVATAR_COLOR[candidate.status] ?? "bg-gray-100 text-gray-500";
 
+  const screeningDecision = lastDecision(decisions, "screening");
+  const topgradingDecision = lastDecision(decisions, "topgrading");
+  const finalDecision = lastDecision(decisions, "final");
+
   const allDone = candidate.screening_status === "done" && candidate.topgrading_status === "done";
   const scoreColor = candidate.score !== null
     ? candidate.score >= 75 ? "text-[#1e8f52]" : candidate.score >= 50 ? "text-[#3a6fd4]" : "text-red-400"
@@ -36,10 +49,13 @@ export function CandidateDetail({
     ? candidate.score >= 75 ? "bg-[#75DA9F]/12 border-[#75DA9F]/25" : candidate.score >= 50 ? "bg-[#99BAF8]/12 border-[#99BAF8]/25" : "bg-red-50 border-red-100"
     : "";
 
+  // Basé sur l'entretien réellement mené (pas sur *_status, forcé "done" par
+  // STATUS_FIELDS pour "Non retenu") : un candidat refusé au screening n'a
+  // jamais eu de Topgrading, cette étape ne doit donc pas apparaître ici.
   const completedSteps = [
-    candidate.screening_status === "done" && { key: "screening" as const, label: "Screening" },
-    candidate.topgrading_status === "done" && { key: "topgrading" as const, label: "Topgrading" },
-  ].filter(Boolean) as { key: "screening" | "topgrading"; label: string }[];
+    screeningInterviewDone && { key: "screening" as const, label: "Screening", decision: screeningDecision },
+    topgradingInterviewDone && { key: "topgrading" as const, label: "Topgrading", decision: topgradingDecision },
+  ].filter(Boolean) as { key: "screening" | "topgrading"; label: string; decision: Decision | null }[];
 
   return (
     <AppLayout headerTitle={name}>
@@ -122,6 +138,9 @@ export function CandidateDetail({
             screeningInterviewDone={screeningInterviewDone}
             topgradingStarted={topgradingStarted}
             topgradingInterviewDone={topgradingInterviewDone}
+            screeningRejected={screeningDecision?.status === "non_retenu"}
+            topgradingRejected={topgradingDecision?.status === "non_retenu"}
+            finalRejected={finalDecision?.status === "non_retenu"}
           />
         </Card>
 
@@ -134,10 +153,19 @@ export function CandidateDetail({
                 <Link href={`/candidats/${candidate.id}/synthese?step=${step.key}`} className="block">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-[#75DA9F]/15 flex items-center justify-center flex-shrink-0">
-                        <Check size={11} className="text-[#1e8f52]" />
-                      </div>
+                      {step.decision?.status === "non_retenu" ? (
+                        <div className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                          <X size={11} className="text-red-400" />
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-[#75DA9F]/15 flex items-center justify-center flex-shrink-0">
+                          <Check size={11} className="text-[#1e8f52]" />
+                        </div>
+                      )}
                       <p className="text-sm font-semibold text-[#010101]">{step.label}</p>
+                      {step.decision?.status === "non_retenu" && (
+                        <Badge color="red">Non retenu</Badge>
+                      )}
                     </div>
                     <ChevronRight size={14} className="text-gray-300" />
                   </div>

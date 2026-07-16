@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users, Plus, FileText, Check, AlertTriangle } from "lucide-react";
+import { Users, Plus, FileText, Check, Target, Award } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Badge, LinkBtn, BackLink, Avatar } from "@/components/noa/ui-primitives";
 import {
@@ -72,8 +72,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
   ]);
 
   const skillsByCategory = (["technique", "relationnelle", "comportementale"] as MissionSkillCategory[])
-    .map((category) => ({ category, items: skills.filter((s) => s.category === category) }))
-    .filter((block) => block.items.length > 0);
+    .map((category) => ({ category, items: skills.filter((s) => s.category === category) }));
 
   return (
     <AppLayout headerTitle={mission.title}>
@@ -101,71 +100,101 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
           <ProcessFrise active={mission.process_step} />
         </Card>
 
-        {/* Fiche de poste */}
-        <Card className="overflow-hidden mb-8">
-          <div className="p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#99BAF8]/15 flex items-center justify-center text-[#3a6fd4] flex-shrink-0 mt-0.5">
-                  <FileText size={15} />
+        {/* Fiche de poste — même structure que /fiche-finale : une carte par
+            section plutôt qu'une grille dense, plus lisible. */}
+        <div className="flex flex-col gap-4 mb-8">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#99BAF8]/12">
+                  <FileText size={12} className="text-[#3a6fd4]" />
                 </div>
-                <div>
-                  <p className="font-semibold text-sm text-[#010101] mb-2">Fiche de poste</p>
-                  <p className="text-sm text-gray-600 leading-relaxed">{mission.mission_text || "Aucune mission rédigée pour le moment."}</p>
-                </div>
+                <h3 className="font-semibold text-[#010101] text-sm">Mission</h3>
               </div>
-              <Link
-                href={`/missions/nouvelle/${mission.id}/resume`}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#3a6fd4] hover:text-[#2a5cb8] flex-shrink-0 mt-0.5 transition-colors"
-              >
-                Voir plus de détails
+              <Link href={`/missions/nouvelle/${mission.id}/resume`} className="text-xs font-semibold text-[#3a6fd4] hover:text-[#2a5cb8] transition-colors">
+                Modifier
               </Link>
             </div>
-          </div>
+            <p className="text-sm text-gray-600 leading-relaxed">{mission.mission_text || "Aucune mission rédigée pour le moment."}</p>
+          </Card>
 
-          {(objectives.length > 0 || skillsByCategory.length > 0) && (
-            <div className="px-5 pb-5 pt-1 border-t border-black/[0.04]">
-              <div className="grid grid-cols-2 gap-6 pt-4">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Résultats attendus</p>
-                  <div className="flex flex-col gap-2.5">
-                    {objectives.length === 0 && <p className="text-xs text-gray-400">Aucun objectif défini.</p>}
-                    {objectives.map((o) => {
-                      const ok = Boolean(o.metric && o.deadline && o.threshold);
-                      return (
-                        <div key={o.id} className="flex items-start gap-2">
-                          <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 ${ok ? "bg-[#75DA9F]/20 text-[#1e8f52]" : "bg-orange-50 text-orange-400"}`}>
-                            {ok ? <Check size={10} /> : <AlertTriangle size={9} />}
-                          </div>
-                          <div>
-                            <p className="text-sm text-[#010101] font-medium leading-snug">{o.label}</p>
-                            <p className="text-xs text-gray-400">{[o.metric, o.deadline, o.threshold].filter(Boolean).join(" · ")}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#75DA9F]/12">
+                  <Target size={12} className="text-[#1e8f52]" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Compétences</p>
-                  <div className="flex flex-col gap-3">
-                    {skillsByCategory.length === 0 && <p className="text-xs text-gray-400">Aucune compétence définie.</p>}
-                    {skillsByCategory.map((block) => (
-                      <div key={block.category}>
-                        <p className="text-[10px] font-semibold text-gray-400 mb-1.5">{SKILL_CATEGORY_LABEL[block.category]}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {block.items.map((s) => (
-                            <span key={s.id} className="text-[10px] font-medium bg-gray-100 text-gray-500 rounded-lg px-2 py-0.5">{s.name}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <h3 className="font-semibold text-[#010101] text-sm">Résultats attendus</h3>
               </div>
+              <Link href={`/missions/nouvelle/${mission.id}/resultats`} className="text-xs font-semibold text-[#3a6fd4] hover:text-[#2a5cb8] transition-colors">
+                Modifier
+              </Link>
             </div>
-          )}
-        </Card>
+            {objectives.length === 0 ? (
+              <p className="text-sm text-gray-400">Aucun objectif défini.</p>
+            ) : (
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      <th className="text-left pb-2 pl-1 pr-2 w-6">#</th>
+                      <th className="text-left pb-2 pr-3">KPI</th>
+                      <th className="text-left pb-2 pr-3">Métrique</th>
+                      <th className="text-left pb-2 pr-3">Seuil de réussite</th>
+                      <th className="text-left pb-2 pr-1">Délai</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {objectives.map((o, i) => (
+                      <tr key={o.id} className="align-top">
+                        <td className="py-2.5 pl-1 pr-2 text-gray-300 text-xs font-bold">{i + 1}</td>
+                        <td className="py-2.5 pr-3 text-sm text-[#010101] font-medium leading-snug">{o.label}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-500 leading-snug">{o.metric || "-"}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-600 font-medium leading-snug">{o.threshold || "-"}</td>
+                        <td className="py-2.5 pr-1 whitespace-nowrap">
+                          {o.deadline ? <Badge color="green">{o.deadline}</Badge> : <span className="text-xs text-gray-300">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#CCB8FF]/12">
+                  <Award size={12} className="text-[#6b4ec4]" />
+                </div>
+                <h3 className="font-semibold text-[#010101] text-sm">Compétences</h3>
+              </div>
+              <Link href={`/missions/nouvelle/${mission.id}/competences`} className="text-xs font-semibold text-[#3a6fd4] hover:text-[#2a5cb8] transition-colors">
+                Modifier
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 gap-5">
+              {skillsByCategory.map((block) => (
+                <div key={block.category}>
+                  <div className="text-[10px] font-bold px-2 py-1 rounded-lg mb-2 inline-block bg-gray-100 text-gray-500">{SKILL_CATEGORY_LABEL[block.category]}</div>
+                  {block.items.length === 0 ? (
+                    <p className="text-xs text-gray-300">-</p>
+                  ) : (
+                    <ul className="flex flex-col gap-1">
+                      {block.items.map((s) => (
+                        <li key={s.id} className="text-xs text-gray-500 flex items-start gap-1.5">
+                          <span className="text-gray-300 mt-1 leading-none">·</span>
+                          {s.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
 
         {/* Kanban candidats */}
         <div>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import {
   requireRecruiter, getCandidate, getCandidateExperiences, getCandidateSkills,
-  getInterview,
+  getInterview, getDecisions,
 } from "@/lib/noa/queries";
 import { createClient } from "@/lib/supabase/server";
 import { CandidateDetail } from "./candidate-detail";
@@ -15,11 +15,12 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
     notFound();
   }
 
-  const [experiences, skills, screeningInterview, topgradingInterview] = await Promise.all([
+  const [experiences, skills, screeningInterview, topgradingInterview, decisions] = await Promise.all([
     getCandidateExperiences(candidate.id),
     getCandidateSkills(candidate.id),
     getInterview(candidate.id, "screening"),
     getInterview(candidate.id, "topgrading"),
+    getDecisions(candidate.id),
   ]);
 
   let cvSignedUrl: string | null = null;
@@ -39,6 +40,7 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
       screeningInterviewDone={screeningInterview?.status === "termine"}
       topgradingStarted={Boolean(topgradingInterview)}
       topgradingInterviewDone={topgradingInterview?.status === "termine"}
+      decisions={decisions}
     />
   );
 }

@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ChevronRight, FileText } from "lucide-react";
+import { Check, ChevronRight, FileText, X } from "lucide-react";
 import { LinkBtn } from "@/components/noa/ui-primitives";
 import type { StageStatus } from "@/lib/noa/types";
+
+// Statut d'affichage local, distinct de StageStatus (persisté en base) :
+// STATUS_FIELDS marque les 3 étapes "done" dès que le candidat est "Non
+// retenu", quelle que soit l'étape réelle du refus (lib/noa/labels.ts). On
+// recroise donc avec les vraies décisions pour ne jamais afficher en vert une
+// étape refusée, ni une étape jamais atteinte après un refus.
+type DisplayStatus = StageStatus | "rejected";
 
 // ─── Route destinations for each step, mirrors STEP_META / SUB_STEP_DEST from
 // the prototype (components/noa/prototype-source.tsx ~line 3162-3194). ───────
@@ -47,6 +54,7 @@ const SUB_STEPS: { key: "prep" | "interview" | "decision"; label: string }[] = [
 export function CandidateFrise({
   candidateId, screening, topgrading, decision,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
+  screeningRejected = false, topgradingRejected = false, finalRejected = false,
 }: {
   candidateId: string;
   screening: StageStatus;
@@ -56,11 +64,21 @@ export function CandidateFrise({
   screeningInterviewDone: boolean;
   topgradingStarted: boolean;
   topgradingInterviewDone: boolean;
+  screeningRejected?: boolean;
+  topgradingRejected?: boolean;
+  finalRejected?: boolean;
 }) {
+  // Un refus ferme le dossier à cette étape : les suivantes n'ont jamais eu
+  // lieu, elles ne doivent donc jamais s'afficher "done" (vert) même si
+  // STATUS_FIELDS les marque ainsi.
+  const screeningDisplay: DisplayStatus = screeningRejected ? "rejected" : screening;
+  const topgradingDisplay: DisplayStatus = screeningRejected ? "none" : topgradingRejected ? "rejected" : topgrading;
+  const decisionDisplay: DisplayStatus = screeningRejected || topgradingRejected ? "none" : finalRejected ? "rejected" : decision;
+
   const steps = [
-    { label: "Screening" as const, status: screening },
-    { label: "Topgrading" as const, status: topgrading },
-    { label: "Décision" as const, status: decision },
+    { label: "Screening" as const, status: screeningDisplay },
+    { label: "Topgrading" as const, status: topgradingDisplay },
+    { label: "Décision" as const, status: decisionDisplay },
   ];
   const activeStep = steps.find((s) => s.status === "current");
 
@@ -71,17 +89,18 @@ export function CandidateFrise({
         {steps.map((step, i) => {
           const done = step.status === "done";
           const cur = step.status === "current";
+          const rejected = step.status === "rejected";
           const curBg = step.label === "Topgrading" ? "bg-[#CCB8FF] text-[#6b4ec4]" : "bg-[#99BAF8] text-[#010101]";
           return (
             <div key={step.label} className="flex items-center">
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  done ? "bg-[#75DA9F] text-white" : cur ? curBg : "bg-gray-100 text-gray-300"
+                  rejected ? "bg-red-100 text-red-400" : done ? "bg-[#75DA9F] text-white" : cur ? curBg : "bg-gray-100 text-gray-300"
                 }`}>
-                  {done ? <Check size={13} /> : i + 1}
+                  {rejected ? <X size={13} /> : done ? <Check size={13} /> : i + 1}
                 </div>
                 <span className={`text-xs font-semibold whitespace-nowrap ${
-                  cur ? "text-[#010101]" : done ? "text-[#1e8f52]" : "text-gray-300"
+                  rejected ? "text-red-400" : cur ? "text-[#010101]" : done ? "text-[#1e8f52]" : "text-gray-300"
                 }`}>{step.label}</span>
               </div>
               {i < steps.length - 1 && (
