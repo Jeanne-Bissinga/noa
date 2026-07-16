@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireRecruiter, getCandidate } from "@/lib/noa/queries";
 import { ensureInterviewAndGrid } from "../actions";
 import { TopgradingGridView } from "./topgrading-grid-view";
-import type { TopgradingEpisode } from "@/lib/noa/synthesis";
+import { PREP_META, type PrepGuideSection } from "@/lib/noa/interview-content";
 
 export default async function TopgradingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,12 +13,15 @@ export default async function TopgradingPage({ params }: { params: Promise<{ id:
     notFound();
   }
 
-  const { interview, grid } = await ensureInterviewAndGrid(candidate.id, "topgrading");
+  const { interview, guide } = await ensureInterviewAndGrid(candidate.id, "topgrading");
+  const guideSections = (guide?.topics as PrepGuideSection[] | undefined)?.length
+    ? (guide!.topics as PrepGuideSection[])
+    : PREP_META.topgrading.guideSections;
 
   return (
     <TopgradingGridView
       candidate={candidate}
-      episodes={grid.criteria as TopgradingEpisode[]}
+      guideSections={guideSections}
       initialTranscript={interview.transcript}
     />
   );

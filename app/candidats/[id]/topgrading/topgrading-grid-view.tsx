@@ -8,18 +8,19 @@ import { TranscriptCapture } from "@/components/noa/transcript-capture";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { finishInterview } from "../actions";
 import type { Candidate } from "@/lib/noa/types";
-import type { TopgradingEpisode } from "@/lib/noa/synthesis";
+import type { PrepGuideSection } from "@/lib/noa/interview-content";
 
 export function TopgradingGridView({
-  candidate, episodes, initialTranscript,
+  candidate, guideSections, initialTranscript,
 }: {
   candidate: Candidate;
-  episodes: TopgradingEpisode[];
+  guideSections: PrepGuideSection[];
   initialTranscript: string | null;
 }) {
   const [transcript, setTranscript] = useState(initialTranscript ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [, startTransition] = useTransition();
 
   const name = `${candidate.first_name} ${candidate.last_name}`;
@@ -66,33 +67,46 @@ export function TopgradingGridView({
           </p>
         </div>
 
-        {/* Guide Topgrading (lecture seule) */}
+        {/* Guide d'entretien (lecture seule) */}
         <div className="flex flex-col gap-4 mb-6">
-          {episodes.map((ep, i) => (
-            <Card key={i} className="p-5">
+          {guideSections.map((section, si) => (
+            <Card key={si} className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <div className="font-bold text-[#010101] text-sm">{ep.co}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{ep.role}</div>
+                  <div className="font-bold text-[#010101] text-sm">{section.title}</div>
+                  {section.subtitle && <div className="text-xs text-gray-400 mt-0.5">{section.subtitle}</div>}
                 </div>
-                {ep.period && <Badge color="violet">{ep.period}</Badge>}
               </div>
               <div className="flex flex-col gap-2.5">
-                {ep.qs.map((item) => (
-                  <div key={item.id} className="bg-gray-50 rounded-xl p-3.5">
-                    <p className="text-xs font-semibold text-gray-700">{item.q}</p>
-                    {item.probes && item.probes.length > 0 && (
-                      <ul className="flex flex-col gap-1 mt-2">
-                        {item.probes.map((probe, pi) => (
-                          <li key={pi} className="flex items-start gap-2 text-xs text-gray-500">
-                            <span className="text-[#CCB8FF] flex-shrink-0 mt-0.5">•</span>
-                            {probe}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
+                {section.questions.map((item, qi) => {
+                  const key = `${si}-${qi}`;
+                  const open = !!expanded[key];
+                  const hasProbes = item.probes && item.probes.length > 0;
+                  return (
+                    <div key={qi} className="bg-gray-50 rounded-xl p-3.5">
+                      <button
+                        onClick={() => hasProbes && setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
+                        disabled={!hasProbes}
+                        className="w-full flex items-start gap-2 text-left disabled:cursor-default"
+                      >
+                        {hasProbes && (
+                          <ChevronRight size={10} className={`text-gray-400 mt-0.5 flex-shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
+                        )}
+                        <p className="text-xs font-semibold text-gray-700">{item.q}</p>
+                      </button>
+                      {open && hasProbes && (
+                        <ul className="flex flex-col gap-1 mt-2 pl-[18px]">
+                          {item.probes.map((probe, pi) => (
+                            <li key={pi} className="flex items-start gap-2 text-xs text-gray-500">
+                              <span className="text-[#CCB8FF] flex-shrink-0 mt-0.5">•</span>
+                              {probe}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           ))}

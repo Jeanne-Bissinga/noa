@@ -48,6 +48,7 @@ export function PreparationView({
   const [guideGenerated, setGuideGenerated] = useState(hasExistingGuide);
   const [guideLoading, setGuideLoading] = useState(false);
   const [guideSections, setGuideSections] = useState<PrepGuideSection[]>(hasExistingGuide ? existingTopics! : []);
+  const [guideExpanded, setGuideExpanded] = useState<Record<string, boolean>>({});
 
   const canGenerateGuide = gridGenerated && format && duration;
   const stepLabel = STEP_LABEL[step];
@@ -317,19 +318,35 @@ export function PreparationView({
                     {section.subtitle && <p className="text-[10px] text-gray-400">{section.subtitle}</p>}
                   </div>
                   <div className="divide-y divide-gray-100">
-                    {section.questions.map((item, qi) => (
-                      <div key={qi} className="px-4 py-3">
-                        <p className="text-[11px] font-semibold text-[#010101] mb-2">{item.q}</p>
-                        <ul className="flex flex-col gap-1.5">
-                          {item.probes.map((probe, pi) => (
-                            <li key={pi} className="flex gap-2 text-[11px] text-gray-600">
-                              <span className="mt-0.5 flex-shrink-0 w-1 h-1 rounded-full bg-gray-300 mt-[6px]" />
-                              {probe}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                    {section.questions.map((item, qi) => {
+                      const key = `${si}-${qi}`;
+                      const open = !!guideExpanded[key];
+                      const hasProbes = item.probes && item.probes.length > 0;
+                      return (
+                        <div key={qi} className="px-4 py-3">
+                          <button
+                            onClick={() => hasProbes && setGuideExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
+                            disabled={!hasProbes}
+                            className="w-full flex items-start gap-2 text-left disabled:cursor-default"
+                          >
+                            {hasProbes && (
+                              <ChevronRight size={11} className={`text-gray-400 mt-0.5 flex-shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
+                            )}
+                            <p className="text-[11px] font-semibold text-[#010101]">{item.q}</p>
+                          </button>
+                          {open && hasProbes && (
+                            <ul className="flex flex-col gap-1.5 mt-2 pl-[19px]">
+                              {item.probes.map((probe, pi) => (
+                                <li key={pi} className="flex gap-2 text-[11px] text-gray-600">
+                                  <span className="mt-0.5 flex-shrink-0 w-1 h-1 rounded-full bg-gray-300 mt-[6px]" />
+                                  {probe}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
