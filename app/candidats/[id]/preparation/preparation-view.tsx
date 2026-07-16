@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import { ChevronRight, Check, Zap, FileText, Plus, X } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink, Badge } from "@/components/noa/ui-primitives";
-import { savePreparation } from "../actions";
+import {
+  savePreparation,
+  generateScreeningGrid, generateScreeningGuide,
+  generateTopgradingGrid, generateTopgradingGuide,
+} from "../actions";
 import { GUIDE_FORMATS, GUIDE_DURATIONS, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
 import type { Candidate, InterviewGuide, InterviewType } from "@/lib/noa/types";
 
@@ -32,26 +36,48 @@ export function PreparationView({
 
   const existingSections = existingGuide?.questions as PrepGridSection[] | undefined;
   const hasExisting = Array.isArray(existingSections) && existingSections.length > 0;
+  const existingTopics = existingGuide?.topics as PrepGuideSection[] | undefined;
+  const hasExistingGuide = Array.isArray(existingTopics) && existingTopics.length > 0;
 
   const [gridGenerated, setGridGenerated] = useState(hasExisting);
-  const [editedSections, setEditedSections] = useState<PrepGridSection[]>(
-    hasExisting ? existingSections! : meta.gridSections.map((s) => ({ ...s, questions: s.questions.map((q) => ({ ...q })) })),
-  );
+  const [gridLoading, setGridLoading] = useState(false);
+  const [editedSections, setEditedSections] = useState<PrepGridSection[]>(hasExisting ? existingSections! : []);
   const [format, setFormat] = useState(existingGuide?.format ?? "");
   const [duration, setDuration] = useState(existingGuide?.duration_minutes ? `${existingGuide.duration_minutes} min` : "");
-  const [guideGenerated, setGuideGenerated] = useState(Boolean(existingGuide));
+  const [guideGenerated, setGuideGenerated] = useState(hasExistingGuide);
+  const [guideLoading, setGuideLoading] = useState(false);
+  const [guideSections, setGuideSections] = useState<PrepGuideSection[]>(hasExistingGuide ? existingTopics! : []);
 
   const canGenerateGuide = gridGenerated && format && duration;
   const stepLabel = STEP_LABEL[step];
   const name = `${candidate.first_name} ${candidate.last_name}`;
 
-  const handleGenerateGrid = () => {
-    setEditedSections(meta.gridSections.map((s) => ({ ...s, questions: s.questions.map((q) => ({ ...q })) })));
-    setGridGenerated(true);
+  const handleGenerateGrid = async () => {
+    setGridLoading(true);
+    try {
+      const sections =
+        step === "screening"
+          ? await generateScreeningGrid(candidate.id)
+          : await generateTopgradingGrid(candidate.id);
+      setEditedSections(sections);
+      setGridGenerated(true);
+    } finally {
+      setGridLoading(false);
+    }
   };
 
-  const handleGenerateGuide = () => {
-    setGuideGenerated(true);
+  const handleGenerateGuide = async () => {
+    setGuideLoading(true);
+    try {
+      const sections =
+        step === "screening"
+          ? await generateScreeningGuide(candidate.id, editedSections)
+          : await generateTopgradingGuide(candidate.id, editedSections);
+      setGuideSections(sections);
+      setGuideGenerated(true);
+    } finally {
+      setGuideLoading(false);
+    }
   };
 
   const updateQuestion = (si: number, qi: number, val: string) => {
@@ -69,7 +95,7 @@ export function PreparationView({
   const handleFinish = () => {
     setPending(true);
     startTransition(async () => {
-      await savePreparation(candidate.id, step, editedSections, format, duration);
+      await savePreparation(candidate.id, step, editedSections, guideSections, format, duration);
     });
   };
 
@@ -108,16 +134,23 @@ export function PreparationView({
           {!gridGenerated && (
             <button
               onClick={handleGenerateGrid}
-              className="w-full group flex items-center gap-4 bg-[#010101] text-white rounded-xl px-5 py-4 hover:bg-gray-900 transition-all text-left"
+              disabled={gridLoading}
+              className="w-full group flex items-center gap-4 bg-[#010101] text-white rounded-xl px-5 py-4 hover:bg-gray-900 transition-all text-left disabled:opacity-70"
             >
               <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                <Zap size={16} className="text-[#FEE831]" />
+                {gridLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-[#FEE831] rounded-full animate-spin" />
+                ) : (
+                  <Zap size={16} className="text-[#FEE831]" />
+                )}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold">Générer la grille d'entretien</p>
-                <p className="text-xs text-gray-400 mt-0.5">noa adapte la grille au poste et au profil de {name}.</p>
+                <p className="text-sm font-semibold">{gridLoading ? "noa génère la grille…" : "Générer la grille d'entretien"}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {gridLoading ? "Analyse du poste et du profil du candidat." : `noa adapte la grille au poste et au profil de ${name}.`}
+                </p>
               </div>
-              <ChevronRight size={15} className="text-gray-500 group-hover:text-white transition-colors" />
+              {!gridLoading && <ChevronRight size={15} className="text-gray-500 group-hover:text-white transition-colors" />}
             </button>
           )}
 
@@ -251,23 +284,30 @@ export function PreparationView({
           {canGenerateGuide && !guideGenerated && (
             <button
               onClick={handleGenerateGuide}
-              className="w-full group flex items-center gap-4 bg-[#010101] text-white rounded-xl px-5 py-4 hover:bg-gray-900 transition-all text-left"
+              disabled={guideLoading}
+              className="w-full group flex items-center gap-4 bg-[#010101] text-white rounded-xl px-5 py-4 hover:bg-gray-900 transition-all text-left disabled:opacity-70"
             >
               <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                <Zap size={16} className="text-[#FEE831]" />
+                {guideLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-[#FEE831] rounded-full animate-spin" />
+                ) : (
+                  <Zap size={16} className="text-[#FEE831]" />
+                )}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold">Générer le guide d'entretien</p>
-                <p className="text-xs text-gray-400 mt-0.5">{format} · {duration} · Adapté au profil de {name}</p>
+                <p className="text-sm font-semibold">{guideLoading ? "noa rédige le guide…" : "Générer le guide d'entretien"}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {guideLoading ? "Questions et relances adaptées au candidat." : `${format} · ${duration} · Adapté au profil de ${name}`}
+                </p>
               </div>
-              <ChevronRight size={15} className="text-gray-500 group-hover:text-white transition-colors" />
+              {!guideLoading && <ChevronRight size={15} className="text-gray-500 group-hover:text-white transition-colors" />}
             </button>
           )}
 
           {guideGenerated && (
             <div className="flex flex-col gap-5">
               <p className="text-xs text-gray-500">{meta.guideIntro}</p>
-              {meta.guideSections.map((section, si) => (
+              {guideSections.map((section, si) => (
                 <div key={si} className="rounded-xl border border-gray-100 overflow-hidden">
                   <div className="bg-gray-50 px-4 py-2.5 flex items-baseline gap-2">
                     <p className="text-xs font-semibold text-[#010101]">{section.title}</p>

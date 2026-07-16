@@ -60,8 +60,10 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
     if (existing) {
       setSkills((prev) => prev.filter((s) => s.id !== existing.id));
     } else {
-      // optimistic placeholder; replaced with the real row once the action resolves
-      const optimistic: MissionSkill = { id: `optimistic-${Date.now()}`, mission_id: mission.id, category, name, position };
+      // optimistic placeholder; replaced with the real row once the action resolves.
+      // id dérivé de (category, name) : unique (un skill déjà présent part par la
+      // branche `existing`) et déterministe, donc pas d'appel impur au rendu.
+      const optimistic: MissionSkill = { id: `optimistic-${category}-${name}`, mission_id: mission.id, category, name, position };
       setSkills((prev) => [...prev, optimistic]);
     }
 

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentRecruiter, getCandidate, getMission } from "@/lib/noa/queries";
 import { STATUS_FIELDS } from "@/lib/noa/labels";
+import { extractCandidateProfile, CV_SUPPORTED_MIME, type CandidateProfileExtract } from "@/lib/noa/ai";
 import type { CandidateStatus } from "@/lib/noa/types";
 
 // ─── Kanban: move a candidate to a new column ──────────────────────────────
@@ -85,15 +86,30 @@ export async function createCandidate(
 
   const supabase = await createClient();
 
+  // Lecture unique du fichier : sert à l'upload ET à l'extraction noa.
+  const buffer = Buffer.from(await cvFile.arrayBuffer());
+
   const safeName = cvFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${recruiter.company_id}/${randomUUID()}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from("cv-attachments")
-    .upload(path, cvFile, { contentType: cvFile.type || undefined });
+    .upload(path, buffer, { contentType: cvFile.type || undefined });
 
   if (uploadError) {
     return { error: `Échec de l'import du CV : ${uploadError.message}` };
+  }
+
+  // noa extrait le profil (titre, localisation, expériences, compétences…) du CV.
+  // PDF/images uniquement. En cas d'échec, la fiche est créée sans enrichissement.
+  let profile: CandidateProfileExtract | null = null;
+  if (CV_SUPPORTED_MIME.test(cvFile.type)) {
+    try {
+      profile = await extractCandidateProfile({ base64: buffer.toString("base64"), mediaType: cvFile.type });
+    } catch (e) {
+      const err = e as { message?: string };
+      console.error(`[noa] Extraction du CV échouée, fiche créée sans enrichissement : ${err?.message ?? String(e)}`);
+    }
   }
 
   const { data, error } = await supabase
@@ -104,6 +120,10 @@ export async function createCandidate(
       first_name: firstName,
       last_name: lastName,
       cv_url: path,
+      title: profile?.title || null,
+      location: profile?.location || null,
+      email: profile?.email || null,
+      summary: profile?.summary || null,
       status: "Screening",
       screening_status: "current",
       topgrading_status: "pending",
@@ -114,6 +134,28 @@ export async function createCandidate(
 
   if (error || !data) {
     return { error: error?.message ?? "Impossible de créer la fiche candidat." };
+  }
+
+  // Expériences et compétences extraites (tables dédiées).
+  if (profile) {
+    const experiences = profile.experiences.filter((exp) => exp.role || exp.company || exp.bullets.length);
+    if (experiences.length) {
+      await supabase.from("candidate_experiences").insert(
+        experiences.map((exp, i) => ({
+          candidate_id: data.id,
+          role: exp.role || null,
+          company: exp.company || null,
+          period: exp.period || null,
+          bullets: exp.bullets ?? [],
+          position: i,
+        })),
+      );
+    }
+
+    const skills = [...new Set(profile.skills.map((s) => s.trim()).filter(Boolean))];
+    if (skills.length) {
+      await supabase.from("candidate_skills").insert(skills.map((name) => ({ candidate_id: data.id, name })));
+    }
   }
 
   revalidatePath("/candidats");

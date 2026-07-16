@@ -3,8 +3,36 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentRecruiter, getMission } from "@/lib/noa/queries";
-import type { MissionSkillCategory } from "@/lib/noa/types";
+import { getCurrentRecruiter, getMission, getMissionObjectives } from "@/lib/noa/queries";
+import type { Company, Mission, MissionSkillCategory } from "@/lib/noa/types";
+import {
+  generateObjectiveSuggestions,
+  generateSkillSuggestions,
+  type MissionContext,
+  type ObjectiveSuggestion,
+  type SkillSuggestions,
+} from "@/lib/noa/ai";
+
+// Contexte des étapes précédentes + profil entreprise, pour les générateurs noa.
+function missionCtx(mission: Mission, company: Company | null): MissionContext {
+  return {
+    reason: mission.reason ?? "",
+    reasonDetail: mission.reason_detail ?? "",
+    title: mission.title,
+    missionText: mission.mission_text ?? "",
+    company: company
+      ? {
+          name: company.name,
+          sector: company.sector,
+          activityDescription: company.activity_description,
+          techStack: company.tech_stack,
+          cultureValues: company.culture_values,
+          teamSize: company.team_size,
+          mainObjective: company.main_objective,
+        }
+      : undefined,
+  };
+}
 
 async function assertOwnedMission(missionId: string) {
   const recruiter = await getCurrentRecruiter();
@@ -92,12 +120,24 @@ const NOA_OBJ_SUGGESTIONS = [
 ];
 
 export async function fillObjectiveSuggestions(missionId: string, startPosition: number) {
-  const { mission } = await assertOwnedMission(missionId);
+  const { mission, recruiter } = await assertOwnedMission(missionId);
   const supabase = await createClient();
+
+  // noa propose des objectifs à partir du contexte + mission + profil entreprise.
+  // Repli sur des suggestions statiques si l'IA échoue.
+  let suggestions: ObjectiveSuggestion[] = NOA_OBJ_SUGGESTIONS;
+  try {
+    const generated = await generateObjectiveSuggestions(missionCtx(mission, recruiter.company));
+    if (generated.length) suggestions = generated;
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Suggestions d'objectifs échouées, repli statique : ${err?.message ?? String(e)}`);
+  }
+
   const { data } = await supabase
     .from("mission_objectives")
     .insert(
-      NOA_OBJ_SUGGESTIONS.map((s, i) => ({
+      suggestions.map((s, i) => ({
         mission_id: mission.id,
         label: s.label,
         metric: s.metric,
@@ -156,19 +196,33 @@ export async function addCustomSkill(missionId: string, category: MissionSkillCa
   return data;
 }
 
-const NOA_SKILL_SUGGESTIONS: Record<MissionSkillCategory, string[]> = {
+const NOA_SKILL_SUGGESTIONS: SkillSuggestions = {
   technique: ["TypeScript / JavaScript avancé", "React & Next.js", "Node.js / API REST", "PostgreSQL ou équivalent"],
   relationnelle: ["Communication claire avec des non-techniques", "Autonomie sur des sujets complexes", "Feedback constructif en code review"],
   comportementale: ["Orienté livraison et résultats", "Curiosité et veille technologique", "Fiabilité dans les engagements"],
 };
 
 export async function fillSkillSuggestions(missionId: string) {
-  const { mission } = await assertOwnedMission(missionId);
+  const { mission, recruiter } = await assertOwnedMission(missionId);
   const supabase = await createClient();
 
+  // noa propose des compétences à partir du contexte + mission + objectifs
+  // + profil entreprise. Repli sur des suggestions statiques si l'IA échoue.
+  let suggestions: SkillSuggestions = NOA_SKILL_SUGGESTIONS;
+  try {
+    const objectives = await getMissionObjectives(mission.id);
+    const generated = await generateSkillSuggestions(missionCtx(mission, recruiter.company), objectives);
+    if (generated.technique.length || generated.relationnelle.length || generated.comportementale.length) {
+      suggestions = generated;
+    }
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Suggestions de compétences échouées, repli statique : ${err?.message ?? String(e)}`);
+  }
+
   const rows: { mission_id: string; category: MissionSkillCategory; name: string; position: number }[] = [];
-  (Object.keys(NOA_SKILL_SUGGESTIONS) as MissionSkillCategory[]).forEach((category) => {
-    NOA_SKILL_SUGGESTIONS[category].forEach((name, i) => {
+  (Object.keys(suggestions) as MissionSkillCategory[]).forEach((category) => {
+    suggestions[category].forEach((name, i) => {
       rows.push({ mission_id: mission.id, category, name, position: i });
     });
   });
