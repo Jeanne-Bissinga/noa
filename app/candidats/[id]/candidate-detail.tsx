@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, Check, X, FileText } from "lucide-react";
+import { ChevronRight, Check, X, FileText, Edit3 } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
-import { Card, Avatar, Badge, BackLink } from "@/components/noa/ui-primitives";
+import { Card, Avatar, Badge, BackLink, Btn, InputField } from "@/components/noa/ui-primitives";
 import { CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
 import { CvModal } from "./cv-modal";
 import { CandidateFrise } from "./candidate-frise";
+import { CandidateDelete } from "./candidate-delete";
+import { updateCandidateProfile } from "./actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
 
 // Dernière décision actée (hors "reporté", qui ne clôt rien) pour une étape
@@ -33,6 +35,44 @@ export function CandidateDetail({
   topgradingInterviewDone: boolean;
 }) {
   const [cvOpen, setCvOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [draft, setDraft] = useState({
+    firstName: candidate.first_name,
+    lastName: candidate.last_name,
+    title: candidate.title ?? "",
+    location: candidate.location ?? "",
+    email: candidate.email ?? "",
+  });
+  const [, startTransition] = useTransition();
+
+  const handleSaveProfile = () => {
+    setEditError(null);
+    setPending(true);
+    startTransition(async () => {
+      const result = await updateCandidateProfile(candidate.id, draft);
+      if (result.error) {
+        setEditError(result.error);
+        setPending(false);
+        return;
+      }
+      setPending(false);
+      setEditing(false);
+    });
+  };
+
+  const cancelEdit = () => {
+    setDraft({
+      firstName: candidate.first_name,
+      lastName: candidate.last_name,
+      title: candidate.title ?? "",
+      location: candidate.location ?? "",
+      email: candidate.email ?? "",
+    });
+    setEditError(null);
+    setEditing(false);
+  };
 
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = CANDIDATE_AVATAR_COLOR[candidate.status] ?? "bg-gray-100 text-gray-500";
@@ -75,24 +115,51 @@ export function CandidateDetail({
 
         {/* ── En-tête ── */}
         <Card className="p-5 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <Avatar initials={initialsOf(candidate.first_name, candidate.last_name)} color={avatarColor} size="lg" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
-                  <Badge color={CANDIDATE_BADGE[candidate.status]}>{candidate.status}</Badge>
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{[candidate.title, candidate.location].filter(Boolean).join(" · ") || "-"}</p>
+          {editing ? (
+            <div className="mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <InputField label="Prénom" required value={draft.firstName} onChange={(v) => setDraft((d) => ({ ...d, firstName: v }))} />
+                <InputField label="Nom" required value={draft.lastName} onChange={(v) => setDraft((d) => ({ ...d, lastName: v }))} />
+                <InputField label="Poste" value={draft.title} onChange={(v) => setDraft((d) => ({ ...d, title: v }))} />
+                <InputField label="Localisation" value={draft.location} onChange={(v) => setDraft((d) => ({ ...d, location: v }))} />
+                <InputField label="Email" type="email" value={draft.email} onChange={(v) => setDraft((d) => ({ ...d, email: v }))} />
+              </div>
+              {editError && <p className="text-xs text-red-500 mb-2">{editError}</p>}
+              <div className="flex gap-2">
+                <Btn variant="primary" size="sm" onClick={handleSaveProfile} disabled={pending}>
+                  {pending ? "Enregistrement…" : "Enregistrer"}
+                </Btn>
+                <Btn variant="secondary" size="sm" onClick={cancelEdit} disabled={pending}>Annuler</Btn>
               </div>
             </div>
-            <button
-              onClick={() => setCvOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-500 hover:text-[#010101] hover:border-gray-300 px-3 py-2 rounded-xl transition-all"
-            >
-              <FileText size={13} />Voir le CV
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <Avatar initials={initialsOf(candidate.first_name, candidate.last_name)} color={avatarColor} size="lg" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
+                    <Badge color={CANDIDATE_BADGE[candidate.status]}>{candidate.status}</Badge>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{[candidate.title, candidate.location].filter(Boolean).join(" · ") || "-"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-500 hover:text-[#010101] hover:border-gray-300 px-3 py-2 rounded-xl transition-all"
+                >
+                  <Edit3 size={13} />Modifier
+                </button>
+                <button
+                  onClick={() => setCvOpen(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-500 hover:text-[#010101] hover:border-gray-300 px-3 py-2 rounded-xl transition-all"
+                >
+                  <FileText size={13} />Voir le CV
+                </button>
+              </div>
+            </div>
+          )}
 
           {experiences.length > 0 && (
             <>
@@ -207,6 +274,10 @@ export function CandidateDetail({
             </div>
           </Card>
         )}
+
+        <div className="mt-6">
+          <CandidateDelete candidateId={candidate.id} candidateName={name} />
+        </div>
       </div>
     </AppLayout>
   );

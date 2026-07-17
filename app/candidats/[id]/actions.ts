@@ -586,3 +586,63 @@ export async function decideFinal(candidateId: string, action: "non_retenu" | "r
   revalidatePath("/dashboard");
   redirect("/candidats");
 }
+
+// ─── Édition du profil candidat ─────────────────────────────────────────────
+export type UpdateCandidateProfileState = { error?: string };
+
+export async function updateCandidateProfile(
+  candidateId: string,
+  fields: { firstName: string; lastName: string; email: string; title: string; location: string },
+): Promise<UpdateCandidateProfileState> {
+  const { candidate } = await assertOwnedCandidate(candidateId);
+  const supabase = await createClient();
+
+  const firstName = fields.firstName.trim();
+  const lastName = fields.lastName.trim();
+  if (!firstName || !lastName) {
+    return { error: "Le prénom et le nom sont obligatoires." };
+  }
+
+  const { error } = await supabase
+    .from("candidates")
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      email: fields.email.trim() || null,
+      title: fields.title.trim() || null,
+      location: fields.location.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", candidate.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/candidats/${candidate.id}`);
+  revalidatePath("/candidats");
+  return {};
+}
+
+// ─── Suppression du candidat ─────────────────────────────────────────────────
+// candidates.id cascade sur candidate_experiences / candidate_skills /
+// interviews (et leurs evaluation_grids / interview_guides) / syntheses /
+// decisions (cf. scripts/001_noa_schema.sql) : tout l'historique propre à ce
+// candidat, sans effet sur les autres candidats — contrairement à la
+// suppression d'une mission, pas besoin d'un choix intermédiaire.
+export async function deleteCandidate(candidateId: string) {
+  const { candidate } = await assertOwnedCandidate(candidateId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("candidates").delete().eq("id", candidate.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/candidats");
+  revalidatePath("/dashboard");
+  if (candidate.mission_id) {
+    revalidatePath(`/missions/${candidate.mission_id}`);
+  }
+  redirect("/candidats");
+}
