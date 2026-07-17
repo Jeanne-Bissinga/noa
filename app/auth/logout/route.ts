@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 // redirects here instead.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const next = searchParams.get("next") ?? "/connexion";
+  const next = searchParams.get("next") ?? "/";
 
   const supabase = await createClient();
   await supabase.auth.signOut();

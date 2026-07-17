@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { use, useActionState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { NoaLogo, Btn } from "@/components/noa/ui-primitives";
@@ -11,10 +11,10 @@ const initialState: LoginState = {};
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }) {
   const [state, formAction, pending] = useActionState(login, initialState);
-  const incompleteProfile = searchParams?.error === "profil_incomplet";
+  const incompleteProfile = use(searchParams).error === "profil_incomplet";
 
   return (
     <div className="min-h-screen bg-[#f8f9fb] flex">
