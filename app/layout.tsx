@@ -64,6 +64,12 @@ export default function RootLayout({
             </Script>
           </>
         )}
+      {process.env.NODE_ENV === 'production' && (
+          <>
+  
+            <Script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="3bb0cd74-6e3d-450b-9318-9e39ca060be4" data-blockingmode="auto" type="text/javascript"></Script>
+          </>
+        )}
       </body>
     </html>
   )
