@@ -53,6 +53,17 @@ export default function RootLayout({
     })(window, document, "clarity", "script", "xnsq82o77k");`}
           </Script>
         )}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <Script src="https://www.googletagmanager.com/gtag/js?id=G-LQBT3S8P0C" strategy="afterInteractive" />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LQBT3S8P0C');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   )
