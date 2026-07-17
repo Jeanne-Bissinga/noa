@@ -11,6 +11,7 @@ import {
   CANDIDATE_AVATAR_COLOR, SUB_STEP_LABEL, subStepFor,
 } from "@/lib/noa/labels";
 import type { CandidateStatus, MissionSkillCategory } from "@/lib/noa/types";
+import { MissionActions } from "./mission-actions";
 
 const PROCESS_STEPS = ["Cadrage", "Screening", "Topgrading", "Décision"];
 
@@ -94,6 +95,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
               </span>
             </div>
           </div>
+          <MissionActions missionId={mission.id} missionTitle={mission.title} status={mission.status} candidateCount={allCandidates.length} />
         </div>
 
         {/* Avancement */}
