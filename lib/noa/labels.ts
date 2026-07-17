@@ -1,7 +1,7 @@
 // Shared display labels/colors for mission & candidate statuses, kept in one
 // place so dashboard / missions / mission-detail stay visually consistent.
 import type { BadgeColor } from "@/components/noa/ui-primitives";
-import type { MissionStatus, CandidateStatus, StageStatus } from "@/lib/noa/types";
+import type { MissionStatus, CandidateStatus, StageStatus, Interview } from "@/lib/noa/types";
 
 export const MISSION_STATUS_LABEL: Record<MissionStatus, string> = {
   brouillon: "En attente de candidat",
@@ -119,6 +119,24 @@ export const formatDate = (iso: string) =>
 
 export const initials = (firstName: string, lastName: string) =>
   `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+
+// Sous-étape à l'intérieur de Screening/Topgrading, pour les kanbans (page
+// Candidats + fiche mission) : sans ça, une carte "Screening" ne dit pas si
+// le candidat en est à préparer l'entretien, à le passer, ou en attente de
+// décision. Partagé avec la logique équivalente de candidate-frise.tsx.
+export type SubStep = "prep" | "interview" | "decision";
+
+export const SUB_STEP_LABEL: Record<SubStep, string> = {
+  prep: "Préparation",
+  interview: "Entretien",
+  decision: "Décision à prendre",
+};
+
+export function subStepFor(interview: Interview | undefined): SubStep {
+  if (!interview) return "prep";
+  if (interview.status !== "termine") return "interview";
+  return "decision";
+}
 
 // Catégorie de critère de screening (lib/noa/ai.ts) marquant un prérequis
 // éliminatoire, affichée comme badge "Éliminatoire" dans les grilles/guides.

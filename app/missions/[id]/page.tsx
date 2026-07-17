@@ -4,11 +4,11 @@ import { Users, Plus, FileText, Check, Target, Award } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Badge, LinkBtn, BackLink, Avatar } from "@/components/noa/ui-primitives";
 import {
-  requireRecruiter, getMission, getMissionObjectives, getMissionSkills, getCandidates,
+  requireRecruiter, getMission, getMissionObjectives, getMissionSkills, getCandidates, getInterviewsForCandidates,
 } from "@/lib/noa/queries";
 import {
   MISSION_STATUS_LABEL, MISSION_STATUS_COLOR, REASON_LABEL, formatDate, initials,
-  CANDIDATE_AVATAR_COLOR,
+  CANDIDATE_AVATAR_COLOR, SUB_STEP_LABEL, subStepFor,
 } from "@/lib/noa/labels";
 import type { CandidateStatus, MissionSkillCategory } from "@/lib/noa/types";
 
@@ -70,6 +70,8 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
     getMissionSkills(mission.id),
     getCandidates(companyId, { missionId: mission.id }),
   ]);
+  const interviews = await getInterviewsForCandidates(allCandidates.map((c) => c.id));
+  const interviewByCandidate = new Map(interviews.map((i) => [`${i.candidate_id}-${i.type}`, i]));
 
   const skillsByCategory = (["technique", "relationnelle", "comportementale"] as MissionSkillCategory[])
     .map((category) => ({ category, items: skills.filter((s) => s.category === category) }));
@@ -233,7 +235,10 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                           <p className="text-[10px] text-gray-300 font-medium">Aucun candidat</p>
                         </div>
                       )}
-                      {cards.map((c) => (
+                      {cards.map((c) => {
+                        const stepType = c.status === "Screening" ? "screening" : c.status === "Topgrading" ? "topgrading" : null;
+                        const subStep = stepType ? subStepFor(interviewByCandidate.get(`${c.id}-${stepType}`)) : null;
+                        return (
                         <Link
                           key={c.id}
                           href={`/candidats/${c.id}`}
@@ -243,6 +248,13 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                             <Avatar initials={initials(c.first_name, c.last_name)} color={CANDIDATE_AVATAR_COLOR[c.status] ?? "bg-gray-100 text-gray-500"} size="sm" />
                             <span className="text-xs font-semibold text-[#010101] group-hover:text-[#3a6fd4] transition-colors leading-tight">{c.first_name} {c.last_name}</span>
                           </div>
+                          {subStep && (
+                            <span className={`inline-flex items-center text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2 ${
+                              subStep === "decision" ? "bg-[#75DA9F]/15 text-[#1e8f52]" : subStep === "interview" ? "bg-[#99BAF8]/15 text-[#3a6fd4]" : "bg-gray-100 text-gray-400"
+                            }`}>
+                              {SUB_STEP_LABEL[subStep]}
+                            </span>
+                          )}
                           {c.score !== null ? (
                             <div className="flex items-center gap-2 mt-1">
                               <div className="flex-1 bg-gray-100 rounded-full h-1">
@@ -254,7 +266,8 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                             <p className="text-[10px] text-gray-300 mt-1">Pas encore noté</p>
                           )}
                         </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );

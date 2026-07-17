@@ -5,9 +5,9 @@ import Link from "next/link";
 import { Plus, Info } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { LinkBtn, Avatar } from "@/components/noa/ui-primitives";
-import { initials, CANDIDATE_AVATAR_COLOR, canMoveCandidate } from "@/lib/noa/labels";
+import { initials, CANDIDATE_AVATAR_COLOR, canMoveCandidate, SUB_STEP_LABEL, subStepFor } from "@/lib/noa/labels";
 import { moveCandidate } from "./actions";
-import type { Candidate, CandidateStatus } from "@/lib/noa/types";
+import type { Candidate, CandidateStatus, Interview } from "@/lib/noa/types";
 
 const CAND_KANBAN_COLS: { key: CandidateStatus; label: string; border: string; bg: string; dot: string; emptyText: string }[] = [
   { key: "Screening", label: "Screening", border: "border-[#99BAF8]/35", bg: "bg-[#99BAF8]/5", dot: "bg-[#99BAF8]", emptyText: "Aucun candidat en screening" },
@@ -16,8 +16,9 @@ const CAND_KANBAN_COLS: { key: CandidateStatus; label: string; border: string; b
   { key: "Non retenu", label: "Non retenu", border: "border-gray-200", bg: "bg-gray-50", dot: "bg-gray-300", emptyText: "Aucun candidat non retenu" },
 ];
 
-export function CandidatesBoard({ candidates: initialCandidates }: { candidates: Candidate[] }) {
+export function CandidatesBoard({ candidates: initialCandidates, interviews }: { candidates: Candidate[]; interviews: Interview[] }) {
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const interviewByCandidate = new Map(interviews.map((i) => [`${i.candidate_id}-${i.type}`, i]));
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -124,7 +125,10 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
                   {isOver && cards.length === 0 && (
                     <div className="py-8 rounded-xl border-2 border-dashed border-[#99BAF8]/40 bg-[#99BAF8]/5" />
                   )}
-                  {cards.map((c) => (
+                  {cards.map((c) => {
+                    const stepType = c.status === "Screening" ? "screening" : c.status === "Topgrading" ? "topgrading" : null;
+                    const subStep = stepType ? subStepFor(interviewByCandidate.get(`${c.id}-${stepType}`)) : null;
+                    return (
                     <Link
                       key={c.id}
                       href={`/candidats/${c.id}`}
@@ -143,6 +147,13 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
                           <p className="text-[10px] text-gray-400 truncate mt-0.5">{c.title ?? "-"}</p>
                         </div>
                       </div>
+                      {subStep && (
+                        <span className={`inline-flex items-center text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2 ${
+                          subStep === "decision" ? "bg-[#75DA9F]/15 text-[#1e8f52]" : subStep === "interview" ? "bg-[#99BAF8]/15 text-[#3a6fd4]" : "bg-gray-100 text-gray-400"
+                        }`}>
+                          {SUB_STEP_LABEL[subStep]}
+                        </span>
+                      )}
                       {c.score !== null ? (
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-gray-100 rounded-full h-1">
@@ -154,7 +165,8 @@ export function CandidatesBoard({ candidates: initialCandidates }: { candidates:
                         <p className="text-[10px] text-gray-300">Pas encore noté</p>
                       )}
                     </Link>
-                  ))}
+                    );
+                  })}
                   {isOver && cards.length > 0 && (
                     <div className="h-12 rounded-xl border-2 border-dashed border-[#99BAF8]/40 bg-[#99BAF8]/5" />
                   )}
