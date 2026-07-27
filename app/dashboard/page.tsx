@@ -43,13 +43,14 @@ export default async function DashboardPage() {
   ]);
 
   const activeMissions = missions.filter((m) => m.status === "en_cours" || m.status === "brouillon");
-  const candidatesInProgress = candidates.filter((c) => c.status !== "Non retenu");
+  // "En cours" exclut les deux issues terminales : refusé ou déjà recruté.
+  const candidatesInProgress = candidates.filter((c) => c.status !== "Non retenu" && c.status !== "Recrute");
   const interviewsThisWeek = candidates.filter(
     (c) => c.screening_status === "current" || c.topgrading_status === "current",
   );
   const pending = pendingDecisions(candidates, interviews, decisions);
 
-  const recentMissions = missions.slice(0, 3);
+  const recentMissions = activeMissions.slice(0, 3);
   const recentCandidates = candidates.slice(0, 3);
 
   const today = new Date().toLocaleDateString("fr-FR", {

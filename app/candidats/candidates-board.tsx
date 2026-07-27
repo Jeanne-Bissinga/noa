@@ -13,6 +13,7 @@ const CAND_KANBAN_COLS: { key: CandidateStatus; label: string; border: string; b
   { key: "Screening", label: "Screening", border: "border-[#99BAF8]/35", bg: "bg-[#99BAF8]/5", dot: "bg-[#99BAF8]", emptyText: "Aucun candidat en screening" },
   { key: "Topgrading", label: "Topgrading", border: "border-[#CCB8FF]/35", bg: "bg-[#CCB8FF]/5", dot: "bg-[#CCB8FF]", emptyText: "Aucun candidat en topgrading" },
   { key: "Decision finale", label: "Décision finale", border: "border-[#75DA9F]/35", bg: "bg-[#75DA9F]/5", dot: "bg-[#75DA9F]", emptyText: "Aucune décision en attente" },
+  { key: "Recrute", label: "Recruté", border: "border-[#1e8f52]/35", bg: "bg-[#1e8f52]/5", dot: "bg-[#1e8f52]", emptyText: "Aucun candidat recruté" },
   { key: "Non retenu", label: "Non retenu", border: "border-gray-200", bg: "bg-gray-50", dot: "bg-gray-300", emptyText: "Aucun candidat non retenu" },
 ];
 
@@ -88,7 +89,7 @@ export function CandidatesBoard({ candidates: initialCandidates, interviews }: {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-3 items-start">
+        <div className="grid grid-cols-5 gap-3 items-start">
           {CAND_KANBAN_COLS.map((col) => {
             const cards = candidates.filter((c) => c.status === col.key);
             const droppable = canDropIn(col.key);

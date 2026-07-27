@@ -919,6 +919,74 @@ ${input.transcript?.trim() ? `\nTranscription de l'entretien (collée par le rec
   };
 }
 
+// ─── Recommandation globale (page Décision finale) ─────────────────────────
+// Les 3 valeurs de verdict sont contraintes par schéma (enum) plutôt que
+// dérivées d'un texte libre : l'UI mappe directement la valeur à un badge de
+// couleur, sans regex/heuristique fragile sur le texte généré.
+const FINAL_RECOMMENDATION_VERDICTS = [
+  "Recommandation : recruter",
+  "Recommandation : à discuter",
+  "Recommandation : écarter",
+] as const;
+export type FinalRecommendationVerdict = (typeof FINAL_RECOMMENDATION_VERDICTS)[number];
+
+const FINAL_RECOMMENDATION_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la campagne de recrutement, du profil du candidat, des synthèses de Screening et de Topgrading et de la note globale, tu formules une RECOMMANDATION GLOBALE pour aider le recruteur à trancher.
+
+Règles :
+- content : 2 à 4 phrases maximum. Croise l'adéquation au poste, les points forts et points de vigilance des deux entretiens, et la note globale. Direct et factuel, pas de round de négociation.
+- advice : le verdict, parmi les valeurs autorisées uniquement.
+- Ne recommande jamais sur la seule note chiffrée : croise-la avec le contenu qualitatif des synthèses. Si une étape n'a pas encore eu lieu, dis-le explicitement plutôt que de l'ignorer.
+- N'invente aucun fait absent des informations fournies. Français, ton professionnel et direct.`;
+
+/**
+ * Recommandation globale de fin de process, croisant mission + profil +
+ * synthèses des deux entretiens + score. Lève en cas d'échec ; l'appelant
+ * décide du repli (pas de fallback rule-based : la page peut simplement ne
+ * pas afficher de suggestion).
+ */
+export async function generateFinalRecommendation(input: {
+  job: JobSpecContext;
+  candidate: CandidateContext;
+  score: number | null;
+  screeningSynthesis: { content: string; advice: string } | null;
+  topgradingSynthesis: { content: string; advice: string } | null;
+}): Promise<{ content: string; advice: FinalRecommendationVerdict }> {
+  const stageBlock = (label: string, s: { content: string; advice: string } | null) =>
+    s ? `${label} :\n${s.content}\nConseil noté à l'époque : ${s.advice}` : `${label} : (pas encore réalisé)`;
+
+  const user = `${jobSpecLines(input.job)}
+
+${candidateLines(input.candidate)}
+
+${stageBlock("Synthèse Screening", input.screeningSynthesis)}
+
+${stageBlock("Synthèse Topgrading", input.topgradingSynthesis)}
+
+Note globale : ${input.score !== null ? `${input.score}/100` : "(pas encore calculée)"}`;
+
+  const result = await generateStructured<{ content: string; advice: FinalRecommendationVerdict }>({
+    system: FINAL_RECOMMENDATION_SYSTEM,
+    user,
+    toolName: "enregistrer_recommandation_finale",
+    toolDescription: "Enregistre la recommandation globale (content) et le verdict (advice).",
+    maxTokens: 1024,
+    schema: {
+      type: "object",
+      properties: {
+        content: { type: "string" },
+        advice: { type: "string", enum: [...FINAL_RECOMMENDATION_VERDICTS] },
+      },
+      required: ["content", "advice"],
+      additionalProperties: false,
+    },
+  });
+
+  return {
+    content: stripFieldTags(result.content ?? ""),
+    advice: result.advice,
+  };
+}
+
 // ─── Question libre sur l'entretien (page Synthèse) ─────────────────────────
 const QUESTION_SYSTEM = `Tu es noa, un expert en recrutement. Le recruteur te pose une question sur un entretien qu'il vient de mener. Tu réponds à partir de la transcription de cet entretien, croisée avec le poste et le profil du candidat.
 

@@ -33,6 +33,23 @@ export async function cancelMission(missionId: string) {
   revalidatePath(`/missions/${mission.id}`);
 }
 
+// Proposée au recruteur juste après avoir marqué un candidat comme recruté
+// (cf. decideFinal dans app/candidats/[id]/actions.ts) : la mission ne se clôt
+// jamais toute seule quand un candidat est recruté, au cas où le recrutement
+// porte sur plusieurs postes. C'est un choix explicite, pas un effet de bord.
+export async function markMissionFilled(missionId: string) {
+  const { mission } = await assertOwnedMission(missionId);
+  const supabase = await createClient();
+
+  await supabase
+    .from("missions")
+    .update({ status: "pourvu", updated_at: new Date().toISOString() })
+    .eq("id", mission.id);
+
+  revalidatePath("/missions");
+  revalidatePath(`/missions/${mission.id}`);
+}
+
 export async function reactivateMission(missionId: string) {
   const { mission } = await assertOwnedMission(missionId);
   const supabase = await createClient();

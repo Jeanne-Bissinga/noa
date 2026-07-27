@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireRecruiter, getCandidate, getInterview, getEvaluationGrid } from "@/lib/noa/queries";
+import {
+  requireRecruiter, getCandidate, getInterview, getEvaluationGrid,
+  getCandidateExperiences, getCandidateSkills, getSyntheses,
+} from "@/lib/noa/queries";
 import { computeAggregateScore } from "@/lib/noa/score";
+import { ensureFinalRecommendation } from "../actions";
 import { FinalDecisionView } from "./final-decision-view";
 
 export default async function DecisionFinalePage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,9 +17,12 @@ export default async function DecisionFinalePage({ params }: { params: Promise<{
     notFound();
   }
 
-  const [screeningInterview, topgradingInterview] = await Promise.all([
+  const [screeningInterview, topgradingInterview, experiences, skills, syntheses] = await Promise.all([
     getInterview(candidate.id, "screening"),
     getInterview(candidate.id, "topgrading"),
+    getCandidateExperiences(candidate.id),
+    getCandidateSkills(candidate.id),
+    getSyntheses(candidate.id),
   ]);
 
   const [screeningGrid, topgradingGrid] = await Promise.all([
@@ -36,5 +43,35 @@ export default async function DecisionFinalePage({ params }: { params: Promise<{
     candidate.score = score;
   }
 
-  return <FinalDecisionView candidate={candidate} score={score} />;
+  const noaSynthesis = (interviewId: string | undefined) =>
+    syntheses.find((s) => s.interview_id === interviewId && s.authored_by === "noa") ?? null;
+  const screeningSynthesis = noaSynthesis(screeningInterview?.id);
+  const topgradingSynthesis = noaSynthesis(topgradingInterview?.id);
+
+  // Générée une seule fois (persistée en base) : si aucune synthèse globale
+  // n'existe encore pour ce candidat, on la génère maintenant.
+  let globalRecommendation = syntheses.find((s) => s.interview_id === null && s.authored_by === "noa") ?? null;
+  if (!globalRecommendation) {
+    globalRecommendation = await ensureFinalRecommendation(candidate.id, {
+      score,
+      screeningSynthesis: screeningSynthesis
+        ? { content: screeningSynthesis.content ?? "", advice: screeningSynthesis.advice ?? "" }
+        : null,
+      topgradingSynthesis: topgradingSynthesis
+        ? { content: topgradingSynthesis.content ?? "", advice: topgradingSynthesis.advice ?? "" }
+        : null,
+    });
+  }
+
+  return (
+    <FinalDecisionView
+      candidate={candidate}
+      score={score}
+      experiences={experiences}
+      skills={skills}
+      screeningSynthesis={screeningSynthesis}
+      topgradingSynthesis={topgradingSynthesis}
+      globalRecommendation={globalRecommendation}
+    />
+  );
 }

@@ -16,13 +16,14 @@ import {
   generateTopgradingEpisodes,
   generateTopgradingGuideSections,
   generateInterviewSynthesis,
+  generateFinalRecommendation,
   answerInterviewQuestion,
   evaluateScreeningGrid,
   evaluateTopgradingGrid,
   type JobSpecContext,
   type CandidateContext,
 } from "@/lib/noa/ai";
-import type { InterviewType, DecisionStage, CandidateStatus, Candidate, RecruiterWithCompany } from "@/lib/noa/types";
+import type { InterviewType, DecisionStage, CandidateStatus, Candidate, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
 
 async function assertOwnedCandidate(candidateId: string) {
   const recruiter = await getCurrentRecruiter();
@@ -557,9 +558,54 @@ export async function decideStage(candidateId: string, stage: "screening" | "top
   }
 }
 
+// ─── Recommandation globale (page Décision finale) ──────────────────────────
+// Générée une seule fois puis persistée comme synthèse "globale"
+// (interview_id = null, cf. scripts/001_noa_schema.sql : syntheses.interview_id
+// est nullable) plutôt que recalculée à chaque visite de la page — même
+// logique que les synthèses par étape, qui ne sont écrites qu'à
+// finishInterview. Pas de repli rule-based possible ici : en cas d'échec, la
+// page affiche simplement l'absence de suggestion.
+export async function ensureFinalRecommendation(
+  candidateId: string,
+  input: {
+    score: number | null;
+    screeningSynthesis: { content: string; advice: string } | null;
+    topgradingSynthesis: { content: string; advice: string } | null;
+  },
+): Promise<Synthesis | null> {
+  const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
+  const supabase = await createClient();
+
+  try {
+    const { job, cand } = await buildScreeningContext(candidate, recruiter);
+    const result = await generateFinalRecommendation({ job, candidate: cand, ...input });
+
+    const { data, error } = await supabase
+      .from("syntheses")
+      .insert({
+        candidate_id: candidateId,
+        interview_id: null,
+        authored_by: "noa",
+        content: result.content,
+        advice: result.advice,
+      })
+      .select("*")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data as Synthesis;
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Recommandation finale échouée : ${err?.message ?? String(e)}`);
+    return null;
+  }
+}
+
 // ─── Final decision ─────────────────────────────────────────────────────────
-export async function decideFinal(candidateId: string, action: "non_retenu" | "retenu", score: number | null) {
-  const { recruiter } = await assertOwnedCandidate(candidateId);
+export type DecideFinalResult = { missionId: string | null } | void;
+
+export async function decideFinal(candidateId: string, action: "non_retenu" | "retenu", score: number | null): Promise<DecideFinalResult> {
+  const { recruiter, candidate } = await assertOwnedCandidate(candidateId);
   const supabase = await createClient();
 
   await supabase.from("decisions").insert({
@@ -584,6 +630,17 @@ export async function decideFinal(candidateId: string, action: "non_retenu" | "r
   revalidatePath("/candidats");
   revalidatePath(`/candidats/${candidateId}`);
   revalidatePath("/dashboard");
+  if (candidate.mission_id) {
+    revalidatePath(`/missions/${candidate.mission_id}`);
+  }
+
+  // Un candidat recruté ne clôt jamais la mission tout seul (elle peut viser
+  // plusieurs postes) : on laisse la vue cliente demander au recruteur s'il
+  // marque la campagne comme pourvue avant de rediriger.
+  if (action === "retenu") {
+    return { missionId: candidate.mission_id };
+  }
+
   redirect("/candidats");
 }
 

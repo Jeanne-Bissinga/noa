@@ -47,6 +47,7 @@ const KANBAN_COLS: { key: CandidateStatus; label: string; color: string; dot: st
   { key: "Screening", label: "Screening", color: "border-[#99BAF8]/40 bg-[#99BAF8]/4", dot: "bg-[#99BAF8]" },
   { key: "Topgrading", label: "Topgrading", color: "border-[#CCB8FF]/40 bg-[#CCB8FF]/4", dot: "bg-[#CCB8FF]" },
   { key: "Decision finale", label: "Décision finale", color: "border-[#75DA9F]/40 bg-[#75DA9F]/4", dot: "bg-[#75DA9F]" },
+  { key: "Recrute", label: "Recruté", color: "border-[#1e8f52]/40 bg-[#1e8f52]/4", dot: "bg-[#1e8f52]" },
   { key: "Non retenu", label: "Non retenu", color: "border-gray-200 bg-gray-50", dot: "bg-gray-300" },
 ];
 
@@ -220,7 +221,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
               <LinkBtn href={`/candidats/nouveau?mission=${mission.id}`} variant="primary" size="sm"><Plus size={13} />Ajouter un candidat</LinkBtn>
             </Card>
           ) : (
-            <div className="grid grid-cols-4 gap-3 items-start">
+            <div className="grid grid-cols-5 gap-3 items-start">
               {KANBAN_COLS.map((col) => {
                 const cards = allCandidates.filter((c) => c.status === col.key);
                 return (
