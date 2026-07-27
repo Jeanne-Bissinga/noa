@@ -67,7 +67,7 @@ export default async function DashboardPage() {
           <div>
             <p className="text-[11px] text-gray-500 mb-1.5 capitalize">{today}</p>
             <h1 className="text-2xl font-bold text-white mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Bonjour, {recruiter.first_name} 👋
+              Bonjour {recruiter.first_name} 👋
             </h1>
             <p className="text-sm text-gray-400">
               Vous avez <span className="font-bold text-white">{pending.length} décision{pending.length !== 1 ? "s" : ""}</span> en attente cette semaine.
