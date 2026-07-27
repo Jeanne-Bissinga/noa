@@ -94,6 +94,46 @@ export function PreparationView({
     setEditedSections((prev) => prev.map((s, i) => (i === si ? { ...s, questions: s.questions.filter((_, j) => j !== qi) } : s)));
   };
 
+  const updateGuideQuestion = (si: number, qi: number, val: string) => {
+    setGuideSections((prev) =>
+      prev.map((s, i) => (i === si ? { ...s, questions: s.questions.map((q, j) => (j === qi ? { ...q, q: val } : q)) } : s)),
+    );
+  };
+  const updateGuideProbe = (si: number, qi: number, pi: number, val: string) => {
+    setGuideSections((prev) =>
+      prev.map((s, i) => (i === si ? {
+        ...s,
+        questions: s.questions.map((q, j) => (j === qi ? { ...q, probes: q.probes.map((p, k) => (k === pi ? val : p)) } : q)),
+      } : s)),
+    );
+  };
+  const addGuideProbe = (si: number, qi: number) => {
+    setGuideSections((prev) =>
+      prev.map((s, i) => (i === si ? {
+        ...s,
+        questions: s.questions.map((q, j) => (j === qi ? { ...q, probes: [...q.probes, ""] } : q)),
+      } : s)),
+    );
+  };
+  const removeGuideProbe = (si: number, qi: number, pi: number) => {
+    setGuideSections((prev) =>
+      prev.map((s, i) => (i === si ? {
+        ...s,
+        questions: s.questions.map((q, j) => (j === qi ? { ...q, probes: q.probes.filter((_, k) => k !== pi) } : q)),
+      } : s)),
+    );
+  };
+  const addGuideQuestion = (si: number) => {
+    setGuideSections((prev) => prev.map((s, i) => (i === si ? { ...s, questions: [...s.questions, { q: "", probes: [] }] } : s)));
+    // La nouvelle question est repliée par défaut (pas de relance) ; on
+    // l'ouvre directement pour que "Ajouter une relance" soit visible sans
+    // devoir cliquer sur le chevron.
+    setGuideExpanded((prev) => ({ ...prev, [`${si}-${guideSections[si].questions.length}`]: true }));
+  };
+  const removeGuideQuestion = (si: number, qi: number) => {
+    setGuideSections((prev) => prev.map((s, i) => (i === si ? { ...s, questions: s.questions.filter((_, j) => j !== qi) } : s)));
+  };
+
   const handleFinish = () => {
     setPending(true);
     startTransition(async () => {
@@ -321,32 +361,54 @@ export function PreparationView({
                     {section.questions.map((item, qi) => {
                       const key = `${si}-${qi}`;
                       const open = !!guideExpanded[key];
-                      const hasProbes = item.probes && item.probes.length > 0;
                       return (
-                        <div key={qi} className="px-4 py-3">
-                          <button
-                            onClick={() => hasProbes && setGuideExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
-                            disabled={!hasProbes}
-                            className="w-full flex items-start gap-2 text-left disabled:cursor-default"
-                          >
-                            {hasProbes && (
-                              <ChevronRight size={11} className={`text-gray-400 mt-0.5 flex-shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
-                            )}
-                            <p className="text-[11px] font-semibold text-[#010101]">{item.q}</p>
-                          </button>
-                          {open && hasProbes && (
-                            <ul className="flex flex-col gap-1.5 mt-2 pl-[19px]">
+                        <div key={qi} className="px-4 py-3 group">
+                          <div className="flex items-start gap-2">
+                            <button
+                              onClick={() => setGuideExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
+                              className="mt-0.5 flex-shrink-0"
+                            >
+                              <ChevronRight size={11} className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`} />
+                            </button>
+                            <textarea
+                              value={item.q}
+                              onChange={(e) => updateGuideQuestion(si, qi, e.target.value)}
+                              rows={1}
+                              className="flex-1 text-[11px] font-semibold text-[#010101] bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-snug transition-colors resize-none whitespace-normal"
+                            />
+                            <button onClick={() => removeGuideQuestion(si, qi)} className="mt-0.5 text-gray-200 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
+                              <X size={11} />
+                            </button>
+                          </div>
+                          {open && (
+                            <div className="flex flex-col gap-1.5 mt-2 pl-[19px]">
                               {item.probes.map((probe, pi) => (
-                                <li key={pi} className="flex gap-2 text-[11px] text-gray-600">
-                                  <span className="mt-0.5 flex-shrink-0 w-1 h-1 rounded-full bg-gray-300 mt-[6px]" />
-                                  {probe}
-                                </li>
+                                <div key={pi} className="flex items-start gap-2 group">
+                                  <span className="mt-2 flex-shrink-0 w-1 h-1 rounded-full bg-gray-300" />
+                                  <textarea
+                                    value={probe}
+                                    onChange={(e) => updateGuideProbe(si, qi, pi, e.target.value)}
+                                    rows={1}
+                                    className="flex-1 text-[11px] text-gray-600 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-snug transition-colors resize-none whitespace-normal"
+                                  />
+                                  <button onClick={() => removeGuideProbe(si, qi, pi)} className="mt-1 text-gray-200 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
+                                    <X size={10} />
+                                  </button>
+                                </div>
                               ))}
-                            </ul>
+                              <button onClick={() => addGuideProbe(si, qi)} className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-[#3a6fd4] transition-colors">
+                                <Plus size={10} />Ajouter une relance
+                              </button>
+                            </div>
                           )}
                         </div>
                       );
                     })}
+                  </div>
+                  <div className="px-4 py-3 border-t border-gray-50 bg-gray-50">
+                    <button onClick={() => addGuideQuestion(si)} className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-[#3a6fd4] transition-colors">
+                      <Plus size={11} />Ajouter une question
+                    </button>
                   </div>
                 </div>
               ))}
