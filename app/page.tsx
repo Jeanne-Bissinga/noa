@@ -7,7 +7,7 @@ import { ScrollLink } from "@/components/noa/scroll-link";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Noa — Recruter avec méthode",
+  title: "Recruter avec méthode",
   description:
     "Noa vous guide à chaque étape de votre recrutement grâce à une méthode simple et reconnue. Vous évaluez, vous comparez, vous décidez.",
 };
