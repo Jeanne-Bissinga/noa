@@ -27,6 +27,11 @@ export function CandidatesBoard({ candidates: initialCandidates, interviews }: {
 
   const draggedCandidate = dragging ? candidates.find((c) => c.id === dragging) ?? null : null;
 
+  // "Recrute" et "Non retenu" sont des statuts terminaux : ces candidats ne
+  // sont plus "en cours d'évaluation", même s'ils apparaissent toujours dans
+  // le kanban.
+  const inProgressCount = candidates.filter((c) => c.status !== "Recrute" && c.status !== "Non retenu").length;
+
   // Une colonne n'accepte le candidat en cours de glissement que si le
   // déplacement est une correction. Avancer un candidat est une décision, qui
   // se prend depuis sa fiche.
@@ -75,7 +80,9 @@ export function CandidatesBoard({ candidates: initialCandidates, interviews }: {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>Candidats</h1>
-            <p className="text-gray-400 text-sm mt-1">{candidates.length} candidats en cours d'évaluation</p>
+            <p className="text-gray-400 text-sm mt-1">
+              {inProgressCount} candidat{inProgressCount !== 1 ? "s" : ""} en cours d'évaluation
+            </p>
           </div>
           <LinkBtn href="/missions" variant="primary">
             <Plus size={15} />Ajouter un candidat
@@ -89,7 +96,8 @@ export function CandidatesBoard({ candidates: initialCandidates, interviews }: {
           </div>
         )}
 
-        <div className="grid grid-cols-5 gap-3 items-start">
+        <div className="overflow-x-auto -mx-1 px-1">
+        <div className="grid grid-cols-5 gap-3 items-start min-w-[840px]">
           {CAND_KANBAN_COLS.map((col) => {
             const cards = candidates.filter((c) => c.status === col.key);
             const droppable = canDropIn(col.key);
@@ -175,6 +183,7 @@ export function CandidatesBoard({ candidates: initialCandidates, interviews }: {
               </div>
             );
           })}
+        </div>
         </div>
       </div>
     </AppLayout>

@@ -320,6 +320,13 @@ export async function createCandidate(
     return { error: error?.message ?? "Impossible de créer la fiche candidat." };
   }
 
+  // Un poste "pourvu" redevient "en_cours" dès qu'on ajoute un nouveau
+  // candidat : la mission recrute à nouveau. Le candidat déjà recruté n'est
+  // pas touché, il reste affiché comme "Recruté".
+  if (mission.status === "pourvu") {
+    await supabase.from("missions").update({ status: "en_cours" }).eq("id", mission.id);
+  }
+
   // Expériences et compétences extraites (tables dédiées).
   if (profile) {
     const experiences = profile.experiences.filter((exp) => exp.role || exp.company || exp.bullets.length);

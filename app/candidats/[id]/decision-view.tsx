@@ -104,18 +104,18 @@ export function DecisionView({
   return (
     <AppLayout headerTitle={name}>
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-6">
+          <div className="flex items-center gap-4 min-w-0">
             <Avatar initials={initialsOf(candidate.first_name, candidate.last_name)} color={avatarColor} size="md" />
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl font-bold text-[#010101] leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-400">{meta.label} · Synthèse</span>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <span className="text-sm text-gray-400 whitespace-nowrap">{meta.label} · Synthèse</span>
                 <Badge color={meta.badge}>{meta.label}</Badge>
               </div>
             </div>
           </div>
-          <span className="text-[10px] text-gray-400 italic">Proposition d'analyse. La décision vous appartient.</span>
+          <span className="text-[10px] text-gray-400 italic flex-shrink-0">Proposition d'analyse. La décision vous appartient.</span>
         </div>
 
         {/* Accès direct à la transcription intégrale, au-dessus du bloc d'évaluation */}

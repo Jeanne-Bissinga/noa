@@ -26,7 +26,7 @@ const QUESTIONS: Question[] = [
   { q: "Dans quel secteur opérez-vous principalement ?", type: "choice", options: ["SaaS / Logiciel", "Fintech", "Healthtech", "E-commerce / Marketplace", "Deeptech / IA", "Autre"] },
   { q: "Quelle est votre stack technique ?", type: "stack" },
   { q: "Quelles sont vos 3 valeurs fondamentales ?", type: "textarea", placeholder: "Ex : Transparence, Excellence, Autonomie" },
-  { q: "Comment décrieriez-vous votre culture de travail ?", type: "choice", options: ["Très structurée et processée", "Agile et itérative", "Collaborative et horizontale", "Orientée résultats", "En construction"] },
+  { q: "Comment décririez-vous votre culture de travail ?", type: "choice", options: ["Très structurée et processée", "Agile et itérative", "Collaborative et horizontale", "Orientée résultats", "En construction"] },
   { q: "Quels sont vos principaux défis RH aujourd'hui ?", type: "choice", options: ["Attirer les bons profils", "Évaluer objectivement", "Réduire le time-to-hire", "Fidéliser les talents", "Tous ces sujets"] },
 ];
 
@@ -195,7 +195,9 @@ export default function OnboardingPage() {
                 <div key={opt} className="flex flex-col gap-0">
                   <button
                     onClick={() => {
-                      setSelected(prev => prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]);
+                      // Choix unique : ces questions n'ont pas de case à cocher, une
+                      // seule réponse a de sens (secteur, culture, défi principal).
+                      setSelected([opt]);
                       if (opt !== "Autre") setAutreText("");
                     }}
                     className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${

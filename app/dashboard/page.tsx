@@ -130,8 +130,14 @@ export default async function DashboardPage() {
           </div>
           {recentMissions.length === 0 ? (
             <Card className="p-8 flex flex-col items-center justify-center gap-2 text-center">
-              <p className="text-sm font-semibold text-[#010101]">Aucune mission pour le moment</p>
-              <p className="text-xs text-gray-400">Créez votre première fiche de poste pour démarrer un recrutement.</p>
+              <p className="text-sm font-semibold text-[#010101]">
+                {missions.length === 0 ? "Aucune mission pour le moment" : "Aucun recrutement actif en ce moment"}
+              </p>
+              <p className="text-xs text-gray-400">
+                {missions.length === 0
+                  ? "Créez votre première fiche de poste pour démarrer un recrutement."
+                  : "Toutes vos missions sont pourvues ou annulées. Créez-en une nouvelle pour démarrer un recrutement."}
+              </p>
             </Card>
           ) : (
             <div className="grid grid-cols-3 gap-3">

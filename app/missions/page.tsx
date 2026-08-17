@@ -14,13 +14,17 @@ export default async function MissionsPage() {
     getCandidates(companyId),
   ]);
 
+  // "pourvu" et "annule" sont des issues terminales : ces missions ne sont
+  // plus "actives", même si elles restent listées ci-dessous.
+  const activeMissionsCount = missions.filter((m) => m.status === "en_cours" || m.status === "brouillon").length;
+
   return (
     <AppLayout headerTitle="Missions">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>Campagne de recrutement</h1>
-            <p className="text-gray-400 text-sm mt-1">{missions.length} mission{missions.length !== 1 ? "s" : ""} active{missions.length !== 1 ? "s" : ""}</p>
+            <p className="text-gray-400 text-sm mt-1">{activeMissionsCount} mission{activeMissionsCount !== 1 ? "s" : ""} active{activeMissionsCount !== 1 ? "s" : ""}</p>
           </div>
           <LinkBtn href="/missions/nouvelle" variant="primary"><Plus size={15} />Nouvelle mission</LinkBtn>
         </div>

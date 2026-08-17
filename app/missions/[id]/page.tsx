@@ -78,6 +78,24 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
   const skillsByCategory = (["technique", "relationnelle", "comportementale"] as MissionSkillCategory[])
     .map((category) => ({ category, items: skills.filter((s) => s.category === category) }));
 
+  // La frise reflète la progression réelle des candidats de la mission plutôt
+  // que mission.process_step (figé au dernier écran de l'assistant de
+  // création) : sinon elle reste bloquée sur "Screening" même après un
+  // recrutement.
+  // Seul mission.status === "pourvu" marque tout comme terminé : un candidat
+  // déjà "Recrute" ne suffit plus une fois la mission rouverte (ajout d'un
+  // nouveau candidat), sans quoi la frise resterait figée sur "tout est fini"
+  // alors que le recrutement a repris.
+  const processStep = mission.status === "pourvu"
+    ? 4
+    : allCandidates.some((c) => c.status === "Decision finale" || c.status === "Non retenu" || c.status === "Recrute")
+    ? 3
+    : allCandidates.some((c) => c.status === "Topgrading")
+    ? 2
+    : allCandidates.length > 0
+    ? 1
+    : 0;
+
   return (
     <AppLayout headerTitle={mission.title}>
       <div className="max-w-5xl mx-auto">
@@ -102,7 +120,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
         {/* Avancement */}
         <Card className="p-5 mb-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Avancement du recrutement</p>
-          <ProcessFrise active={mission.process_step} />
+          <ProcessFrise active={processStep} />
         </Card>
 
         {/* Fiche de poste — même structure que /fiche-finale : une carte par
@@ -221,7 +239,8 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
               <LinkBtn href={`/candidats/nouveau?mission=${mission.id}`} variant="primary" size="sm"><Plus size={13} />Ajouter un candidat</LinkBtn>
             </Card>
           ) : (
-            <div className="grid grid-cols-5 gap-3 items-start">
+            <div className="overflow-x-auto -mx-1 px-1">
+            <div className="grid grid-cols-5 gap-3 items-start min-w-[840px]">
               {KANBAN_COLS.map((col) => {
                 const cards = allCandidates.filter((c) => c.status === col.key);
                 return (
@@ -275,6 +294,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                   </div>
                 );
               })}
+            </div>
             </div>
           )}
         </div>
