@@ -11,6 +11,9 @@
     "test:watch": "vitest tests/unit tests/crud",
     "test:ai": "vitest run tests/integration"
   },
+  "overrides": {
+    "hono": "4.12.25"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
     "@base-ui/react": "^1.5.0",
