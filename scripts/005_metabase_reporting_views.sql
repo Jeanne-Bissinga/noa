@@ -4,10 +4,16 @@
 -- tables brutes pour construire des dashboards (jointures déjà faites, noms
 -- lisibles plutôt que des UUID).
 --
+-- Les vues sont créées dans le schéma `reporting`, jamais dans `public` : tout
+-- objet du schéma `public` est exposé publiquement par l'API REST de Supabase,
+-- et une vue contourne les policies RLS de ses tables (cf. 008_secure_reporting_views.sql).
+--
 -- Run this once in Supabase Dashboard -> SQL Editor -> New query -> Run.
 
+create schema if not exists reporting;
+
 -- ─── Vue 1 : une ligne par mission ──────────────────────────────────────────
-create or replace view vw_missions_summary as
+create or replace view reporting.vw_missions_summary as
 select
   m.id as mission_id,
   m.company_id,
@@ -28,7 +34,7 @@ join companies co on co.id = m.company_id
 left join recruiters r on r.id = m.created_by;
 
 -- ─── Vue 2 : une ligne par candidat, avec sa mission ────────────────────────
-create or replace view vw_candidates_pipeline as
+create or replace view reporting.vw_candidates_pipeline as
 select
   c.id as candidate_id,
   c.company_id,
@@ -52,7 +58,7 @@ join companies co on co.id = c.company_id
 left join missions m on m.id = c.mission_id;
 
 -- ─── Vue 3 : effectifs par mission x statut, pour un graphique d'entonnoir ──
-create or replace view vw_candidate_funnel as
+create or replace view reporting.vw_candidate_funnel as
 select
   m.id as mission_id,
   m.company_id,
@@ -64,7 +70,7 @@ join missions m on m.id = c.mission_id
 group by m.id, m.company_id, m.title, c.status;
 
 -- ─── Vue 4 : une ligne par décision (screening / topgrading / final) ────────
-create or replace view vw_decisions_detail as
+create or replace view reporting.vw_decisions_detail as
 select
   d.id as decision_id,
   c.id as candidate_id,
@@ -83,7 +89,7 @@ left join missions m on m.id = c.mission_id
 left join recruiters r on r.id = d.decided_by;
 
 -- ─── Vue 5 : une ligne par entretien (screening / topgrading) ───────────────
-create or replace view vw_interviews_summary as
+create or replace view reporting.vw_interviews_summary as
 select
   i.id as interview_id,
   c.id as candidate_id,
@@ -107,7 +113,7 @@ join candidates c on c.id = i.candidate_id
 left join missions m on m.id = c.mission_id;
 
 -- ─── Vue 6 : délai jusqu'à la décision finale, pour les candidats clôturés ──
-create or replace view vw_time_to_hire as
+create or replace view reporting.vw_time_to_hire as
 select
   c.id as candidate_id,
   c.company_id,
@@ -138,11 +144,8 @@ where c.status in ('Recrute', 'Non retenu');
 -- défaut par ce script) :
 --
 -- create role metabase_reader login password 'change-moi' bypassrls;
--- grant usage on schema public to metabase_reader;
--- grant select on
---   vw_missions_summary, vw_candidates_pipeline, vw_candidate_funnel,
---   vw_decisions_detail, vw_interviews_summary, vw_time_to_hire
--- to metabase_reader;
+-- grant usage on schema reporting to metabase_reader;
+-- grant select on all tables in schema reporting to metabase_reader;
 --
 -- Dans Supabase, ce rôle se crée et se gère via Database -> Roles (ou SQL
 -- Editor avec les droits superuser du projet). Ne jamais utiliser la clé

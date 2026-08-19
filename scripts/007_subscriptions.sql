@@ -5,7 +5,13 @@
 -- app - les lignes se créent pour l'instant à la main (Supabase SQL Editor /
 -- Table Editor) tant qu'un flux de vente/billing n'existe pas.
 --
+-- Les vues sont créées dans le schéma `reporting`, jamais dans `public` : tout
+-- objet du schéma `public` est exposé publiquement par l'API REST de Supabase,
+-- et une vue contourne les policies RLS de ses tables (cf. 008_secure_reporting_views.sql).
+--
 -- Run this once in Supabase Dashboard -> SQL Editor -> New query -> Run.
+
+create schema if not exists reporting;
 
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
@@ -38,7 +44,7 @@ create policy "recruiters can read their own company subscriptions" on subscript
 -- Un candidat est rattaché au pack actif de son entreprise s'il a été créé
 -- pendant la fenêtre de validité de ce pack (started_at -> expires_at, ou
 -- indéfiniment si expires_at est nul). Seuls les packs 'active' sont retenus.
-create or replace view vw_kpi_pack_utilization as
+create or replace view reporting.vw_kpi_pack_utilization as
 select
   s.company_id,
   co.name as company_name,
