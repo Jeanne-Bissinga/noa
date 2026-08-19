@@ -84,7 +84,7 @@ export async function getCurrentRecruiter(): Promise<RecruiterWithCompany | null
  * /connexion. Server Components can't write cookies, so signOut() can't be
  * called directly here - redirecting to /connexion while still
  * authenticated would otherwise bounce right back to /dashboard via the
- * middleware, looping forever.
+ * proxy, looping forever.
  */
 export async function requireRecruiter(): Promise<RecruiterWithCompany> {
   const recruiter = await getCurrentRecruiter();
