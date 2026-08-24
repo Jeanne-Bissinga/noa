@@ -9,6 +9,7 @@ import { CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, initials as initialsOf } from 
 import { CvModal } from "./cv-modal";
 import { CandidateFrise } from "./candidate-frise";
 import { CandidateDelete } from "./candidate-delete";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { updateCandidateProfile } from "./actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
 
@@ -46,6 +47,17 @@ export function CandidateDetail({
     email: candidate.email ?? "",
   });
   const [, startTransition] = useTransition();
+
+  useRegisterTestFiller(() => {
+    setEditing(true);
+    setDraft({
+      firstName: "Alex",
+      lastName: "Dupont (test)",
+      title: "Développeur Full-Stack",
+      location: "Paris",
+      email: "alex.dupont.test@example.com",
+    });
+  });
 
   const handleSaveProfile = () => {
     setEditError(null);

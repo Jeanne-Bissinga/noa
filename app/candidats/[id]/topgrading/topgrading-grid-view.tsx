@@ -6,8 +6,9 @@ import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn } from "@/components/noa/ui-primitives";
 import { RecordingGuidance } from "@/components/noa/recording-guidance";
 import { TranscriptCapture } from "@/components/noa/transcript-capture";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
-import { finishInterview } from "../actions";
+import { finishInterview, finishInterviewTest } from "../actions";
 import type { Candidate } from "@/lib/noa/types";
 import type { PrepGuideSection } from "@/lib/noa/interview-content";
 
@@ -24,6 +25,24 @@ export function TopgradingGridView({
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [, startTransition] = useTransition();
+
+  // Simule le clic "Analyser l'entretien" en bout de course : grille remplie,
+  // entretien terminé et synthèse rédigées par finishInterviewTest, sans IA.
+  useRegisterTestFiller(() => {
+    setTranscript(
+      "Transcription de test (topgrading) : parcours détaillé sur Scaleway, Skello et une période freelance, avec des exemples concrets de réalisations, de désaccords gérés sainement et de raisons de départ cohérentes.",
+    );
+    setNotes("Parcours cohérent, progression claire des responsabilités (donnée de test).");
+    setPending(true);
+    setError(null);
+    startTransition(async () => {
+      const result = await finishInterviewTest(candidate.id, "topgrading");
+      if (result?.error) {
+        setError(result.error);
+        setPending(false);
+      }
+    });
+  });
 
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = CANDIDATE_AVATAR_COLOR[candidate.status] ?? "bg-[#CCB8FF]/20 text-[#6b4ec4]";

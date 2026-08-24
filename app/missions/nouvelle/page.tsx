@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { ChevronRight, Zap } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink, InputField, Textarea, StepBar } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { createMission, type CreateMissionState } from "./actions";
 
 // ─── Mini SVG illustrations for recruitment context cards ──────────────────
@@ -90,6 +91,23 @@ export default function CampaignWhyPage() {
   const [reason, setReason] = useState("");
   const [autreDetail, setAutreDetail] = useState("");
   const [loadingStep, setLoadingStep] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // title / startingPoint / targetObjective sont des champs non contrôlés
+  // (lus via FormData au submit) : on les remplit en écrivant directement
+  // dans le DOM plutôt que via un setState, qui n'existe pas pour eux.
+  useRegisterTestFiller(() => {
+    setReason("scale");
+    setAutreDetail("");
+    const form = formRef.current;
+    if (!form) return;
+    const title = form.elements.namedItem("title") as HTMLInputElement | null;
+    if (title) title.value = "Développeur Full-Stack (donnée de test)";
+    const startingPoint = form.elements.namedItem("startingPoint") as HTMLTextAreaElement | null;
+    if (startingPoint) startingPoint.value = "Équipe produit en croissance, besoin d'un renfort technique polyvalent (donnée de test).";
+    const targetObjective = form.elements.namedItem("targetObjective") as HTMLTextAreaElement | null;
+    if (targetObjective) targetObjective.value = "Recruter un·e développeur·se full-stack opérationnel·le sous 6 semaines (donnée de test).";
+  });
 
   // Purely cosmetic staged-loading animation while the server action runs,
   // the actual mission insert happens in the server action itself.
@@ -113,7 +131,7 @@ export default function CampaignWhyPage() {
           </div>
         )}
 
-        <form action={formAction} onSubmit={handleSubmitClick}>
+        <form ref={formRef} action={formAction} onSubmit={handleSubmitClick}>
           <input type="hidden" name="reason" value={reason} />
           <input type="hidden" name="reasonDetail" value={reason === "other" ? autreDetail : ""} />
 

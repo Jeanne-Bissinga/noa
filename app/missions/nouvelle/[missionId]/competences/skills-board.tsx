@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ChevronRight, Plus, Check, Zap, Award } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, LinkBtn, BackLink, StepBar } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { toggleSkill, addCustomSkill, fillSkillSuggestions } from "../actions";
 import type { Mission, MissionSkill, MissionSkillCategory } from "@/lib/noa/types";
 import type { SkillSuggestions } from "@/lib/noa/ai";
@@ -26,6 +27,25 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
     technique: "", relationnelle: "", comportementale: "",
   });
   const [, startTransition] = useTransition();
+
+  // Mêmes appels que le clic "+" sur une compétence personnalisée : pas d'IA,
+  // valeurs fixes.
+  useRegisterTestFiller(() => {
+    if (skills.length > 0) return;
+    const FIXED_SKILLS: { category: MissionSkillCategory; name: string }[] = [
+      { category: "technique", name: "React" },
+      { category: "technique", name: "TypeScript" },
+      { category: "relationnelle", name: "Communication claire" },
+      { category: "comportementale", name: "Autonomie" },
+    ];
+    startTransition(async () => {
+      const positions: Record<MissionSkillCategory, number> = { technique: 0, relationnelle: 0, comportementale: 0 };
+      for (const { category, name } of FIXED_SKILLS) {
+        const created = await addCustomSkill(mission.id, category, name, positions[category]++);
+        if (created) setSkills((prev) => [...prev, created]);
+      }
+    });
+  });
 
   // Tant que le pool n'a pas été demandé et qu'aucune compétence n'existe
   // encore, on reste sur l'accroche "Laisser noa suggérer" plutôt que sur la

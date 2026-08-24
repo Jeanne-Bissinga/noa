@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { Briefcase, ChevronRight, Check, Upload, Plus, Zap, FileText } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { createCandidate, extractCvProfile, type CreateCandidateState } from "../actions";
 import type { CandidateProfileExtract } from "@/lib/noa/ai";
 import type { Mission } from "@/lib/noa/types";
@@ -27,6 +28,40 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
   const [profile, setProfile] = useState<CandidateProfileExtract | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Simule un CV déjà importé et déjà analysé (sans appeler l'IA d'extraction) :
+  // un vrai fichier factice est posé sur l'input pour satisfaire la validation
+  // serveur (cvFile obligatoire), et un profil fixe est fourni directement pour
+  // que createCandidate n'ait pas besoin de relancer l'extraction lui-même.
+  useRegisterTestFiller(() => {
+    const fakeFile = new File(["%PDF-1.4 donnée de test, pas un vrai CV"], "cv-test.pdf", { type: "application/pdf" });
+    const transfer = new DataTransfer();
+    transfer.items.add(fakeFile);
+    if (fileInputRef.current) fileInputRef.current.files = transfer.files;
+
+    const fixedProfile: CandidateProfileExtract = {
+      firstName: "Alex",
+      lastName: "Dupont (test)",
+      title: "Développeur Full-Stack",
+      location: "Paris",
+      email: "alex.dupont.test@example.com",
+      summary: "Développeur full-stack, 5 ans d'expérience React/TypeScript/Node.js (donnée de test).",
+      experiences: [
+        { role: "Senior Frontend Engineer", company: "Scaleway", period: "2021–2025", bullets: ["Réalisation clé (donnée de test)."] },
+      ],
+      skills: ["React", "TypeScript", "Node.js"],
+    };
+
+    setFile(fakeFile);
+    setParsing(false);
+    setCvDone(true);
+    setExtractError(null);
+    setProfile(fixedProfile);
+    setFirstName(fixedProfile.firstName);
+    setLastName(fixedProfile.lastName);
+    setTitle(fixedProfile.title);
+    setLocation(fixedProfile.location);
+  });
 
   const handleFileSelected = async (selected: File | null) => {
     if (!selected) return;

@@ -6,8 +6,9 @@ import Link from "next/link";
 import { Check, X, TrendingUp, PartyPopper, Sparkles, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, Btn, BackLink } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { initials as initialsOf } from "@/lib/noa/labels";
-import { decideFinal } from "../actions";
+import { decideFinal, ensureFinalRecommendationTest } from "../actions";
 import { markMissionFilled } from "@/app/missions/actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Synthesis } from "@/lib/noa/types";
 
@@ -69,6 +70,16 @@ export function FinalDecisionView({
   const [missionPending, setMissionPending] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();
+
+  // La page ne génère jamais la recommandation IA pour le compte de test (cf.
+  // page.tsx) : ce bouton la remplace par une recommandation fixe.
+  useRegisterTestFiller(() => {
+    if (globalRecommendation) return;
+    startTransition(async () => {
+      const created = await ensureFinalRecommendationTest(candidate.id);
+      if (created) router.refresh();
+    });
+  });
 
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = score !== null && score >= 75

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ChevronRight, Check, Zap, FileText, Plus, X } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink, Badge } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import {
   savePreparation,
   generateScreeningGrid, generateScreeningGuide,
@@ -49,6 +50,18 @@ export function PreparationView({
   const [guideLoading, setGuideLoading] = useState(false);
   const [guideSections, setGuideSections] = useState<PrepGuideSection[]>(hasExistingGuide ? existingTopics! : []);
   const [guideExpanded, setGuideExpanded] = useState<Record<string, boolean>>({});
+
+  // meta.gridSections/guideSections viennent de PREP_META (contenu statique,
+  // cf. lib/noa/interview-content.ts) : on les utilise tels quels, sans passer
+  // par handleGenerateGrid/handleGenerateGuide qui appellent l'IA.
+  useRegisterTestFiller(() => {
+    setEditedSections(meta.gridSections);
+    setGridGenerated(true);
+    setFormat("Visioconférence");
+    setDuration(step === "screening" ? "30 min" : "90 min");
+    setGuideSections(meta.guideSections);
+    setGuideGenerated(true);
+  });
 
   const canGenerateGuide = gridGenerated && format && duration;
   const stepLabel = STEP_LABEL[step];

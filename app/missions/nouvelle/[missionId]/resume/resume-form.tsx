@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { ChevronRight, Zap, Edit3, Check, X } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink, StepBar } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { saveMissionText, type SaveMissionTextState } from "../actions";
 import type { Mission } from "@/lib/noa/types";
 
@@ -14,6 +15,13 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
   const [state, formAction, pending] = useActionState(boundAction, initialState);
   const [editing, setEditing] = useState(!mission.mission_text);
   const [draft, setDraft] = useState(mission.mission_text ?? "");
+
+  useRegisterTestFiller(() => {
+    setEditing(true);
+    setDraft(
+      "Développer, tester et livrer des fonctionnalités produit en React/TypeScript/Node.js, en collaboration avec l'équipe produit, pour accélérer la roadmap (donnée de test).",
+    );
+  });
 
   return (
     <AppLayout headerTitle={mission.title}>

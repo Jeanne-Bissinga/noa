@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, LinkBtn, BackLink, StepBar } from "@/components/noa/ui-primitives";
+import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import {
   addObjective, updateObjective, removeObjective, fillObjectiveSuggestions, regenerateObjectiveSuggestions, getObjectiveSuggestions,
 } from "../actions";
@@ -152,6 +153,25 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   const [cardSuggestions, setCardSuggestions] = useState<ObjectiveSuggestion[] | null>(null);
   const [loadingCardSuggestions, setLoadingCardSuggestions] = useState(false);
   const [, startTransition] = useTransition();
+
+  // Mêmes appels que ceux déclenchés par la saisie manuelle (addObjective au
+  // clic "Ajouter", updateObjective au blur) : pas d'IA, valeurs fixes.
+  useRegisterTestFiller(() => {
+    if (objectives.length > 0) return;
+    const FIXED_OBJECTIVES = [
+      { label: "Livrer la v2 du parcours candidat", metric: "Taux de complétion du parcours", deadline: "3 mois", threshold: "+20 points (donnée de test)" },
+      { label: "Réduire le délai de recrutement", metric: "Time-to-hire moyen", deadline: "6 mois", threshold: "< 30 jours (donnée de test)" },
+    ];
+    startTransition(async () => {
+      for (let i = 0; i < FIXED_OBJECTIVES.length; i++) {
+        const created = await addObjective(mission.id, objectives.length + i);
+        if (!created) continue;
+        const fields = FIXED_OBJECTIVES[i];
+        setObjectives((prev) => [...prev, { ...created, ...fields }]);
+        await updateObjective(created.id, mission.id, fields);
+      }
+    });
+  });
 
   const localUpdate = (id: string, fields: Partial<MissionObjective>) =>
     setObjectives((prev) => prev.map((o) => (o.id === id ? { ...o, ...fields } : o)));

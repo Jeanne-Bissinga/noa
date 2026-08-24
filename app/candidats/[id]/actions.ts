@@ -10,6 +10,7 @@ import {
 import { STATUS_FIELDS } from "@/lib/noa/labels";
 import { generateNoaSynthesis } from "@/lib/noa/synthesis";
 import { SCREENING_CRITERIA, TOPGRADING_EPISODES, PREP_META, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
+import { TEST_USER_ID } from "@/lib/noa/test-account";
 import {
   generateScreeningCriteria,
   generateScreeningGuideSections,
@@ -490,6 +491,65 @@ export async function finishInterview(candidateId: string, type: InterviewType, 
   redirect(`/candidats/${candidateId}/${type}/decision`);
 }
 
+// ─── Version de test de finishInterview, réservée à un seul compte : même
+// enchaînement (grille remplie -> entretien terminé -> synthèse -> redirect
+// décision) mais avec des réponses et une synthèse fixes, générées sans
+// appeler l'IA (generateNoaSynthesis est le même repli déterministe que celui
+// utilisé plus haut quand l'IA échoue), pour pouvoir tester tout le parcours
+// sans consommer de crédits.
+const FIXED_TRANSCRIPTS: Record<InterviewType, string> = {
+  screening:
+    "Transcription de test (screening) : le candidat confirme 5 ans d'expérience React/TypeScript, une expérience en startup de 30 personnes, une disponibilité sous 3 semaines, des prétentions salariales à 68 k€ et un mentorat de deux développeurs juniors.",
+  topgrading:
+    "Transcription de test (topgrading) : parcours détaillé sur Scaleway, Skello et une période freelance, avec des exemples concrets de réalisations, de désaccords gérés sainement et de raisons de départ cohérentes.",
+};
+
+export async function finishInterviewTest(candidateId: string, type: InterviewType): Promise<FinishInterviewState> {
+  const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
+  if (recruiter.user_id !== TEST_USER_ID) {
+    return { error: "Cette action est réservée au compte de test." };
+  }
+
+  const supabase = await createClient();
+  const interview = await getOrCreateInterview(candidateId, type);
+  const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate, recruiter);
+
+  const answers: Record<string, string> =
+    type === "screening"
+      ? Object.fromEntries((grid.criteria as { id: string }[]).map((c, i) => [c.id, i % 5 === 4 ? "Partiel" : "Oui"]))
+      : Object.fromEntries(
+          (grid.criteria as { qs: { id: string }[] }[]).flatMap((ep) =>
+            ep.qs.map((q) => [q.id, "Réponse détaillée et cohérente, exemple concret à l'appui (donnée de test)."]),
+          ),
+        );
+
+  const { error: gridError } = await supabase
+    .from("evaluation_grids")
+    .update({ answers, updated_at: new Date().toISOString() })
+    .eq("id", grid.id);
+  if (gridError) return { error: gridError.message };
+
+  const { error: interviewError } = await supabase
+    .from("interviews")
+    .update({ status: "termine", completed_at: new Date().toISOString(), transcript: FIXED_TRANSCRIPTS[type] })
+    .eq("id", interview.id);
+  if (interviewError) return { error: interviewError.message };
+
+  const { content, advice } = generateNoaSynthesis(grid.criteria, answers);
+  await supabase.from("syntheses").insert({
+    candidate_id: candidateId,
+    interview_id: interview.id,
+    authored_by: "noa",
+    content,
+    advice,
+  });
+
+  revalidatePath(`/candidats/${candidateId}`);
+  revalidatePath(`/candidats/${candidateId}/synthese`);
+  revalidatePath("/dashboard");
+  redirect(`/candidats/${candidateId}/${type}/decision`);
+}
+
 // ─── Stage decisions (screening / topgrading) ──────────────────────────────
 type StageDecisionAction = "non_retenu" | "reporte" | "retenu";
 
@@ -599,6 +659,34 @@ export async function ensureFinalRecommendation(
     console.error(`[noa] Recommandation finale échouée : ${err?.message ?? String(e)}`);
     return null;
   }
+}
+
+// Version de test de ensureFinalRecommendation, réservée au compte de test :
+// la page Décision finale n'appelle jamais l'IA pour ce compte (cf.
+// app/candidats/[id]/decision-finale/page.tsx), cette action fournit à la
+// place une recommandation fixe. "Recommandation : recruter" doit rester une
+// des trois clés de VERDICT_STYLE (final-decision-view.tsx) pour que le badge
+// s'affiche correctement.
+export async function ensureFinalRecommendationTest(candidateId: string): Promise<Synthesis | null> {
+  const { recruiter } = await assertOwnedCandidate(candidateId);
+  if (recruiter.user_id !== TEST_USER_ID) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("syntheses")
+    .insert({
+      candidate_id: candidateId,
+      interview_id: null,
+      authored_by: "noa",
+      content: "Recommandation de test : candidat aligné avec les objectifs de la mission sur l'ensemble du parcours d'évaluation.",
+      advice: "Recommandation : recruter",
+    })
+    .select("*")
+    .single();
+
+  if (error) return null;
+  revalidatePath(`/candidats/${candidateId}/decision-finale`);
+  return data as Synthesis;
 }
 
 // ─── Final decision ─────────────────────────────────────────────────────────

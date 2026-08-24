@@ -5,6 +5,7 @@ import {
   getCandidateExperiences, getCandidateSkills, getSyntheses,
 } from "@/lib/noa/queries";
 import { computeAggregateScore } from "@/lib/noa/score";
+import { TEST_USER_ID } from "@/lib/noa/test-account";
 import { ensureFinalRecommendation } from "../actions";
 import { FinalDecisionView } from "./final-decision-view";
 
@@ -49,9 +50,11 @@ export default async function DecisionFinalePage({ params }: { params: Promise<{
   const topgradingSynthesis = noaSynthesis(topgradingInterview?.id);
 
   // Générée une seule fois (persistée en base) : si aucune synthèse globale
-  // n'existe encore pour ce candidat, on la génère maintenant.
+  // n'existe encore pour ce candidat, on la génère maintenant. Le compte de
+  // test n'appelle jamais l'IA ici : il obtient une recommandation fixe via le
+  // bouton de test (ensureFinalRecommendationTest, cf. final-decision-view.tsx).
   let globalRecommendation = syntheses.find((s) => s.interview_id === null && s.authored_by === "noa") ?? null;
-  if (!globalRecommendation) {
+  if (!globalRecommendation && recruiter.user_id !== TEST_USER_ID) {
     globalRecommendation = await ensureFinalRecommendation(candidate.id, {
       score,
       screeningSynthesis: screeningSynthesis

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { NoaLogo } from "@/components/noa/ui-primitives";
 import { signOut } from "@/app/(app)/actions";
+import { TestFillButton } from "@/components/noa/test-fill-button";
 
 // Ressources masquée pour l'instant (page pas prête) : la route reste, seule
 // l'entrée de nav est retirée. Réajouter { label: "Ressources", icon: BookOpen, href: "/ressources" } pour la ré-activer.
@@ -90,5 +91,6 @@ export const AppLayout = ({
         {children}
       </main>
     </div>
+    <TestFillButton />
   </div>
 );
