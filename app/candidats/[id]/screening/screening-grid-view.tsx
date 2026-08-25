@@ -80,7 +80,7 @@ export function ScreeningGridView({
           </div>
         </div>
 
-        <RecordingGuidance accent="blue" />
+        <RecordingGuidance value={transcript} onChange={setTranscript} accent="blue" />
 
         {/* Guide d'entretien (lecture seule) */}
         <Card className="p-6 mb-6">

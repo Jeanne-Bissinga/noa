@@ -81,7 +81,7 @@ export function TopgradingGridView({
           <Btn variant="secondary" size="sm"><Eye size={13} />Voir le CV</Btn>
         </div>
 
-        <RecordingGuidance accent="violet" />
+        <RecordingGuidance value={transcript} onChange={setTranscript} accent="violet" />
 
         {/* Contexte */}
         <div className="bg-[#CCB8FF]/10 border border-[#CCB8FF]/25 rounded-2xl p-4 mb-5">

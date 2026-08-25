@@ -1,25 +1,35 @@
-import { Mic, ExternalLink, Smartphone } from "lucide-react";
-import { Card } from "@/components/noa/ui-primitives";
+"use client";
 
-// noa n'enregistre pas encore l'entretien : le recruteur doit enregistrer
-// lui-même (outil externe ou dictaphone natif du téléphone) avant de
-// démarrer, puis coller la transcription obtenue une fois l'entretien terminé
-// (cf. TranscriptCapture, affiché après le guide sur la page d'entretien).
-const TOOL_EXAMPLES = [
-  { name: "Otter.ai", hint: "dictaphone + transcription auto" },
-  { name: "Fireflies.ai", hint: "rejoint Zoom / Meet / Teams" },
-  { name: "tl;dv", hint: "transcription + résumé de visio" },
-  { name: "Fathom", hint: "gratuit, transcription de visio" },
-  { name: "Notta", hint: "appli mobile de transcription" },
-];
+import { Mic, Square, X } from "lucide-react";
+import { Card } from "@/components/noa/ui-primitives";
+import { useInterviewRecorder } from "@/components/noa/use-interview-recorder";
+
+function formatElapsed(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const s = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 const ACCENT = {
-  blue: { chip: "border-[#99BAF8]/30 text-[#3a6fd4] bg-[#99BAF8]/8", icon: "text-[#3a6fd4] bg-[#99BAF8]/12" },
-  violet: { chip: "border-[#CCB8FF]/30 text-[#6b4ec4] bg-[#CCB8FF]/8", icon: "text-[#6b4ec4] bg-[#CCB8FF]/12" },
+  blue: { icon: "text-[#3a6fd4] bg-[#99BAF8]/12" },
+  violet: { icon: "text-[#6b4ec4] bg-[#CCB8FF]/12" },
 };
 
-export function RecordingGuidance({ accent = "blue" }: { accent?: "blue" | "violet" }) {
+// Affiché avant le guide d'entretien : le recruteur démarre l'enregistrement
+// ici, avant de dérouler l'entretien (cf. TranscriptCapture, affiché après le
+// guide, qui reçoit le texte transcrit et permet de le relire/corriger).
+export function RecordingGuidance({
+  value, onChange, accent = "blue",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  accent?: "blue" | "violet";
+}) {
   const colors = ACCENT[accent];
+
+  const recorder = useInterviewRecorder((text) => {
+    onChange(value.trim() ? `${value.trim()}\n\n${text}` : text);
+  });
 
   return (
     <Card className="p-4 mb-5">
@@ -27,30 +37,53 @@ export function RecordingGuidance({ accent = "blue" }: { accent?: "blue" | "viol
         <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${colors.icon}`}>
           <Mic size={12} />
         </div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Avant de démarrer : enregistrez l'entretien</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Enregistrer l&apos;entretien</p>
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed mb-3">
-        noa n&apos;enregistre pas encore l&apos;entretien lui-même. Enregistrez-le avec un outil externe qui propose une transcription automatique
-        (informez le candidat au préalable) — vous collerez le texte obtenu à la fin de l&apos;entretien, une fois la grille consultée.
+        Enregistrez directement l&apos;entretien (haut-parleur activé pour capter les deux voix), ou collez le texte obtenu depuis un autre outil : noa s&apos;en servira pour analyser la grille et rédiger la synthèse.
       </p>
 
-      <div className="flex items-start gap-2 mb-3 bg-gray-50 rounded-xl px-3 py-2.5">
-        <Smartphone size={13} className="text-gray-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Le plus simple : le dictaphone natif de votre téléphone (Dictaphone sur iPhone, Enregistreur vocal sur Android), si disponible sur votre appareil.
-        </p>
+      <div className="flex items-center gap-2">
+        {recorder.status === "idle" || recorder.status === "error" ? (
+          <button
+            type="button"
+            onClick={recorder.start}
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#010101] hover:bg-gray-800 rounded-lg px-3 py-2 transition-colors"
+          >
+            <Mic size={12} />
+            Démarrer l&apos;enregistrement
+          </button>
+        ) : recorder.status === "recording" ? (
+          <>
+            <button
+              type="button"
+              onClick={recorder.stop}
+              className="flex items-center gap-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg px-3 py-2 transition-colors"
+            >
+              <Square size={11} />
+              Arrêter · {formatElapsed(recorder.elapsedSeconds)}
+            </button>
+            <button
+              type="button"
+              onClick={recorder.cancel}
+              aria-label="Annuler l'enregistrement"
+              className="flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg p-2 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#99BAF8] animate-pulse" />
+            {recorder.status === "uploading" ? "Envoi de l'enregistrement…" : "Transcription en cours…"}
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {TOOL_EXAMPLES.map((tool) => (
-          <span key={tool.name} className={`inline-flex items-center gap-1 text-[10px] font-medium border rounded-full px-2.5 py-1 ${colors.chip}`}>
-            <ExternalLink size={9} />
-            {tool.name}
-            <span className="text-gray-400 font-normal">· {tool.hint}</span>
-          </span>
-        ))}
-      </div>
+      {recorder.error && (
+        <p className="text-xs text-red-500 mt-2">{recorder.error}</p>
+      )}
     </Card>
   );
 }

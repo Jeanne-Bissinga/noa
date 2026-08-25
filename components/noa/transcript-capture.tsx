@@ -7,9 +7,9 @@ import { saveTranscript } from "@/app/candidats/[id]/actions";
 import type { InterviewType } from "@/lib/noa/types";
 
 // Affiché après le guide d'entretien (cf. RecordingGuidance, affiché avant,
-// pour la consigne d'enregistrement) : le recruteur colle ici la
-// transcription obtenue une fois l'entretien terminé, pour que noa l'utilise
-// dans la synthèse post-entretien.
+// qui porte le contrôle d'enregistrement) : le texte transcrit y apparaît
+// automatiquement à la fin de l'enregistrement, et le recruteur peut aussi y
+// coller une transcription obtenue autrement, ou corriger le texte.
 const ACCENT = {
   blue: { ring: "focus:border-[#99BAF8] focus:ring-[#99BAF8]/20", icon: "text-[#3a6fd4] bg-[#99BAF8]/12" },
   violet: { ring: "focus:border-[#CCB8FF] focus:ring-[#CCB8FF]/20", icon: "text-[#6b4ec4] bg-[#CCB8FF]/12" },
@@ -57,7 +57,7 @@ export function TranscriptCapture({
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed mb-3">
-        Collez ici le texte obtenu depuis votre outil d&apos;enregistrement une fois l&apos;entretien terminé : noa s&apos;en servira pour analyser la grille et rédiger la synthèse.
+        Le texte transcrit apparaît ici automatiquement une fois l&apos;enregistrement terminé. Vous pouvez aussi coller une transcription obtenue autrement, ou corriger le texte.
       </p>
 
       <textarea
