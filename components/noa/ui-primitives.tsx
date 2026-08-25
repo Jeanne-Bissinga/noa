@@ -106,14 +106,15 @@ export const InputField = ({
 );
 
 export const Textarea = ({
-  label, placeholder, value, onChange, rows = 4, hint, name,
-}: { label?: string; placeholder?: string; value?: string; onChange?: (v: string) => void; rows?: number; hint?: string; name?: string }) => (
+  label, placeholder, value, onChange, rows = 4, hint, name, defaultValue,
+}: { label?: string; placeholder?: string; value?: string; onChange?: (v: string) => void; rows?: number; hint?: string; name?: string; defaultValue?: string }) => (
   <div className="flex flex-col gap-1.5">
     {label && <label className="text-sm font-semibold text-[#010101]">{label}</label>}
     <textarea
       name={name}
       placeholder={placeholder}
       value={value}
+      defaultValue={defaultValue}
       onChange={e => onChange?.(e.target.value)}
       rows={rows}
       className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/40 focus:border-[#99BAF8] transition-all bg-white resize-none placeholder-gray-300 text-black"

@@ -239,21 +239,24 @@ export async function addCustomSkill(missionId: string, category: MissionSkillCa
   return data;
 }
 
+// Repli neutre, volontairement indépendant de tout métier : la génération IA
+// prend en compte l'intitulé du poste, mais ces suggestions statiques ne le
+// peuvent pas (elles servent seulement si l'appel IA échoue). Elles ne doivent
+// donc jamais nommer une techno ou un outil spécifique à un métier (ex. React),
+// sous peine d'être hors sujet pour un poste non-dev (designer, commercial...).
 const NOA_SKILL_SUGGESTIONS: SkillSuggestions = {
   technique: [
-    { name: "TypeScript / JavaScript avancé", essential: true },
-    { name: "React & Next.js", essential: true },
-    { name: "Node.js / API REST", essential: true },
-    { name: "PostgreSQL ou équivalent", essential: false },
+    { name: "Maîtrise des outils métier du poste", essential: true },
+    { name: "Bonne connaissance du secteur d'activité", essential: false },
   ],
   relationnelle: [
-    { name: "Communication claire avec des non-techniques", essential: true },
+    { name: "Communication claire avec les parties prenantes", essential: true },
     { name: "Autonomie sur des sujets complexes", essential: true },
-    { name: "Feedback constructif en code review", essential: false },
+    { name: "Capacité à donner et recevoir du feedback", essential: false },
   ],
   comportementale: [
     { name: "Orienté livraison et résultats", essential: true },
-    { name: "Curiosité et veille technologique", essential: true },
+    { name: "Curiosité et envie d'apprendre", essential: true },
     { name: "Fiabilité dans les engagements", essential: false },
   ],
 };

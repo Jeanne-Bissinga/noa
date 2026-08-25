@@ -239,13 +239,14 @@ Règles :
 - Maximum 8 compétences par catégorie. Parmi elles :
   - essential=true pour les 4 à 6 compétences réellement INDISPENSABLES au poste (le recruteur les verra pré-sélectionnées).
   - essential=false pour 2 à 3 compétences complémentaires, pertinentes mais non bloquantes (suggérées, à cocher par le recruteur s'il les retient).
-- Les compétences TECHNIQUES doivent provenir de la stack de l'entreprise (si fournie) ou en découler directement. N'invente pas de technologies non pertinentes pour ce contexte.
+- Les compétences TECHNIQUES doivent d'abord correspondre au MÉTIER réel indiqué par l'intitulé du poste (ex : un designer a des compétences en design/outils UX, un commercial en vente/CRM, un RH en droit du travail/SIRH), PAS systématiquement à la stack technique de l'entreprise. La stack technique de l'entreprise ne s'applique que si le poste est lui-même un poste de développement/ingénierie logicielle ; pour tout autre métier, ignore-la et base-toi sur les outils et savoir-faire propres à ce métier.
 - Les compétences relationnelles et comportementales doivent refléter la mission, la culture et la taille de l'entreprise (ex : autonomie forte en petite structure, coordination transverse en grande équipe).
 - Formulations concises (2 à 6 mots).
 
 Calibrage :
-- Bon (technique, stack Django/PostgreSQL) : « Django & Django REST », « Optimisation PostgreSQL ».
-- Mauvais : « React & Next.js » alors que la stack ne le mentionne pas (hors sujet).
+- Bon (poste développeur, stack Django/PostgreSQL) : « Django & Django REST », « Optimisation PostgreSQL ».
+- Bon (poste designer, même si la stack entreprise est Django/PostgreSQL) : « Maîtrise de Figma », « Design systems », « Prototypage UX » — pas de technologies backend, car non pertinentes pour ce métier.
+- Mauvais : proposer « React & Next.js » ou toute techno de développement pour un poste non-dev (design, vente, RH, marketing...).
 
 Rejette les compétences génériques applicables à n'importe quel poste. Français.`;
 
