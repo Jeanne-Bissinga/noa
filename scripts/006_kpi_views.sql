@@ -9,10 +9,16 @@
 -- (pas de gestion de pack/abonnement dans noa aujourd'hui). À ajouter quand
 -- cette table existera - dis-moi si tu veux que je la modélise.
 --
+-- Les vues sont créées dans le schéma `reporting`, jamais dans `public` : tout
+-- objet du schéma `public` est exposé publiquement par l'API REST de Supabase,
+-- et une vue contourne les policies RLS de ses tables (cf. 008_secure_reporting_views.sql).
+--
 -- Run this once in Supabase Dashboard -> SQL Editor -> New query -> Run.
 
+create schema if not exists reporting;
+
 -- ─── KPI 1 : candidats importés (30 derniers jours) ─────────────────────────
-create or replace view vw_kpi_candidates_imported_30d as
+create or replace view reporting.vw_kpi_candidates_imported_30d as
 select count(*) as candidats_importes
 from candidates
 where created_at >= now() - interval '30 days';
@@ -21,7 +27,7 @@ where created_at >= now() - interval '30 days';
 -- "Décision atteinte" = decision_status = 'done', c'est-à-dire recruté ou non
 -- retenu (cf. STATUS_FIELDS dans lib/noa/labels.ts) : un candidat encore en
 -- attente de la décision finale ('current') n'est pas compté comme abouti.
-create or replace view vw_kpi_decision_completion_30d as
+create or replace view reporting.vw_kpi_decision_completion_30d as
 with imported as (
   select decision_status from candidates
   where created_at >= now() - interval '30 days'
@@ -34,7 +40,7 @@ select
 from imported;
 
 -- ─── KPI 3 : nouveaux comptes créés (30 derniers jours) ─────────────────────
-create or replace view vw_kpi_new_accounts_30d as
+create or replace view reporting.vw_kpi_new_accounts_30d as
 select count(*) as nouveaux_comptes
 from companies
 where created_at >= now() - interval '30 days';
@@ -44,7 +50,7 @@ where created_at >= now() - interval '30 days';
 -- mise à jour d'un candidat rattaché, ou la création d'un entretien. Restreint
 -- aux missions ouvertes (brouillon / en_cours) : une mission pourvue ou
 -- annulée n'a pas vocation à bouger.
-create or replace view vw_kpi_stagnant_campaigns as
+create or replace view reporting.vw_kpi_stagnant_campaigns as
 with open_missions as (
   select id, updated_at from missions
   where status in ('brouillon', 'en_cours')
