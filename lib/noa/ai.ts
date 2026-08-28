@@ -240,13 +240,16 @@ Règles :
   - essential=true pour les 4 à 6 compétences réellement INDISPENSABLES au poste (le recruteur les verra pré-sélectionnées).
   - essential=false pour 2 à 3 compétences complémentaires, pertinentes mais non bloquantes (suggérées, à cocher par le recruteur s'il les retient).
 - Les compétences TECHNIQUES doivent d'abord correspondre au MÉTIER réel indiqué par l'intitulé du poste (ex : un designer a des compétences en design/outils UX, un commercial en vente/CRM, un RH en droit du travail/SIRH), PAS systématiquement à la stack technique de l'entreprise. La stack technique de l'entreprise ne s'applique que si le poste est lui-même un poste de développement/ingénierie logicielle ; pour tout autre métier, ignore-la et base-toi sur les outils et savoir-faire propres à ce métier.
+- Une compétence TECHNIQUE doit TOUJOURS nommer un outil, logiciel, langage, framework, méthode ou certification concret et vérifiable (nom propre ou terme précis du métier) — jamais une catégorie abstraite. Si tu hésites entre une formulation vague et un nom d'outil précis, choisis toujours l'outil précis, quitte à en proposer plusieurs pour couvrir le poste.
 - Les compétences relationnelles et comportementales doivent refléter la mission, la culture et la taille de l'entreprise (ex : autonomie forte en petite structure, coordination transverse en grande équipe).
 - Formulations concises (2 à 6 mots).
 
-Calibrage :
+Calibrage (compétences TECHNIQUES) :
 - Bon (poste développeur, stack Django/PostgreSQL) : « Django & Django REST », « Optimisation PostgreSQL ».
-- Bon (poste designer, même si la stack entreprise est Django/PostgreSQL) : « Maîtrise de Figma », « Design systems », « Prototypage UX » — pas de technologies backend, car non pertinentes pour ce métier.
-- Mauvais : proposer « React & Next.js » ou toute techno de développement pour un poste non-dev (design, vente, RH, marketing...).
+- Bon (poste designer, même si la stack entreprise est Django/PostgreSQL) : « Figma », « Design systems », « Prototypage sur Framer » — des logiciels et pratiques concrets, pas de technologies backend (non pertinentes pour ce métier).
+- Bon (poste commercial) : « Négociation grands comptes », « Salesforce ou HubSpot », « Prospection outbound ».
+- Mauvais : « React & Next.js » ou toute techno de développement pour un poste non-dev.
+- Mauvais (trop vague, à bannir même quand tu ne connais pas le détail du poste) : « Maîtrise des outils du métier », « Bonnes compétences techniques », « Connaissance des logiciels du secteur », « Compétences digitales ». Remplace-les toujours par les outils/logiciels réels de ce métier (déduis-les du contexte si besoin, mais nomme-les).
 
 Rejette les compétences génériques applicables à n'importe quel poste. Français.`;
 
