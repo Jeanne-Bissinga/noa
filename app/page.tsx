@@ -40,7 +40,14 @@ const PROOF = [
 ];
 
 const PRODUCT_LINKS = ["Méthode A-Player", "Cadrer le poste", "Sourcer les candidats", "Évaluer les profils", "Convaincre le candidat"];
-const LEGAL_LINKS = ["Mentions légales", "Politique de confidentialité", "CGU", "Contact"];
+// `href: null` = page pas encore rédigée, le libellé reste affiché mais n'est
+// pas présenté comme cliquable (cf. ticket « Pages légales absentes »).
+const LEGAL_LINKS: { label: string; href: string | null }[] = [
+  { label: "Mentions légales", href: null },
+  { label: "Politique de confidentialité", href: null },
+  { label: "CGU", href: "/cgu" },
+  { label: "Contact", href: null },
+];
 
 const PLANS = [
   {
@@ -296,7 +303,11 @@ export default async function LandingPage() {
           <div>
             <p className="mb-4 text-xs uppercase tracking-[1.6px] text-white/30">Informations légales</p>
             {LEGAL_LINKS.map(l => (
-              <ScrollLink key={l} href="#" className="mb-2 block text-sm text-white/60 transition-colors hover:text-white">{l}</ScrollLink>
+              l.href ? (
+                <Link key={l.label} href={l.href} className="mb-2 block text-sm text-white/60 transition-colors hover:text-white">{l.label}</Link>
+              ) : (
+                <p key={l.label} className="mb-2 block text-sm text-white/40">{l.label}</p>
+              )
             ))}
           </div>
         </div>

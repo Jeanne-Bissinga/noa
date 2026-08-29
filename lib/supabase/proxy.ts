@@ -1,7 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/', '/inscription', '/connexion', '/demo']
+// Les pages légales doivent rester lisibles sans compte : on ne peut pas
+// exiger une connexion pour consulter les conditions qu'il faut accepter.
+const PUBLIC_PATHS = ['/', '/inscription', '/connexion', '/demo', '/cgu']
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true
