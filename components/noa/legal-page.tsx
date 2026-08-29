@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { NoaLogo } from "@/components/noa/ui-primitives";
+import { NoaLogo, BackLink } from "@/components/noa/ui-primitives";
 
 // Coquille partagée par les pages légales (CGU, politique de confidentialité,
 // mentions légales…). Le contenu est décrit en données côté page : un article
@@ -37,8 +36,8 @@ const MailLink = () => (
 const Block = ({ block }: { block: LegalBlock }) => {
   if ("address" in block) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
-        <p className="text-sm font-bold text-[#010101]">{block.address.name}</p>
+      <div>
+        <p className="text-sm font-semibold leading-relaxed text-[#010101]">{block.address.name}</p>
         {block.address.lines.map((line) => (
           <p key={line} className="text-sm leading-relaxed text-gray-600">{line}</p>
         ))}
@@ -105,18 +104,15 @@ export function LegalPage({
   return (
     <div className="min-h-screen bg-[#f8f9fb]">
       <header className="bg-[#010101]">
-        <div className="mx-auto flex w-[min(100%-32px,768px)] items-center justify-between py-5">
+        <div className="mx-auto flex w-[min(100%-32px,768px)] items-center py-5">
           <Link href="/" aria-label="Retour à l'accueil" className="inline-flex">
             <NoaLogo scale={0.8} />
-          </Link>
-          <Link href="/" className="group flex items-center gap-1.5 text-xs font-medium text-white/50 transition-colors hover:text-white">
-            <ArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" />
-            Retour à l'accueil
           </Link>
         </div>
       </header>
 
       <main className="mx-auto w-[min(100%-32px,768px)] py-12 sm:py-16">
+        <BackLink href="/" />
         <h1 className="text-3xl font-bold text-[#010101] sm:text-4xl" style={poppins}>{title}</h1>
         <p className="mt-3 text-sm text-gray-400">Dernière mise à jour : {lastUpdate}</p>
 
