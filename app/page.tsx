@@ -43,7 +43,7 @@ const PRODUCT_LINKS = ["Méthode A-Player", "Cadrer le poste", "Sourcer les cand
 // `href: null` = page pas encore rédigée, le libellé reste affiché mais n'est
 // pas présenté comme cliquable (cf. ticket « Pages légales absentes »).
 const LEGAL_LINKS: { label: string; href: string | null }[] = [
-  { label: "Mentions légales", href: null },
+  { label: "Mentions légales", href: "/mentions-legales" },
   { label: "Politique de confidentialité", href: "/confidentialite" },
   { label: "CGU", href: "/cgu" },
   { label: "Contact", href: null },

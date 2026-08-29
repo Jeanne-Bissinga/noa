@@ -13,6 +13,8 @@ export const LEGAL_CONTACT_EMAIL = "noa.recrutement@gmail.com";
 
 export type LegalBlock =
   | { p: string }
+  | { address: { name: string; lines: string[] } }
+  | { contact: { label: string; value: string; href?: string }[] }
   | { h3: string }
   | { ul: string[] }
   | { dl: { term: string; def: string }[] }
@@ -33,6 +35,32 @@ const MailLink = () => (
 );
 
 const Block = ({ block }: { block: LegalBlock }) => {
+  if ("address" in block) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <p className="text-sm font-bold text-[#010101]">{block.address.name}</p>
+        {block.address.lines.map((line) => (
+          <p key={line} className="text-sm leading-relaxed text-gray-600">{line}</p>
+        ))}
+      </div>
+    );
+  }
+  if ("contact" in block) {
+    return (
+      <div className="space-y-1">
+        {block.contact.map((c) => (
+          <p key={c.label} className="text-sm leading-relaxed text-gray-600">
+            {c.label} :{" "}
+            {c.href ? (
+              <a href={c.href} className="font-semibold text-[#3a6fd4] underline underline-offset-2 transition-colors hover:text-[#010101]">{c.value}</a>
+            ) : (
+              <span className="font-semibold text-[#010101]">{c.value}</span>
+            )}
+          </p>
+        ))}
+      </div>
+    );
+  }
   if ("h3" in block) {
     return <h3 className="pt-2 text-sm font-bold text-[#010101]" style={poppins}>{block.h3}</h3>;
   }
