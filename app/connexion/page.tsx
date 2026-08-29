@@ -72,7 +72,7 @@ export default function LoginPage({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-semibold text-[#010101]">Mot de passe</label>
-                <span className="text-xs text-[#3a6fd4] cursor-pointer hover:underline">Mot de passe oublié ?</span>
+                <Link href="/mot-de-passe-oublie" className="text-xs text-[#3a6fd4] hover:underline">Mot de passe oublié ?</Link>
               </div>
               <input
                 type="password"
