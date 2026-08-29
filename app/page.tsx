@@ -44,7 +44,7 @@ const PRODUCT_LINKS = ["Méthode A-Player", "Cadrer le poste", "Sourcer les cand
 // pas présenté comme cliquable (cf. ticket « Pages légales absentes »).
 const LEGAL_LINKS: { label: string; href: string | null }[] = [
   { label: "Mentions légales", href: null },
-  { label: "Politique de confidentialité", href: null },
+  { label: "Politique de confidentialité", href: "/confidentialite" },
   { label: "CGU", href: "/cgu" },
   { label: "Contact", href: null },
 ];

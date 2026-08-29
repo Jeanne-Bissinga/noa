@@ -127,7 +127,16 @@ export default function SignupPage() {
               >
                 Conditions Générales d'Utilisation
               </Link>{" "}
-              et reconnais avoir pris connaissance de la Politique de confidentialité
+              et reconnais avoir pris connaissance de la{" "}
+              <Link
+                href="/confidentialite"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#3a6fd4] underline hover:text-[#010101] transition-colors"
+              >
+                Politique de confidentialité
+              </Link>
             </span>
           </label>
 

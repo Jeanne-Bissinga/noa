@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { NoaLogo } from "@/components/noa/ui-primitives";
+import { LegalPage, type LegalArticle } from "@/components/noa/legal-page";
 
 export const metadata: Metadata = {
   title: "Conditions Générales d'Utilisation",
@@ -9,19 +7,7 @@ export const metadata: Metadata = {
     "Conditions Générales d'Utilisation du service Noa Recrutement : accès au service, compte, données personnelles, responsabilités et droit applicable.",
 };
 
-const LAST_UPDATE = "29 août 2026";
-const CONTACT_EMAIL = "noa.recrutement@gmail.com";
-const poppins = { fontFamily: "Poppins, sans-serif" };
-
-// Le contenu est décrit en données plutôt qu'en JSX : chaque article se lit
-// d'un bloc, et la mise en forme reste identique d'un article à l'autre.
-type Block =
-  | { p: string }
-  | { ul: string[] }
-  | { quote: string }
-  | { mail: true };
-
-const ARTICLES: { n: number; title: string; blocks: Block[] }[] = [
+const ARTICLES: LegalArticle[] = [
   {
     n: 1,
     title: "Objet",
@@ -268,79 +254,12 @@ const ARTICLES: { n: number; title: string; blocks: Block[] }[] = [
   },
 ];
 
-function MailLink() {
-  return (
-    <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm font-semibold text-[#3a6fd4] underline underline-offset-2 hover:text-[#010101] transition-colors">
-      {CONTACT_EMAIL}
-    </a>
-  );
-}
-
 export default function CguPage() {
   return (
-    <div className="min-h-screen bg-[#f8f9fb]">
-      <header className="bg-[#010101]">
-        <div className="mx-auto flex w-[min(100%-32px,768px)] items-center justify-between py-5">
-          <Link href="/" aria-label="Retour à l'accueil" className="inline-flex">
-            <NoaLogo scale={0.8} />
-          </Link>
-          <Link href="/" className="group flex items-center gap-1.5 text-xs font-medium text-white/50 transition-colors hover:text-white">
-            <ArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" />
-            Retour à l'accueil
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto w-[min(100%-32px,768px)] py-12 sm:py-16">
-        <h1 className="text-3xl font-bold text-[#010101] sm:text-4xl" style={poppins}>
-          Conditions Générales d'Utilisation de Noa Recrutement
-        </h1>
-        <p className="mt-3 text-sm text-gray-400">Dernière mise à jour : {LAST_UPDATE}</p>
-
-        <div className="mt-12 space-y-12">
-          {ARTICLES.map((article) => (
-            <section key={article.n} id={`article-${article.n}`} className="scroll-mt-8">
-              <h2 className="mb-4 text-lg font-bold text-[#010101]" style={poppins}>
-                {article.n}. {article.title}
-              </h2>
-              <div className="space-y-4">
-                {article.blocks.map((block, i) => {
-                  if ("ul" in block) {
-                    return (
-                      <ul key={i} className="space-y-2 pl-5">
-                        {block.ul.map((item) => (
-                          <li key={item} className="list-disc text-sm leading-relaxed text-gray-600 marker:text-gray-300">
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    );
-                  }
-                  if ("quote" in block) {
-                    return (
-                      <blockquote key={i} className="border-l-2 border-[#99BAF8] bg-white px-4 py-3 text-sm italic leading-relaxed text-gray-600">
-                        « {block.quote} »
-                      </blockquote>
-                    );
-                  }
-                  if ("mail" in block) return <p key={i}><MailLink /></p>;
-                  return (
-                    <p key={i} className="text-sm leading-relaxed text-gray-600">
-                      {block.p}
-                    </p>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-      </main>
-
-      <footer className="border-t border-gray-200 bg-white">
-        <div className="mx-auto w-[min(100%-32px,768px)] py-6 text-xs text-gray-400">
-          © {new Date().getFullYear()} Noa Recrutement
-        </div>
-      </footer>
-    </div>
+    <LegalPage
+      title="Conditions Générales d'Utilisation de Noa Recrutement"
+      lastUpdate="29 août 2026"
+      articles={ARTICLES}
+    />
   );
 }

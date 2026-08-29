@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 // Les pages légales doivent rester lisibles sans compte : on ne peut pas
 // exiger une connexion pour consulter les conditions qu'il faut accepter.
-const PUBLIC_PATHS = ['/', '/inscription', '/connexion', '/demo', '/cgu']
+const PUBLIC_PATHS = ['/', '/inscription', '/connexion', '/demo', '/cgu', '/confidentialite']
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true
