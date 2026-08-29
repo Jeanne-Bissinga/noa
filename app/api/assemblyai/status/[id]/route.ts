@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { ASSEMBLYAI_BASE_URL } from "@/lib/noa/assemblyai";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +16,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { id } = await params;
 
-  const res = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+  const res = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/transcript/${id}`, {
     headers: { authorization: apiKey },
   });
 

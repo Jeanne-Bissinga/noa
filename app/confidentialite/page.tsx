@@ -155,10 +155,10 @@ const ARTICLES: LegalArticle[] = [
       { p: "Certaines fonctionnalités de Noa reposent sur des services d'intelligence artificielle opérés par des prestataires tiers. Les données qui leur sont transmises se limitent à ce qui est nécessaire à la fonctionnalité demandée." },
       { dl: [
         { term: "Anthropic PBC, États-Unis", def: "traitement des contenus nécessaires aux analyses et aux suggestions de Noa. Sont notamment transmis le contenu des CV importés, afin d'en extraire la fiche candidat, les informations de la mission, pour proposer objectifs, compétences et guides d'entretien, ainsi que les réponses et transcriptions d'entretien, pour évaluer les grilles, produire les synthèses et formuler une recommandation." },
-        { term: "AssemblyAI Inc., États-Unis", def: "transcription des entretiens. Lorsque le recruteur utilise l'enregistrement audio, celui-ci est transmis à ce prestataire, qui le restitue sous forme de texte. La transcription obtenue est ensuite utilisée dans Noa comme toute autre note d'entretien." },
+        { term: "AssemblyAI Inc., serveurs européens", def: "transcription des entretiens. Lorsque le recruteur utilise l'enregistrement audio, celui-ci est transmis à ce prestataire, qui le restitue sous forme de texte. Noa utilise ses serveurs européens : les enregistrements sont traités et conservés dans l'Union européenne, et ne sont pas utilisés pour entraîner les modèles du prestataire. La transcription obtenue est ensuite utilisée dans Noa comme toute autre note d'entretien." },
       ] },
       { p: "Ces prestataires interviennent en qualité de sous-traitants. Ils ne sont pas autorisés à utiliser ces données à d'autres fins que la fourniture du service demandé." },
-      { p: "Le recours à ces prestataires implique un transfert de données en dehors de l'Union européenne. Ce transfert est encadré par les garanties prévues au chapitre V du RGPD." },
+      { p: "Le recours à Anthropic implique un transfert de données vers les États-Unis. Ce transfert est encadré par les garanties prévues au chapitre V du RGPD. Les enregistrements confiés à AssemblyAI ne quittent pas l'Union européenne." },
       { p: "Les analyses, évaluations et synthèses produites par ces outils constituent une aide à la décision. Aucune décision de recrutement n'est prise automatiquement par eux, et la décision finale reste celle du client recruteur." },
       { p: "Vos données personnelles ne sont jamais vendues à des tiers." },
     ],
