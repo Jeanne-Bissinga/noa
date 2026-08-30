@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-import { NoaLogo, Btn, InputField } from "@/components/noa/ui-primitives";
+import { ChevronRight } from "lucide-react";
+import { NoaLogo, Btn, InputField, BackLink } from "@/components/noa/ui-primitives";
 import { requestPasswordReset, type ForgotPasswordState } from "./actions";
 
 const initialState: ForgotPasswordState = {};
@@ -32,6 +32,8 @@ export default function ForgotPasswordPage() {
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <form action={formAction} className="w-full max-w-sm py-8">
           <div className="lg:hidden mb-8"><NoaLogo /></div>
+
+          <BackLink href="/connexion" />
 
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={poppins}>Mot de passe oublié</h2>
           <p className="text-gray-400 text-sm mb-8">
@@ -66,14 +68,6 @@ export default function ForgotPasswordPage() {
               </Btn>
             </>
           )}
-
-          <Link
-            href="/connexion"
-            className="group mt-6 flex w-fit items-center gap-1.5 text-xs font-medium text-gray-400 transition-colors hover:text-[#010101]"
-          >
-            <ArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" />
-            Retour à la connexion
-          </Link>
         </form>
       </div>
     </div>
