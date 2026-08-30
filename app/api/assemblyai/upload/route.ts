@@ -1,6 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
+import { ASSEMBLYAI_BASE_URL } from "@/lib/noa/assemblyai";
 
 // Reçoit le blob audio enregistré côté navigateur, le transmet à AssemblyAI
 // puis lance la transcription (langue française). Ne renvoie que l'id du
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Aucun audio reçu." }, { status: 400 });
   }
 
-  const uploadRes = await fetch("https://api.assemblyai.com/v2/upload", {
+  const uploadRes = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/upload`, {
     method: "POST",
     headers: { authorization: apiKey },
     body: audio,
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
   const { upload_url } = await uploadRes.json();
 
-  const transcriptRes = await fetch("https://api.assemblyai.com/v2/transcript", {
+  const transcriptRes = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/transcript`, {
     method: "POST",
     headers: { authorization: apiKey, "content-type": "application/json" },
     body: JSON.stringify({ audio_url: upload_url, language_code: "fr" }),

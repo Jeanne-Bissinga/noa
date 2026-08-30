@@ -116,9 +116,27 @@ export default function SignupPage() {
             </div>
             <span className="text-sm text-gray-500 leading-relaxed">
               J'accepte les{" "}
-              <span className="text-[#3a6fd4] underline">Conditions Générales d'Utilisation</span>{" "}
-              et la{" "}
-              <span className="text-[#3a6fd4] underline">Politique de confidentialité</span>
+              {/* Ouvre dans un nouvel onglet et stoppe la propagation : le lien est
+                  dans le <label> de la case à cocher, un clic la basculerait sinon. */}
+              <Link
+                href="/cgu"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#3a6fd4] underline hover:text-[#010101] transition-colors"
+              >
+                Conditions Générales d'Utilisation
+              </Link>{" "}
+              et reconnais avoir pris connaissance de la{" "}
+              <Link
+                href="/confidentialite"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#3a6fd4] underline hover:text-[#010101] transition-colors"
+              >
+                Politique de confidentialité
+              </Link>
             </span>
           </label>
 

@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-import { NoaLogo, Btn, InputField } from "@/components/noa/ui-primitives";
+import { ChevronRight } from "lucide-react";
+import { NoaLogo, Btn, InputField, BackLink } from "@/components/noa/ui-primitives";
 import { requestDemo, type DemoState } from "./actions";
 
 const initialState: DemoState = {};
@@ -43,20 +43,16 @@ export default function DemoPage() {
         {state?.message ? (
           <div className="w-full max-w-lg py-8">
             <div className="lg:hidden mb-8"><NoaLogo /></div>
+            <BackLink href="/" label="Retour à l'accueil" />
             <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={poppins}>Demande envoyée</h2>
             <div className="mt-4 px-4 py-3 rounded-xl bg-[#75DA9F]/10 border border-[#75DA9F]/30 text-[#1e8f52] text-sm">
               {state.message}
             </div>
-            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[#3a6fd4] hover:underline mt-6">
-              <ArrowLeft size={15} /> Retour à l'accueil
-            </Link>
           </div>
         ) : (
           <form action={formAction} className="w-full max-w-lg py-8">
-            <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#010101] mb-6">
-              <ArrowLeft size={14} /> Retour à l'accueil
-            </Link>
             <div className="lg:hidden mb-8"><NoaLogo /></div>
+            <BackLink href="/" label="Retour à l'accueil" />
             <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={poppins}>Demander une démo</h2>
             <p className="text-gray-400 text-sm mb-8">Dites-nous en un peu plus, on vous recontacte pour fixer un rendez-vous.</p>
 
