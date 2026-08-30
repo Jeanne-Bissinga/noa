@@ -73,8 +73,8 @@ export function TopgradingGridView({
             <div>
               <h1 className="text-xl font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-400">Entretien Topgrading</span>
-                <Badge color="violet">Topgrading</Badge>
+                <span className="text-sm text-gray-400">Entretien technique</span>
+                <Badge color="violet">Entretien technique</Badge>
               </div>
             </div>
           </div>
@@ -86,7 +86,7 @@ export function TopgradingGridView({
         {/* Contexte */}
         <div className="bg-[#CCB8FF]/10 border border-[#CCB8FF]/25 rounded-2xl p-4 mb-5">
           <p className="text-xs text-[#6b4ec4] leading-relaxed">
-            Le Topgrading explore le parcours chronologique. Consultez les questions et relances ci-dessous pendant l'entretien —
+            L'entretien technique explore le parcours chronologique. Consultez les questions et relances ci-dessous pendant l'entretien —
             noa évaluera la grille automatiquement à partir de la transcription, rien à noter ici.
           </p>
         </div>

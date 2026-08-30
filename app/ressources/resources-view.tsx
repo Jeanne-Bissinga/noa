@@ -26,7 +26,7 @@ const RESOURCES = [
     ],
   },
   {
-    step: "3. Évaluer avec le Screening",
+    step: "3. Évaluer avec le premier entretien",
     color: "bg-[#FEE831]/10 border-[#FEE831]/30",
     tag: "text-[#8a6a00] bg-[#FEE831]/15",
     articles: [
@@ -36,7 +36,7 @@ const RESOURCES = [
     ],
   },
   {
-    step: "4. Approfondir avec le Topgrading",
+    step: "4. Approfondir avec l'entretien technique",
     color: "bg-[#75DA9F]/12 border-[#75DA9F]/20",
     tag: "text-[#1e8f52] bg-[#75DA9F]/15",
     articles: [

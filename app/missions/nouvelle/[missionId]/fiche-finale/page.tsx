@@ -50,7 +50,7 @@ export default async function JobFinalPage({ params }: { params: Promise<{ missi
   const SKILL_CATEGORY_LABEL: Record<MissionSkillCategory, string> = {
     technique: "Techniques",
     relationnelle: "Relationnelles",
-    comportementale: "Comportementales",
+    comportementale: "Savoir-être",
   };
 
   const skillsByCategory = (["technique", "relationnelle", "comportementale"] as MissionSkillCategory[]).map((category) => ({

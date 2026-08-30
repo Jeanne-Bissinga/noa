@@ -12,10 +12,12 @@ import { decideFinal, ensureFinalRecommendationTest } from "../actions";
 import { markMissionFilled } from "@/app/missions/actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Synthesis } from "@/lib/noa/types";
 
+// Libellés formulés comme des suggestions, jamais comme un ordre : la
+// décision finale revient toujours au recruteur (cf. disclaimer ci-dessous).
 const VERDICT_STYLE: Record<string, { label: string; tone: string }> = {
-  "Recommandation : recruter": { label: "Recruter", tone: "bg-[#75DA9F]/15 text-[#1e8f52]" },
-  "Recommandation : à discuter": { label: "À discuter", tone: "bg-[#99BAF8]/15 text-[#3a6fd4]" },
-  "Recommandation : écarter": { label: "Écarter", tone: "bg-red-50 text-red-500" },
+  "Recommandation : recruter": { label: "Suggestion : recruter", tone: "bg-[#75DA9F]/15 text-[#1e8f52]" },
+  "Recommandation : à discuter": { label: "Suggestion : à discuter", tone: "bg-[#99BAF8]/15 text-[#3a6fd4]" },
+  "Recommandation : écarter": { label: "Suggestion : écarter ce candidat", tone: "bg-red-50 text-red-500" },
 };
 
 function StageRecap({ candidateId, step, label, synthesis }: {
@@ -88,8 +90,17 @@ export function FinalDecisionView({
     ? "bg-[#99BAF8]/20 text-[#3a6fd4]"
     : "bg-red-50 text-red-400";
 
+  // Une bonne note ne doit pas afficher "recommandé" si noa a lui-même signalé
+  // un point de vigilance non levé dans son analyse : le badge doit refléter
+  // la nuance de la synthèse, pas seulement le score brut.
+  const riskFlagged = /risque|point de vigilance|à confirmer|zone d'incertitude|non levé/i.test(
+    `${globalRecommendation?.content ?? ""} ${globalRecommendation?.advice ?? ""}`,
+  );
+
   const recommendation = score === null
     ? { label: "Score en attente", tone: "bg-gray-100 text-gray-500" }
+    : score >= 75 && riskFlagged
+    ? { label: "Profil à approfondir", tone: "bg-[#FEE831]/20 text-[#8a6a00]" }
     : score >= 75
     ? { label: "Profil recommandé", tone: "bg-[#75DA9F]/15 text-[#1e8f52]" }
     : score >= 50
@@ -131,14 +142,14 @@ export function FinalDecisionView({
             </div>
             <h1 className="text-lg font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>{name} a été marqué comme recruté</h1>
             <p className="text-sm text-gray-500 leading-relaxed mb-6">
-              Cette mission cherche-t-elle encore d'autres profils, ou le recrutement est-il terminé ?
+              Cette campagne cherche-t-elle encore d'autres profils, ou le recrutement est-il terminé ?
             </p>
             <div className="flex flex-col gap-2">
               <Btn variant="primary" size="lg" onClick={() => handleMissionChoice(true)} disabled={missionPending}>
-                <Check size={15} />{missionPending ? "…" : "Marquer la mission comme pourvue"}
+                <Check size={15} />{missionPending ? "…" : "Marquer la campagne comme pourvue"}
               </Btn>
               <Btn variant="secondary" size="lg" onClick={() => handleMissionChoice(false)} disabled={missionPending}>
-                Non, je continue à recruter sur cette mission
+                Non, je continue à recruter sur cette campagne
               </Btn>
             </div>
           </Card>
@@ -178,6 +189,7 @@ export function FinalDecisionView({
               {verdict && <span className={`text-xs font-bold px-3 py-1 rounded-full ${verdict.tone}`}>{verdict.label}</span>}
             </div>
             <p className="text-sm text-gray-700 leading-relaxed">{globalRecommendation.content}</p>
+            <p className="text-[10px] text-gray-400 italic mt-3">Proposition d&apos;analyse. La décision vous appartient.</p>
           </Card>
         )}
 
@@ -200,8 +212,8 @@ export function FinalDecisionView({
 
         {/* Récap Screening / Topgrading */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <StageRecap candidateId={candidate.id} step="screening" label="Screening" synthesis={screeningSynthesis} />
-          <StageRecap candidateId={candidate.id} step="topgrading" label="Topgrading" synthesis={topgradingSynthesis} />
+          <StageRecap candidateId={candidate.id} step="screening" label="Premier entretien" synthesis={screeningSynthesis} />
+          <StageRecap candidateId={candidate.id} step="topgrading" label="Entretien technique" synthesis={topgradingSynthesis} />
         </div>
 
         {/* Profil candidat */}

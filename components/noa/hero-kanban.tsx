@@ -38,7 +38,7 @@ type Column = {
 
 const COLUMNS: Column[] = [
   {
-    title: "Screening",
+    title: "Premier entretien",
     dotClass: "bg-[#99BAF8]",
     count: 3,
     candidates: [
@@ -48,7 +48,7 @@ const COLUMNS: Column[] = [
     ],
   },
   {
-    title: "Topgrading",
+    title: "Entretien technique",
     dotClass: "bg-[#CCB8FF]",
     count: 2,
     candidates: [

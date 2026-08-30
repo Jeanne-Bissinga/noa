@@ -99,7 +99,7 @@ export function MissionActions({
             disabled={pending}
             className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:bg-red-50 px-3 py-2 rounded-xl transition-all disabled:opacity-60"
           >
-            <Trash2 size={13} />Supprimer la mission
+            <Trash2 size={13} />Supprimer la campagne
           </button>
         )}
       </div>
@@ -107,7 +107,7 @@ export function MissionActions({
       {deleteStep === "choice" && (
         <div className="mt-3 p-4 rounded-xl border border-orange-200 bg-orange-50 max-w-md">
           <p className="text-xs text-orange-700 leading-relaxed mb-3">
-            Cette mission a <strong>{candidateCount} candidat{candidateCount > 1 ? "s" : ""}</strong> rattaché{candidateCount > 1 ? "s" : ""}.
+            Cette campagne a <strong>{candidateCount} candidat{candidateCount > 1 ? "s" : ""}</strong> rattaché{candidateCount > 1 ? "s" : ""}.
             Voulez-vous les supprimer aussi ?
           </p>
           <div className="flex flex-col gap-2">
@@ -135,7 +135,7 @@ export function MissionActions({
       {deleteStep === "confirm" && (
         <div className="mt-3 p-4 rounded-xl border border-red-200 bg-red-50 max-w-md">
           <p className="text-xs text-red-600 leading-relaxed mb-2">
-            Action irréversible{candidateCount > 0 ? ` : la mission ET ses ${candidateCount} candidat${candidateCount > 1 ? "s" : ""} (entretiens, grilles, synthèses, décisions inclus) seront définitivement supprimés` : " : la mission sera définitivement supprimée"}.
+            Action irréversible{candidateCount > 0 ? ` : la campagne ET ses ${candidateCount} candidat${candidateCount > 1 ? "s" : ""} (entretiens, grilles, synthèses, décisions inclus) seront définitivement supprimés` : " : la campagne sera définitivement supprimée"}.
             Tapez son nom (<strong>{missionTitle}</strong>) pour confirmer.
           </p>
           <input

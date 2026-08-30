@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 
 // ─── Process steps frise (matches components/noa/prototype-source.tsx) ─────
-const PROCESS_STEPS = ["Cadrage", "Screening", "Topgrading", "Décision"];
+const PROCESS_STEPS = ["Cadrage", "Premier entretien", "Entretien technique", "Décision"];
 
 const ProcessFrise = ({ active }: { active: number }) => (
   <div className="flex items-center gap-0">

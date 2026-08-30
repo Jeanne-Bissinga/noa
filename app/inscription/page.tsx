@@ -15,7 +15,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-[#f8f9fb] flex">
       <div className="hidden lg:flex lg:w-[42%] bg-[#010101] flex-col p-12 justify-between flex-shrink-0">
-        <NoaLogo scale={0.85} />
+        <Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo scale={0.85} /></Link>
         <div>
           <h1 className="text-white font-bold text-4xl leading-tight mb-5" style={{ fontFamily: "Poppins, sans-serif" }}>
             Recruter avec méthode,<br />Décider avec confiance.
@@ -40,7 +40,7 @@ export default function SignupPage() {
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         {state?.message ? (
           <div className="w-full max-w-lg py-8">
-            <div className="lg:hidden mb-8"><NoaLogo /></div>
+            <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo /></Link></div>
             <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Vérifiez votre boîte mail</h2>
             <div className="mt-4 px-4 py-3 rounded-xl bg-[#75DA9F]/10 border border-[#75DA9F]/30 text-[#1e8f52] text-sm">
               {state.message}

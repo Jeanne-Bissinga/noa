@@ -10,8 +10,8 @@ import { moveCandidate } from "./actions";
 import type { Candidate, CandidateStatus, Interview } from "@/lib/noa/types";
 
 const CAND_KANBAN_COLS: { key: CandidateStatus; label: string; border: string; bg: string; dot: string; emptyText: string }[] = [
-  { key: "Screening", label: "Screening", border: "border-[#99BAF8]/35", bg: "bg-[#99BAF8]/5", dot: "bg-[#99BAF8]", emptyText: "Aucun candidat en screening" },
-  { key: "Topgrading", label: "Topgrading", border: "border-[#CCB8FF]/35", bg: "bg-[#CCB8FF]/5", dot: "bg-[#CCB8FF]", emptyText: "Aucun candidat en topgrading" },
+  { key: "Screening", label: "Premier entretien", border: "border-[#99BAF8]/35", bg: "bg-[#99BAF8]/5", dot: "bg-[#99BAF8]", emptyText: "Aucun candidat en premier entretien" },
+  { key: "Topgrading", label: "Entretien technique", border: "border-[#CCB8FF]/35", bg: "bg-[#CCB8FF]/5", dot: "bg-[#CCB8FF]", emptyText: "Aucun candidat en entretien technique" },
   { key: "Decision finale", label: "Décision finale", border: "border-[#75DA9F]/35", bg: "bg-[#75DA9F]/5", dot: "bg-[#75DA9F]", emptyText: "Aucune décision en attente" },
   { key: "Recrute", label: "Recruté", border: "border-[#1e8f52]/35", bg: "bg-[#1e8f52]/5", dot: "bg-[#1e8f52]", emptyText: "Aucun candidat recruté" },
   { key: "Non retenu", label: "Non retenu", border: "border-gray-200", bg: "bg-gray-50", dot: "bg-gray-300", emptyText: "Aucun candidat non retenu" },

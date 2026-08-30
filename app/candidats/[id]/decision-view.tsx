@@ -43,14 +43,14 @@ const DECIDED_META: Record<"retenu" | "non_retenu", { text: string; className: s
 
 const STAGE_META = {
   screening: {
-    label: "Screening",
+    label: "Premier entretien",
     badge: "blue" as const,
     accentBorder: "border-[#99BAF8]/30",
     accentBg: "from-[#99BAF8]/5",
     avatarColor: "bg-[#99BAF8]/20 text-[#3a6fd4]",
   },
   topgrading: {
-    label: "Topgrading",
+    label: "Entretien technique",
     badge: "violet" as const,
     accentBorder: "border-[#CCB8FF]/30",
     accentBg: "from-[#CCB8FF]/5",
@@ -193,7 +193,9 @@ export function DecisionView({
               <Zap size={11} className="text-[#8a6a00]" />
             </div>
             <h3 className="font-semibold text-[#010101] text-sm">Analyse noa</h3>
-            <span className="ml-auto text-[10px] text-[#3a6fd4] bg-[#99BAF8]/15 px-2 py-0.5 rounded-full font-medium">Générée depuis la grille</span>
+            <span className="ml-auto flex items-center gap-1 text-[10px] text-[#3a6fd4] bg-[#99BAF8]/15 px-2 py-0.5 rounded-full font-medium">
+              <Zap size={9} />Générée par noa
+            </span>
           </div>
           <p className="text-xs text-gray-400 mb-5">Proposition d'analyse. La décision vous appartient.</p>
 

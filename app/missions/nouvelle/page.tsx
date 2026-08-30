@@ -118,7 +118,7 @@ export default function CampaignWhyPage() {
   };
 
   return (
-    <AppLayout headerTitle="Nouvelle mission">
+    <AppLayout headerTitle="Nouvelle campagne">
       <div className="max-w-2xl mx-auto">
         <BackLink href="/missions" />
         <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={0} /></div>

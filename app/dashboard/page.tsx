@@ -11,13 +11,13 @@ import {
 import { pendingDecisions } from "@/lib/noa/pending-decisions";
 import type { DecisionStage, Mission } from "@/lib/noa/types";
 import {
-  MISSION_STATUS_LABEL, MISSION_STATUS_DOT, CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR,
+  MISSION_STATUS_LABEL, MISSION_STATUS_DOT, CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, CANDIDATE_STATUS_LABEL,
   formatDate, initials,
 } from "@/lib/noa/labels";
 
 const PENDING_STAGE_LABEL: Record<DecisionStage, string> = {
-  screening: "Screening terminé · à trancher",
-  topgrading: "Topgrading terminé · à trancher",
+  screening: "Premier entretien terminé · à trancher",
+  topgrading: "Entretien technique terminé · à trancher",
   final: "Décision finale à prendre",
 };
 
@@ -53,12 +53,15 @@ export default async function DashboardPage() {
   const recentMissions = activeMissions.slice(0, 3);
   const recentCandidates = candidates.slice(0, 3);
 
-  const today = new Date().toLocaleDateString("fr-FR", {
+  const todayRaw = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+  // Capitalise uniquement le premier mot (ex. "Lundi 12 août 2026") — la classe
+  // CSS `capitalize` mettrait aussi une majuscule à "Août" en milieu de phrase.
+  const today = todayRaw.charAt(0).toUpperCase() + todayRaw.slice(1);
 
   return (
     <AppLayout headerTitle="Dashboard">
@@ -66,7 +69,7 @@ export default async function DashboardPage() {
         {/* Hero banner */}
         <div className="bg-[#010101] rounded-2xl px-7 py-6 mb-7 flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-gray-500 mb-1.5 capitalize">{today}</p>
+            <p className="text-[11px] text-gray-500 mb-1.5">{today}</p>
             <h1 className="text-2xl font-bold text-white mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>
               Bonjour {recruiter.first_name} 👋
             </h1>
@@ -79,14 +82,14 @@ export default async function DashboardPage() {
             className="flex items-center gap-2 bg-white text-[#010101] text-sm font-bold px-5 py-3 rounded-xl hover:bg-gray-100 transition-all flex-shrink-0"
           >
             <Plus size={15} />
-            Nouvelle mission
+            Nouvelle campagne
           </Link>
         </div>
 
         {/* KPI row */}
         <div className="grid grid-cols-4 gap-3.5 mb-7">
           {[
-            { l: "Recrutements actifs", v: activeMissions.length, icon: <Briefcase size={15} />, c: "bg-[#99BAF8]/10 border-[#99BAF8]/20", t: "text-[#3a6fd4]", sub: "Missions en cours" },
+            { l: "Campagnes actives", v: activeMissions.length, icon: <Briefcase size={15} />, c: "bg-[#99BAF8]/10 border-[#99BAF8]/20", t: "text-[#3a6fd4]", sub: "Campagnes en cours" },
             { l: "Candidats en cours", v: candidatesInProgress.length, icon: <Users size={15} />, c: "bg-[#CCB8FF]/10 border-[#CCB8FF]/20", t: "text-[#6b4ec4]", sub: "Tous statuts" },
             { l: "Entretiens prévus", v: interviewsThisWeek.length, icon: <BarChart2 size={15} />, c: "bg-[#75DA9F]/10 border-[#75DA9F]/20", t: "text-[#1e8f52]", sub: "Cette semaine" },
             { l: "Décisions en attente", v: pending.length, icon: <AlertTriangle size={15} />, c: "bg-[#FEE831]/10 border-[#FEE831]/30", t: "text-[#8a6a00]", sub: "À traiter" },
@@ -122,21 +125,21 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Recrutements actifs */}
+        {/* Campagnes actives */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-[#010101] text-sm">Recrutements actifs</h2>
+            <h2 className="font-bold text-[#010101] text-sm">Campagnes actives</h2>
             <Link href="/missions" className="text-xs text-[#3a6fd4] font-semibold hover:underline flex items-center gap-1">Voir tout <ChevronRight size={11} /></Link>
           </div>
           {recentMissions.length === 0 ? (
             <Card className="p-8 flex flex-col items-center justify-center gap-2 text-center">
               <p className="text-sm font-semibold text-[#010101]">
-                {missions.length === 0 ? "Aucune mission pour le moment" : "Aucun recrutement actif en ce moment"}
+                {missions.length === 0 ? "Aucune campagne pour le moment" : "Aucune campagne active en ce moment"}
               </p>
               <p className="text-xs text-gray-400">
                 {missions.length === 0
                   ? "Créez votre première fiche de poste pour démarrer un recrutement."
-                  : "Toutes vos missions sont pourvues ou annulées. Créez-en une nouvelle pour démarrer un recrutement."}
+                  : "Toutes vos campagnes sont pourvues ou annulées. Créez-en une nouvelle pour démarrer un recrutement."}
               </p>
             </Card>
           ) : (
@@ -175,7 +178,7 @@ export default async function DashboardPage() {
           {recentCandidates.length === 0 ? (
             <Card className="p-8 flex flex-col items-center justify-center gap-2 text-center">
               <p className="text-sm font-semibold text-[#010101]">Aucun candidat pour le moment</p>
-              <p className="text-xs text-gray-400">Ajoutez un candidat depuis une mission pour démarrer l'évaluation.</p>
+              <p className="text-xs text-gray-400">Ajoutez un candidat depuis une campagne pour démarrer l'évaluation.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-3 gap-3">
@@ -190,7 +193,7 @@ export default async function DashboardPage() {
                     <div className="font-semibold text-sm text-[#010101] truncate group-hover:text-[#3a6fd4] transition-colors">{c.first_name} {c.last_name}</div>
                     <div className="text-[10px] text-gray-400 truncate">{c.title ?? "-"}</div>
                   </div>
-                  <Badge color={CANDIDATE_BADGE[c.status] ?? "gray"}>{c.status}</Badge>
+                  <Badge color={CANDIDATE_BADGE[c.status] ?? "gray"}>{CANDIDATE_STATUS_LABEL[c.status] ?? c.status}</Badge>
                 </Link>
               ))}
             </div>
@@ -203,7 +206,7 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "Ajouter un candidat", desc: "Importer un CV", icon: <Users size={15} />, color: "text-[#6b4ec4] bg-[#CCB8FF]/12", href: "/candidats/nouveau" },
-              { label: "Nouvelle mission", desc: "Créer une fiche de poste", icon: <Briefcase size={15} />, color: "text-[#3a6fd4] bg-[#99BAF8]/12", href: "/missions/nouvelle" },
+              { label: "Nouvelle campagne", desc: "Créer une fiche de poste", icon: <Briefcase size={15} />, color: "text-[#3a6fd4] bg-[#99BAF8]/12", href: "/missions/nouvelle" },
             ].map((a) => (
               <Link
                 key={a.label}

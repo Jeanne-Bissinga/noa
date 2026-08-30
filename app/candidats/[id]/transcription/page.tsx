@@ -6,8 +6,8 @@ import { requireRecruiter, getCandidate, getInterview } from "@/lib/noa/queries"
 import type { InterviewType } from "@/lib/noa/types";
 
 const STEP_LABEL: Record<InterviewType, string> = {
-  screening: "Screening",
-  topgrading: "Topgrading",
+  screening: "Premier entretien",
+  topgrading: "Entretien technique",
 };
 
 export default async function CandidateTranscriptPage({

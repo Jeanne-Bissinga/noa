@@ -13,7 +13,7 @@ import {
 import type { CandidateStatus, MissionSkillCategory } from "@/lib/noa/types";
 import { MissionActions } from "./mission-actions";
 
-const PROCESS_STEPS = ["Cadrage", "Screening", "Topgrading", "Décision"];
+const PROCESS_STEPS = ["Cadrage", "Premier entretien", "Entretien technique", "Décision"];
 
 const ProcessFrise = ({ active }: { active: number }) => (
   <div className="flex items-center gap-0">
@@ -44,8 +44,8 @@ const ProcessFrise = ({ active }: { active: number }) => (
 );
 
 const KANBAN_COLS: { key: CandidateStatus; label: string; color: string; dot: string }[] = [
-  { key: "Screening", label: "Screening", color: "border-[#99BAF8]/40 bg-[#99BAF8]/4", dot: "bg-[#99BAF8]" },
-  { key: "Topgrading", label: "Topgrading", color: "border-[#CCB8FF]/40 bg-[#CCB8FF]/4", dot: "bg-[#CCB8FF]" },
+  { key: "Screening", label: "Premier entretien", color: "border-[#99BAF8]/40 bg-[#99BAF8]/4", dot: "bg-[#99BAF8]" },
+  { key: "Topgrading", label: "Entretien technique", color: "border-[#CCB8FF]/40 bg-[#CCB8FF]/4", dot: "bg-[#CCB8FF]" },
   { key: "Decision finale", label: "Décision finale", color: "border-[#75DA9F]/40 bg-[#75DA9F]/4", dot: "bg-[#75DA9F]" },
   { key: "Recrute", label: "Recruté", color: "border-[#1e8f52]/40 bg-[#1e8f52]/4", dot: "bg-[#1e8f52]" },
   { key: "Non retenu", label: "Non retenu", color: "border-gray-200 bg-gray-50", dot: "bg-gray-300" },
@@ -54,7 +54,7 @@ const KANBAN_COLS: { key: CandidateStatus; label: string; color: string; dot: st
 const SKILL_CATEGORY_LABEL: Record<MissionSkillCategory, string> = {
   technique: "Techniques",
   relationnelle: "Relationnelles",
-  comportementale: "Comportementales",
+  comportementale: "Savoir-être",
 };
 
 export default async function MissionDetailPage({ params }: { params: Promise<{ id: string }> }) {

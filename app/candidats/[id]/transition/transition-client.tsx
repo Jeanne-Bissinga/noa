@@ -6,7 +6,7 @@ import { FileText, Users, Search, Award, TrendingUp } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 
 // ─── Process steps frise (matches components/noa/prototype-source.tsx) ─────
-const PROCESS_STEPS = ["Cadrage", "Screening", "Topgrading", "Décision"];
+const PROCESS_STEPS = ["Cadrage", "Premier entretien", "Entretien technique", "Décision"];
 
 const ProcessFrise = ({ active }: { active: number }) => (
   <div className="flex items-center gap-0">
@@ -54,18 +54,18 @@ const TRANSITION_CONFIG: Record<TransitionType, TransitionConfig> = {
   screening: {
     step: 1,
     icon: <Search size={28} />,
-    eyebrow: "Screening",
-    title: "Préparer l'entretien de screening",
+    eyebrow: "Premier entretien",
+    title: "Préparer le premier entretien",
     description:
-      "Le screening permet de vérifier rapidement les prérequis objectifs du poste. noa a généré une grille de questions standardisées à partir de la fiche de poste, à compléter pendant l'entretien téléphonique.",
+      "Le premier entretien permet de vérifier rapidement les prérequis objectifs du poste. noa a généré une grille de questions standardisées à partir de la fiche de poste, à compléter pendant l'entretien téléphonique.",
   },
   topgrading: {
     step: 2,
     icon: <Award size={28} />,
-    eyebrow: "Topgrading",
-    title: "Préparer l'entretien Topgrading",
+    eyebrow: "Entretien technique",
+    title: "Préparer l'entretien technique",
     description:
-      "Le Topgrading explore chronologiquement le parcours du candidat pour identifier ses patterns de performance réels, au-delà des formulations d'un CV.",
+      "L'entretien technique explore chronologiquement le parcours du candidat pour identifier ses patterns de performance réels, au-delà des formulations d'un CV.",
   },
   final: {
     step: 3,
