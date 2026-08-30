@@ -15,8 +15,8 @@ import { ELIMINATOIRE_CRIT } from "@/lib/noa/labels";
 import type { Candidate, InterviewGuide, InterviewType } from "@/lib/noa/types";
 
 const STEP_LABEL: Record<InterviewType, string> = {
-  screening: "Screening",
-  topgrading: "Topgrading",
+  screening: "Premier entretien",
+  topgrading: "Entretien technique",
 };
 
 export function PreparationView({

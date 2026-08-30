@@ -11,7 +11,7 @@ import { ValidateButton } from "./validate-button";
 const SKILL_CATEGORY_LABEL: Record<MissionSkillCategory, string> = {
   technique: "Techniques",
   relationnelle: "Relationnelles",
-  comportementale: "Comportementales",
+  comportementale: "Savoir-être",
 };
 
 export default async function JobCoherencePage({ params }: { params: Promise<{ missionId: string }> }) {

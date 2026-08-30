@@ -19,21 +19,21 @@ export default async function MissionsPage() {
   const activeMissionsCount = missions.filter((m) => m.status === "en_cours" || m.status === "brouillon").length;
 
   return (
-    <AppLayout headerTitle="Missions">
+    <AppLayout headerTitle="Campagnes de recrutement">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>Campagne de recrutement</h1>
-            <p className="text-gray-400 text-sm mt-1">{activeMissionsCount} mission{activeMissionsCount !== 1 ? "s" : ""} active{activeMissionsCount !== 1 ? "s" : ""}</p>
+            <h1 className="text-2xl font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>Campagnes de recrutement</h1>
+            <p className="text-gray-400 text-sm mt-1">{activeMissionsCount} campagne{activeMissionsCount !== 1 ? "s" : ""} active{activeMissionsCount !== 1 ? "s" : ""}</p>
           </div>
-          <LinkBtn href="/missions/nouvelle" variant="primary"><Plus size={15} />Nouvelle mission</LinkBtn>
+          <LinkBtn href="/missions/nouvelle" variant="primary"><Plus size={15} />Nouvelle campagne</LinkBtn>
         </div>
 
         {missions.length === 0 ? (
           <Card className="p-12 flex flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm font-semibold text-[#010101]">Aucune mission pour le moment</p>
+            <p className="text-sm font-semibold text-[#010101]">Aucune campagne pour le moment</p>
             <p className="text-xs text-gray-400">Créez votre première fiche de poste pour démarrer un recrutement.</p>
-            <LinkBtn href="/missions/nouvelle" variant="primary" size="sm"><Plus size={13} />Nouvelle mission</LinkBtn>
+            <LinkBtn href="/missions/nouvelle" variant="primary" size="sm"><Plus size={13} />Nouvelle campagne</LinkBtn>
           </Card>
         ) : (
           <div className="flex flex-col gap-4">

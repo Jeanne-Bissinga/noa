@@ -105,8 +105,8 @@ export function CandidateDetail({
   // STATUS_FIELDS pour "Non retenu") : un candidat refusé au screening n'a
   // jamais eu de Topgrading, cette étape ne doit donc pas apparaître ici.
   const completedSteps = [
-    screeningInterviewDone && { key: "screening" as const, label: "Screening", decision: screeningDecision },
-    topgradingInterviewDone && { key: "topgrading" as const, label: "Topgrading", decision: topgradingDecision },
+    screeningInterviewDone && { key: "screening" as const, label: "Premier entretien", decision: screeningDecision },
+    topgradingInterviewDone && { key: "topgrading" as const, label: "Entretien technique", decision: topgradingDecision },
   ].filter(Boolean) as { key: "screening" | "topgrading"; label: string; decision: Decision | null }[];
 
   return (

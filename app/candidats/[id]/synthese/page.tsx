@@ -10,8 +10,8 @@ import {
 import type { InterviewType } from "@/lib/noa/types";
 
 const STEP_LABEL: Record<InterviewType, string> = {
-  screening: "Screening",
-  topgrading: "Topgrading",
+  screening: "Premier entretien",
+  topgrading: "Entretien technique",
 };
 
 export default async function CandidateSynthesisPage({

@@ -19,7 +19,7 @@ export default function LoginPage({
   return (
     <div className="min-h-screen bg-[#f8f9fb] flex">
       <div className="hidden lg:flex lg:w-[42%] bg-[#010101] flex-col p-12 justify-between flex-shrink-0">
-        <NoaLogo scale={0.85} />
+        <Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo scale={0.85} /></Link>
         <div>
           <h1 className="text-white font-bold text-4xl leading-tight mb-5" style={{ fontFamily: "Poppins, sans-serif" }}>
             Bon retour<br />parmi nous.
@@ -43,7 +43,7 @@ export default function LoginPage({
 
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <form action={formAction} className="w-full max-w-sm py-8">
-          <div className="lg:hidden mb-8"><NoaLogo /></div>
+          <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo /></Link></div>
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Se connecter</h2>
           <p className="text-gray-400 text-sm mb-8">Accédez à votre espace noa.</p>
 

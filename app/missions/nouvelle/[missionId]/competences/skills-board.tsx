@@ -16,7 +16,7 @@ import type { SkillSuggestions } from "@/lib/noa/ai";
 const SKILLS_META: { category: MissionSkillCategory; title: string; badge: string }[] = [
   { category: "technique", title: "Compétences techniques", badge: "bg-[#99BAF8]/15 text-[#3a6fd4] border-[#99BAF8]/20" },
   { category: "relationnelle", title: "Compétences relationnelles", badge: "bg-[#CCB8FF]/15 text-[#6b4ec4] border-[#CCB8FF]/20" },
-  { category: "comportementale", title: "Compétences comportementales", badge: "bg-[#75DA9F]/15 text-[#1e8f52] border-[#75DA9F]/20" },
+  { category: "comportementale", title: "Savoir-être", badge: "bg-[#75DA9F]/15 text-[#1e8f52] border-[#75DA9F]/20" },
 ];
 
 export function SkillsBoard({ mission, skills: initialSkills }: { mission: Mission; skills: MissionSkill[] }) {

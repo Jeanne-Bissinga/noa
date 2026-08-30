@@ -269,7 +269,7 @@ export const PREP_META: Record<
     goal:
       "Le Topgrading est un entretien approfondi (60–90 min) basé sur le parcours chronologique du candidat. L'objectif est d'identifier ses patterns de performance, comportements récurrents, réalisations mesurables et axes de développement.",
     gridIntro:
-      "noa documentera automatiquement chaque question à partir de la transcription de l'entretien. Modifiez les intitulés si besoin avant de commencer.",
+      "noa complètera automatiquement chaque question à partir de la transcription de l'entretien. Modifiez les intitulés si besoin avant de commencer.",
     gridSections: TOPGRADING_EPISODES.map((ep) => ({
       title: ep.co,
       subtitle: ep.role,

@@ -24,6 +24,17 @@ export const MISSION_STATUS_DOT: Record<MissionStatus, string> = {
   annule: "bg-gray-300",
 };
 
+// Libellés affichés aux recruteurs : "Screening"/"Topgrading" restent les
+// valeurs internes (statut BDD, routes, clés de logique), mais l'UI doit
+// parler le langage courant du recrutement (retours utilisateurs de Manal).
+export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
+  Screening: "Premier entretien",
+  Topgrading: "Entretien technique",
+  "Decision finale": "Décision finale",
+  "Non retenu": "Non retenu",
+  Recrute: "Recruté",
+};
+
 export const CANDIDATE_BADGE: Record<CandidateStatus, BadgeColor> = {
   Screening: "blue",
   Topgrading: "violet",

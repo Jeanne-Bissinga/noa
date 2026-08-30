@@ -44,63 +44,26 @@ const STATS = [
 ];
 
 const STEPS = [
-  {
-    n: "1",
-    color: "bg-[#FEE831]",
-    title: "Cadrer",
-    text: "Définir ce que le poste exige vraiment : critères, résultats attendus, compétences clés.",
-  },
-  {
-    n: "2",
-    color: "bg-[#CCB8FF]",
-    title: "Sourcer",
-    text: "Centraliser les candidats, tracer leur origine, garder une vue claire du vivier.",
-  },
-  {
-    n: "3",
-    color: "bg-[#75DA9F]",
-    title: "Évaluer",
-    text: "Mener des entretiens structurés et scorer chaque profil sur les mêmes critères.",
-  },
-  {
-    n: "4",
-    color: "bg-[#99BAF8]",
-    title: "Convaincre",
-    text: "Préparer une proposition ciblée pour que le bon candidat accepte l'offre.",
-  },
+  { n: "1", color: "bg-[#FEE831]", title: "Grille de scoring", text: "Définir les critères qui comptent vraiment pour le poste." },
+  { n: "2", color: "bg-[#CCB8FF]", title: "Entretien structuré", text: "Mener un entretien guidé, candidat par candidat." },
+  { n: "3", color: "bg-[#75DA9F]", title: "Synthèse", text: "Obtenir une synthèse claire et comparable pour chaque profil." },
+  { n: "4", color: "bg-[#99BAF8]", title: "Décision", text: "Comparer les profils sur les mêmes critères et trancher en confiance." },
 ];
 
 const WHY = [
-  { title: "Pensé pour les PME", text: "Pas d'usine à gaz. Juste ce qu'il faut pour recruter juste, à votre échelle." },
+  { title: "Pensé pour les PME", text: "Juste ce qu'il faut pour recruter juste, à votre échelle." },
   { title: "Aucune expertise RH requise", text: "La méthode est intégrée à l'outil. Vous suivez le guide, pas besoin de formation RH." },
-  { title: "Une décision documentée, pas un feeling", text: "La méthode est intégrée à l'outil. Vous suivez le guide, pas besoin de formation RH." },
+  { title: "Une décision documentée, pas un feeling", text: "Chaque étape laisse une trace : critères, notes, synthèses ..." },
 ];
 
-const PROOF = [
-  {
-    value: "1 300",
-    suffix: "+",
-    label: "entreprises analysées pour construire la méthode",
-  },
-  {
-    value: "20 000",
-    suffix: "+",
-    label: "candidats étudiés pour valider les critères de sélection",
-  },
-  {
-    value: "90",
-    suffix: "%",
-    label: "de taux de réussite constaté sur ces recrutements structurés",
-  },
-];
+const PROOF = {
+  value: "90",
+  suffix: "%",
+  label: "de taux de réussite constaté sur les recrutements menés avec la méthode Topgrading",
+  source: "Bradford D. Smart, créateur de la méthode Topgrading — pas un résultat propre à Noa",
+};
 
-const PRODUCT_LINKS = [
-  "Méthode A-Player",
-  "Cadrer le poste",
-  "Sourcer les candidats",
-  "Évaluer les profils",
-  "Convaincre le candidat",
-];
+const PRODUCT_LINKS = ["Méthode A-Player", "Grille de scoring", "Entretien structuré", "Synthèse", "Décision"];
 // `href: null` = page pas encore rédigée, le libellé reste affiché mais n'est
 // pas présenté comme cliquable (cf. ticket « Pages légales absentes »).
 const LEGAL_LINKS: { label: string; href: string | null }[] = [
@@ -111,49 +74,38 @@ const LEGAL_LINKS: { label: string; href: string | null }[] = [
 
 const PLANS = [
   {
+    slug: "free",
+    name: "Noa Free",
+    free: true,
+    highlight: false,
+    features: [
+      "Accès complet à la méthode en démo",
+    ],
+    cta: { label: "Demander une démo", href: "/demo" },
+  },
+  {
     slug: "starter",
     name: "Noa Starter",
-    target: "PME tech, recrutement ponctuel",
-    monthly: "41",
-    yearly: "490 €/an",
+    monthly12: "49",
+    monthly3: "69",
     highlight: false,
     features: [
-      "10 candidats évalués inclus",
-      "49 € par candidat évalué",
-      "2 scorecards (missions / postes)",
-      "Jusqu'à 2 utilisateurs recruteurs",
-      "Engagement 12 mois",
+      "500 crédits mensuels",
+      "Environ 8 candidats évalués complètement par mois",
     ],
+    cta: { label: "Souscrire", href: "/inscription?plan=starter" },
   },
   {
-    slug: "pro",
-    name: "Noa Pro",
-    target: "PME tech, recrutement régulier",
-    monthly: "99",
-    yearly: "1 190 €/an",
+    slug: "growth",
+    name: "Noa Growth",
+    monthly12: "99",
+    monthly3: "139",
     highlight: true,
     features: [
-      "25 candidats évalués inclus",
-      "47,60 € par candidat évalué",
-      "4 scorecards (missions / postes)",
-      "Jusqu'à 4 utilisateurs recruteurs",
-      "Engagement 12 mois",
+      "1 500 crédits mensuels",
+      "Environ 27 candidats évalués complètement par mois",
     ],
-  },
-  {
-    slug: "scale",
-    name: "Noa Scale",
-    target: "PME tech en forte croissance",
-    monthly: "183",
-    yearly: "2 190 €/an",
-    highlight: false,
-    features: [
-      "50 candidats évalués inclus",
-      "43,80 € par candidat évalué",
-      "10 scorecards (missions / postes)",
-      "Jusqu'à 8 utilisateurs recruteurs",
-      "Engagement 12 mois",
-    ],
+    cta: { label: "Souscrire", href: "/inscription?plan=growth" },
   },
 ];
 
@@ -180,7 +132,7 @@ export default async function LandingPage() {
         </Link>
 
         <nav aria-label="Navigation principale" className="hidden items-center gap-8 text-sm font-medium text-white/70 min-[901px]:flex">
-          <ScrollLink href="#constat" className="transition-colors hover:text-white">Le constat</ScrollLink>
+          <ScrollLink href="#constat" className="transition-colors hover:text-white">Constat</ScrollLink>
           <ScrollLink href="#methode" className="transition-colors hover:text-white">Méthode</ScrollLink>
           <ScrollLink href="#pourquoi" className="transition-colors hover:text-white">Pourquoi noa</ScrollLink>
           <ScrollLink href="#plans" className="transition-colors hover:text-white">Tarifs</ScrollLink>
@@ -203,7 +155,7 @@ export default async function LandingPage() {
       </header>
 
       <main>
-        <section id="accueil" className="relative overflow-hidden bg-white px-6 py-20 min-[641px]:px-8 min-[641px]:py-24">
+        <section id="accueil" className="relative overflow-hidden bg-white px-6 py-20 min-[641px]:px-8 min-[641px]:py-20">
           <div className="pointer-events-none absolute left-[10%] top-16 h-56 w-56 rounded-full bg-[#FEE831]/20 blur-[70px]" />
           <div className="pointer-events-none absolute left-[28%] top-6 h-56 w-56 rounded-full bg-[#CCB8FF]/25 blur-[70px]" />
           <div className="pointer-events-none absolute left-[14%] top-64 h-56 w-56 rounded-full bg-[#75DA9F]/20 blur-[70px]" />
@@ -217,8 +169,8 @@ export default async function LandingPage() {
               </h1>
 
               <p className="mx-auto mb-8 max-w-[520px] text-[16px] leading-[1.75] text-gray-500 min-[641px]:text-[17px] min-[901px]:mx-0">
-                Noa vous guide à chaque étape de votre recrutement grâce à une méthode simple et reconnue.
-                Vous évaluez, vous comparez, vous décidez.
+                Noa évalue vos candidats avec la rigueur d&apos;un expert du recrutement, sans équipe RH.
+                Vous comparez les profils, la décision finale reste la vôtre.
               </p>
 
               <div className="flex flex-col items-center justify-center gap-4 min-[641px]:flex-row min-[901px]:justify-start">
@@ -235,7 +187,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section id="constat" className="bg-white py-16">
+        <section id="constat" className="border-t-2 border-gray-100 bg-white py-12 mx-16">
           <div className={CONTAINER}>
             <h2 className="mb-10 text-center text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">
               Le constat :
@@ -259,9 +211,9 @@ export default async function LandingPage() {
           <div className={CONTAINER}>
             <p className="mb-2 text-xs font-medium uppercase tracking-[2px] text-white/50">La méthode A-Player</p>
             <h2 className="text-[27px] font-bold leading-[1.25] text-white min-[641px]:text-[30px]">
-              Structurer votre recrutement, étape par étape.
+              Évaluer, étape par étape.
             </h2>
-            <p className="mb-10 mt-2 text-sm text-white/50">Un parcours guidé en 4 étapes. Chaque décision reste la vôtre.</p>
+            <p className="mb-10 mt-2 text-sm text-white/50">Un parcours guidé en 4 étapes, pour comparer vos candidats sur des bases objectives.</p>
 
             <div className="grid gap-4 min-[641px]:grid-cols-2 min-[901px]:grid-cols-4">
               {STEPS.map((step) => (
@@ -288,7 +240,7 @@ export default async function LandingPage() {
 
         <section id="pourquoi" className="bg-gray-50 py-16">
           <div className={CONTAINER}>
-            <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">Pourquoi noa ?</h2>
               <p className="mt-3 text-sm font-bold text-[#8B7FD9] min-[641px]:text-base">
                 Décider sans expertise RH, avec la même rigueur qu&apos;un professionnel du recrutement.
@@ -318,7 +270,7 @@ export default async function LandingPage() {
                 Prêt à recruter la bonne personne ?
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-[1.7] text-[#010101]/70 min-[641px]:text-[15px]">
-                Créez votre compte ou demandez une démo pour voir comment Noa vous accompagne à chaque étape.
+                Créez votre compte ou demandez une démo pour voir comment Noa évalue vos candidats.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 min-[641px]:flex-row min-[641px]:justify-start">
                 <ScrollLink href="#methode" className={`${BTN_WHITE} w-full px-7 py-3.5 min-[641px]:w-auto`}>
@@ -333,23 +285,17 @@ export default async function LandingPage() {
         </section>
 
         <section className="border-t border-gray-100 bg-white py-14">
-          <div
-            className={`${CONTAINER} grid items-center gap-8 min-[901px]:grid-cols-3`}
-          >
-            {PROOF.map((p, i) => (
-              <article
-                key={p.value}
-                className={`text-center ${i === 1 ? "border-y border-gray-100 py-8 min-[901px]:border-x min-[901px]:border-y-0 min-[901px]:px-8 min-[901px]:py-0" : ""}`}
-              >
-                <p className="mb-2 text-[48px] font-extrabold leading-none text-[#010101]">
-                  {p.value}
-                  <span className="text-[#99BAF8]">{p.suffix}</span>
-                </p>
-                <p className="text-sm leading-[1.65] text-gray-500">
-                  {p.label}
-                </p>
-              </article>
-            ))}
+          <div className={`${CONTAINER} mx-auto max-w-xl text-center`}>
+            <p className="mb-2 text-[48px] font-extrabold leading-none text-[#010101]">
+              {PROOF.value}
+              <span className="text-[#99BAF8]">{PROOF.suffix}</span>
+            </p>
+            <p className="text-sm leading-[1.65] text-gray-500">{PROOF.label}</p>
+            <p className="mt-3 text-xs text-gray-400">{PROOF.source}</p>
+            <p className="mt-6 text-xs leading-[1.6] text-gray-400">
+              Noa est en phase de lancement : nous n&apos;avons pas encore de résultats chiffrés qui lui sont propres.
+              Cette méthode a inspiré la nôtre — les résultats obtenus avec Noa seront publiés dès qu&apos;ils seront disponibles.
+            </p>
           </div>
         </section>
 
@@ -367,8 +313,8 @@ export default async function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-12 grid gap-6 min-[901px]:grid-cols-3">
-              {PLANS.map((plan) => (
+            <div className="mx-auto mt-12 grid max-w-5xl gap-6 min-[641px]:grid-cols-3">
+              {PLANS.map(plan => (
                 <article
                   key={plan.slug}
                   className={`relative flex flex-col rounded-2xl border p-8 ${
@@ -382,47 +328,41 @@ export default async function LandingPage() {
                       Le plus choisi
                     </span>
                   )}
-                  <h3
-                    className="text-lg font-bold"
-                    style={{ fontFamily: "Poppins, sans-serif" }}
-                  >
-                    {plan.name}
-                  </h3>
-                  <p className="mt-1 text-xs text-white/50">{plan.target}</p>
+                  <h3 className="text-lg font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>{plan.name}</h3>
 
-                  <div className="mt-6 flex items-end gap-1.5">
-                    <span
-                      className="text-[40px] font-extrabold leading-none"
-                      style={{ fontFamily: "Poppins, sans-serif" }}
-                    >
-                      {plan.monthly} €
-                    </span>
-                    <span className="mb-1 text-sm text-white/50">/mois</span>
-                  </div>
-                  <p className="mt-2 text-xs text-white/40">
-                    soit {plan.yearly}, facturé annuellement
-                  </p>
+                  {plan.free ? (
+                    <div className="mt-6 flex items-end gap-1.5">
+                      <span className="text-[40px] font-extrabold leading-none" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        Gratuit
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-6 flex items-end gap-1.5">
+                        <span className="text-[40px] font-extrabold leading-none" style={{ fontFamily: "Poppins, sans-serif" }}>
+                          {plan.monthly12} € HT
+                        </span>
+                        <span className="mb-1 text-sm text-white/50">/mois</span>
+                      </div>
+                      <p className="mt-2 text-xs text-white/40">avec engagement 12 mois</p>
+                      <p className="mt-1 text-xs text-white/40">soit {plan.monthly3} € HT/mois avec engagement 3 mois</p>
+                    </>
+                  )}
 
-                  <ul className="mt-6 flex flex-col gap-3">
-                    {plan.features.map((f) => (
-                      <li
-                        key={f}
-                        className="flex items-start gap-2.5 text-sm text-white/70"
-                      >
-                        <Check
-                          size={16}
-                          className="mt-0.5 flex-none text-[#75DA9F]"
-                        />
+                  <ul className="mt-6 flex flex-1 flex-col gap-3">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm text-white/70">
+                        <Check size={16} className="mt-0.5 flex-none text-[#75DA9F]" />
                         {f}
                       </li>
                     ))}
                   </ul>
 
                   <Link
-                    href={`/inscription?plan=${plan.slug}`}
+                    href={plan.cta.href}
                     className={`mt-8 w-full px-6 py-3.5 ${plan.highlight ? BTN_BLUE : BTN_OUTLINE}`}
                   >
-                    S'abonner
+                    {plan.cta.label}
                   </Link>
                 </article>
               ))}

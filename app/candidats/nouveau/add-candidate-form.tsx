@@ -117,13 +117,13 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
 
         {!mission ? (
           <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-500 text-sm">
-            Aucune mission associée. Revenez à la fiche d'une mission pour ajouter un candidat via le bouton « Ajouter un candidat ».
+            Aucune campagne associée. Revenez à la fiche d'une campagne pour ajouter un candidat via le bouton « Ajouter un candidat ».
           </div>
         ) : (
           <div className="flex items-center gap-3 p-3.5 bg-white rounded-xl border border-gray-100 mb-7">
             <Briefcase size={14} className="text-gray-400 flex-shrink-0" />
             <div>
-              <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Mission associée</div>
+              <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Campagne associée</div>
               <div className="text-sm font-semibold text-[#010101]">{mission.title}</div>
             </div>
           </div>

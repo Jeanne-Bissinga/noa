@@ -51,6 +51,19 @@ const SUB_STEPS: { key: "prep" | "interview" | "decision"; label: string }[] = [
   { key: "decision", label: "Décision" },
 ];
 
+// "Screening"/"Topgrading" restent les clés internes (routes, logique) — ces
+// libellés sont ce que voit le recruteur (retours utilisateurs de Manal).
+const STEP_LABEL: Record<"Screening" | "Topgrading" | "Décision", string> = {
+  Screening: "Premier entretien",
+  Topgrading: "Entretien technique",
+  Décision: "Décision",
+};
+
+const SUB_STEPS_HEADING: Record<"Screening" | "Topgrading", string> = {
+  Screening: "Sous-étapes du premier entretien",
+  Topgrading: "Sous-étapes de l'entretien technique",
+};
+
 export function CandidateFrise({
   candidateId, screening, topgrading, decision,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
@@ -101,7 +114,7 @@ export function CandidateFrise({
                 </div>
                 <span className={`text-xs font-semibold whitespace-nowrap ${
                   rejected ? "text-red-400" : cur ? "text-[#010101]" : done ? "text-[#1e8f52]" : "text-gray-300"
-                }`}>{step.label}</span>
+                }`}>{STEP_LABEL[step.label]}</span>
               </div>
               {i < steps.length - 1 && (
                 <div className={`h-px w-16 mx-1 mb-5 flex-shrink-0 ${done ? "bg-[#75DA9F]" : "bg-gray-200"}`} />
@@ -127,7 +140,7 @@ export function CandidateFrise({
 
         return (
           <div className={`rounded-xl border ${accentBg} p-4`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${accentText} mb-4`}>Sous-étapes, {stepKey}</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${accentText} mb-4`}>{SUB_STEPS_HEADING[stepKey]}</p>
 
             <div className="flex items-start gap-0 mb-4">
               {SUB_STEPS.map((sub, si) => {

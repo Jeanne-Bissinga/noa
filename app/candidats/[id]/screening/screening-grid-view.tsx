@@ -74,7 +74,7 @@ export function ScreeningGridView({
               <h1 className="text-xl font-bold text-[#010101] leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>{name}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-gray-400">{candidate.title ?? "-"}</span>
-                <Badge color="blue">Screening</Badge>
+                <Badge color="blue">Premier entretien</Badge>
               </div>
             </div>
           </div>
