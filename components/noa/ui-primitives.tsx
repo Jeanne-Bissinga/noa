@@ -139,12 +139,12 @@ export const StepBar = ({ steps, current }: { steps: string[]; current: number }
   </div>
 );
 
-export const BackLink = ({ onClick, href }: { onClick?: () => void; href?: string }) => {
+export const BackLink = ({ onClick, href, label = "Retour" }: { onClick?: () => void; href?: string; label?: string }) => {
   const className = "flex items-center gap-1.5 text-gray-400 hover:text-gray-500 text-xs font-medium mb-5 transition-colors group w-fit";
   const content = (
     <>
       <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
-      Retour
+      {label}
     </>
   );
   if (href) {
