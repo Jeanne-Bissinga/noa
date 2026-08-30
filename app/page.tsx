@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Check } from "lucide-react";
 import { NoaLogo } from "@/components/noa/ui-primitives";
 import { ScrollLink } from "@/components/noa/scroll-link";
+import { HeroKanban } from "@/components/noa/hero-kanban";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -15,10 +16,14 @@ export const metadata: Metadata = {
 // The landing page mirrors the marketing design, whose breakpoints (900px / 640px)
 // and container width don't line up with the Tailwind defaults, hence the arbitrary values.
 const CONTAINER = "mx-auto w-[min(100%-32px,1024px)] min-[641px]:w-[min(100%-48px,1024px)]";
+const HERO_CONTAINER = "mx-auto w-[min(100%-32px,1280px)] min-[641px]:w-[min(100%-64px,1280px)]";
 
-const BTN = "inline-flex items-center justify-center gap-2 rounded-xl border border-transparent text-sm font-bold transition-all hover:-translate-y-px";
-const BTN_BLUE = `${BTN} bg-[#99BAF8] text-[#010101] hover:bg-[#7aa6f5]`;
+const BTN = "inline-flex items-center justify-center gap-2 rounded-xl border text-sm font-bold transition-all hover:-translate-y-px";
+const BTN_BLUE = `${BTN} border-transparent bg-[#99BAF8] text-[#010101] hover:bg-[#7aa6f5]`;
 const BTN_OUTLINE = `${BTN} border-white/20 font-medium text-white hover:bg-white/5`;
+const BTN_OUTLINE_DARK = `${BTN} border-gray-300 font-medium text-[#010101] hover:bg-gray-50`;
+const BTN_WHITE = `${BTN} border-transparent bg-white text-[#010101] hover:bg-white/90`;
+const BTN_OUTLINE_ON_BLUE = `${BTN} border-[#010101]/20 font-medium text-[#010101] hover:bg-white/20`;
 
 const STATS = [
   { value: "74 %", label: "des entreprises admettent avoir mal recruté", source: "Étude LinkedIn, 2024" },
@@ -31,6 +36,12 @@ const STEPS = [
   { n: "2", color: "bg-[#CCB8FF]", title: "Sourcer", text: "Centraliser les candidats, tracer leur origine, garder une vue claire du vivier." },
   { n: "3", color: "bg-[#75DA9F]", title: "Évaluer", text: "Mener des entretiens structurés et scorer chaque profil sur les mêmes critères." },
   { n: "4", color: "bg-[#99BAF8]", title: "Convaincre", text: "Préparer une proposition ciblée pour que le bon candidat accepte l'offre." },
+];
+
+const WHY = [
+  { title: "Pensé pour les PME", text: "Pas d'usine à gaz. Juste ce qu'il faut pour recruter juste, à votre échelle." },
+  { title: "Aucune expertise RH requise", text: "La méthode est intégrée à l'outil. Vous suivez le guide, pas besoin de formation RH." },
+  { title: "Une décision documentée, pas un feeling", text: "La méthode est intégrée à l'outil. Vous suivez le guide, pas besoin de formation RH." },
 ];
 
 const PROOF = [
@@ -102,15 +113,16 @@ export default async function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#010101]" style={{ fontFamily: "Poppins, Arial, sans-serif" }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: "Poppins, Arial, sans-serif" }}>
       <header className="sticky top-5 z-20 mx-2 flex items-center justify-between rounded-[26px] bg-[#010101] px-4 py-4 min-[641px]:px-8">
         <Link href="/" aria-label="Retour à l'accueil" className="inline-flex flex-none">
           <NoaLogo scale={0.75} />
         </Link>
 
         <nav aria-label="Navigation principale" className="hidden items-center gap-8 text-sm font-medium text-white/70 min-[901px]:flex">
+          <ScrollLink href="#constat" className="transition-colors hover:text-white">Le constat</ScrollLink>
           <ScrollLink href="#methode" className="transition-colors hover:text-white">Méthode</ScrollLink>
-          <ScrollLink href="#chiffres" className="transition-colors hover:text-white">Résultats</ScrollLink>
+          <ScrollLink href="#pourquoi" className="transition-colors hover:text-white">Pourquoi noa</ScrollLink>
           <ScrollLink href="#plans" className="transition-colors hover:text-white">Tarifs</ScrollLink>
         </nav>
 
@@ -128,58 +140,65 @@ export default async function LandingPage() {
       </header>
 
       <main>
-        <section id="accueil" className="relative overflow-hidden bg-[#010101] px-6 py-20 text-center text-white min-[641px]:px-8 min-[641px]:py-24">
-          <div className="pointer-events-none absolute left-1/4 top-12 h-64 w-64 rounded-full bg-[#99BAF8]/[0.08] blur-[80px]" />
-          <div className="pointer-events-none absolute bottom-0 right-1/4 h-80 w-80 rounded-full bg-[#CCB8FF]/[0.08] blur-[100px]" />
+        <section id="accueil" className="relative overflow-hidden bg-white px-6 py-20 min-[641px]:px-8 min-[641px]:py-24">
+          <div className="pointer-events-none absolute left-[10%] top-16 h-56 w-56 rounded-full bg-[#FEE831]/20 blur-[70px]" />
+          <div className="pointer-events-none absolute left-[28%] top-6 h-56 w-56 rounded-full bg-[#CCB8FF]/25 blur-[70px]" />
+          <div className="pointer-events-none absolute left-[14%] top-64 h-56 w-56 rounded-full bg-[#75DA9F]/20 blur-[70px]" />
 
-          <div className="relative z-10 mx-auto w-full max-w-3xl">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white/70">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#75DA9F]" />
-              Pour les managers de PME tech
+          <div className={`${HERO_CONTAINER} relative z-10 grid items-center gap-12 min-[901px]:grid-cols-2`}>
+            <div className="text-center min-[901px]:text-left">
+              <h1 className="mb-6 text-[clamp(36px,5vw,48px)] font-extrabold leading-[1.15] tracking-[-1.5px] text-[#010101]">
+                Recruter avec méthode.
+                <br />
+                <span className="text-[#99BAF8]">Décider avec confiance.</span>
+              </h1>
+
+              <p className="mx-auto mb-8 max-w-[520px] text-[16px] leading-[1.75] text-gray-500 min-[641px]:text-[17px] min-[901px]:mx-0">
+                Noa vous guide à chaque étape de votre recrutement grâce à une méthode simple et reconnue.
+                Vous évaluez, vous comparez, vous décidez.
+              </p>
+
+              <div className="flex flex-col items-center justify-center gap-4 min-[641px]:flex-row min-[901px]:justify-start">
+                <ScrollLink href="#methode" className={`${BTN_BLUE} w-full px-7 py-3.5 min-[641px]:w-auto`}>
+                  Découvrir la méthode
+                </ScrollLink>
+                <Link href="/demo" className={`${BTN_OUTLINE_DARK} w-full px-7 py-3.5 min-[641px]:w-auto`}>
+                  Demander une démo
+                </Link>
+              </div>
             </div>
 
-            <h1 className="mb-6 text-[clamp(40px,5.2vw,52px)] font-extrabold leading-[1.15] tracking-[-1.5px]">
-              Recruter avec méthode.
-              <br />
-              <span className="text-[#99BAF8]">Décider avec confiance.</span>
-            </h1>
-
-            <p className="mx-auto mb-4 max-w-[672px] text-[16px] leading-[1.75] text-white/60 min-[641px]:text-[17px]">
-              Noa vous guide à chaque étape de votre recrutement grâce à une méthode simple et reconnue.
-              Vous évaluez, vous comparez, vous décidez.
-            </p>
-            <p className="mx-auto mb-10 text-sm text-white/35">La décision finale reste toujours la vôtre.</p>
-
-            <div className="flex flex-col items-center justify-center gap-4 min-[641px]:flex-row">
-              <ScrollLink href="#methode" className={`${BTN_BLUE} w-full px-7 py-3.5 min-[641px]:w-auto`}>
-                Découvrir la méthode
-              </ScrollLink>
-              <Link href="/demo" className={`${BTN_OUTLINE} w-full px-7 py-3.5 min-[641px]:w-auto`}>
-                Demander une démo
-              </Link>
-            </div>
+            <HeroKanban />
           </div>
         </section>
 
-        <section id="chiffres" className="bg-white py-16">
-          <div className={`${CONTAINER} grid gap-6 min-[901px]:grid-cols-3`}>
-            {STATS.map(s => (
-              <article key={s.value} className="rounded-2xl border border-gray-100 bg-gray-50 p-8 text-center">
-                <p className="mb-3 text-[40px] font-extrabold leading-none text-[#99BAF8]">{s.value}</p>
-                <p className="mb-2 text-sm font-medium leading-[1.65] text-gray-700">{s.label}</p>
-                <p className="text-xs text-gray-400">{s.source}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="methode" className="bg-gray-50 py-16">
+        <section id="constat" className="bg-white py-16">
           <div className={CONTAINER}>
-            <p className="mb-2 text-xs font-medium uppercase tracking-[2px] text-gray-400">La méthode A-Player</p>
-            <h2 className="text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">
+            <h2 className="mb-10 text-center text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">
+              Le constat :
+            </h2>
+            <div className="grid gap-6 min-[901px]:grid-cols-3">
+              {STATS.map(s => (
+                <article key={s.value} className="rounded-2xl border border-[#99BAF8]/40 bg-white p-8 text-center">
+                  <p className="mb-3 text-[40px] font-extrabold leading-none text-[#99BAF8]">{s.value}</p>
+                  <p className="mb-2 text-sm font-medium leading-[1.65] text-gray-700">{s.label}</p>
+                  <p className="text-xs text-gray-400">{s.source}</p>
+                </article>
+              ))}
+            </div>
+            <p className="mt-10 text-center text-sm text-gray-500">
+              <span className="font-bold text-[#010101]">Noa</span> vous aide à éviter ça. Grâce à une méthode structurée, pas à l&apos;instinct.
+            </p>
+          </div>
+        </section>
+
+        <section id="methode" className="bg-[#010101] py-16">
+          <div className={CONTAINER}>
+            <p className="mb-2 text-xs font-medium uppercase tracking-[2px] text-white/50">La méthode A-Player</p>
+            <h2 className="text-[27px] font-bold leading-[1.25] text-white min-[641px]:text-[30px]">
               Structurer votre recrutement, étape par étape.
             </h2>
-            <p className="mb-10 mt-2 text-sm text-gray-500">Un parcours guidé en 4 étapes. Chaque décision reste la vôtre.</p>
+            <p className="mb-10 mt-2 text-sm text-white/50">Un parcours guidé en 4 étapes. Chaque décision reste la vôtre.</p>
 
             <div className="grid gap-4 min-[641px]:grid-cols-2 min-[901px]:grid-cols-4">
               {STEPS.map(step => (
@@ -194,6 +213,52 @@ export default async function LandingPage() {
                   <p className="text-sm leading-[1.65] text-gray-500">{step.text}</p>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="pourquoi" className="bg-gray-50 py-16">
+          <div className={CONTAINER}>
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">Pourquoi noa ?</h2>
+              <p className="mt-3 text-sm font-bold text-[#8B7FD9] min-[641px]:text-base">
+                Décider sans expertise RH, avec la même rigueur qu&apos;un professionnel du recrutement.
+              </p>
+              <p className="mt-4 text-sm leading-[1.75] text-gray-500">
+                Recruter ne s&apos;improvise pas, mais vous n&apos;avez pas besoin d&apos;une équipe RH pour le faire sérieusement.
+                Noa intègre une méthode éprouvée directement dans votre parcours de décision, pour que chaque recrutement
+                repose sur des critères clairs plutôt que sur l&apos;instinct.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-4 min-[901px]:grid-cols-3">
+              {WHY.map(w => (
+                <article key={w.title} className="rounded-2xl border border-[#CCB8FF]/50 bg-white p-6 text-center">
+                  <h3 className="mb-2 text-sm font-bold text-[#010101]">{w.title}</h3>
+                  <p className="text-sm leading-[1.65] text-gray-500">{w.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white py-16">
+          <div className={CONTAINER}>
+            <div className="rounded-3xl bg-[#99BAF8] px-8 py-12 text-center min-[641px]:px-14 min-[641px]:text-left">
+              <h2 className="text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">
+                Prêt à recruter la bonne personne ?
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-[1.7] text-[#010101]/70 min-[641px]:text-[15px]">
+                Créez votre compte ou demandez une démo pour voir comment Noa vous accompagne à chaque étape.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-4 min-[641px]:flex-row min-[641px]:justify-start">
+                <ScrollLink href="#methode" className={`${BTN_WHITE} w-full px-7 py-3.5 min-[641px]:w-auto`}>
+                  Découvrir la méthode
+                </ScrollLink>
+                <Link href="/demo" className={`${BTN_OUTLINE_ON_BLUE} w-full px-7 py-3.5 min-[641px]:w-auto`}>
+                  Demander une démo
+                </Link>
+              </div>
             </div>
           </div>
         </section>
