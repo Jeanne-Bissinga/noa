@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronRight, Plus, X, Zap, Target, AlertTriangle,
 } from "lucide-react";
@@ -153,6 +154,9 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   const [cardSuggestions, setCardSuggestions] = useState<ObjectiveSuggestion[] | null>(null);
   const [loadingCardSuggestions, setLoadingCardSuggestions] = useState(false);
   const [, startTransition] = useTransition();
+  // Modification lancée depuis le récapitulatif : on y ramène plutôt que de
+  // renvoyer vers l'étape suivante, déjà validée.
+  const fromRecap = useSearchParams().get("from") === "recap";
 
   // Mêmes appels que ceux déclenchés par la saisie manuelle (addObjective au
   // clic "Ajouter", updateObjective au blur) : pas d'IA, valeurs fixes.
@@ -311,8 +315,8 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
               Continuer<ChevronRight size={17} />
             </Btn>
           ) : (
-            <LinkBtn href={`/missions/nouvelle/${mission.id}/competences`} variant="primary" size="lg">
-              Continuer<ChevronRight size={17} />
+            <LinkBtn href={`/missions/nouvelle/${mission.id}/${fromRecap ? "coherence" : "competences"}`} variant="primary" size="lg">
+              {fromRecap ? "Revenir au récapitulatif" : "Continuer"}<ChevronRight size={17} />
             </LinkBtn>
           )}
         </div>

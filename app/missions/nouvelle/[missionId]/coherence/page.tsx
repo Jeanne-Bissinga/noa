@@ -62,7 +62,7 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
                 </div>
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Mission</span>
               </div>
-              <Link href={`/missions/nouvelle/${mission.id}/resume`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
+              <Link href={`/missions/nouvelle/${mission.id}/resume?from=recap`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
                 <Edit3 size={10} />Modifier
               </Link>
             </div>
@@ -80,7 +80,7 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
                 </div>
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Résultats attendus</span>
               </div>
-              <Link href={`/missions/nouvelle/${mission.id}/resultats`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
+              <Link href={`/missions/nouvelle/${mission.id}/resultats?from=recap`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
                 <Edit3 size={10} />Modifier
               </Link>
             </div>
@@ -125,7 +125,7 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
                 </div>
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Compétences</span>
               </div>
-              <Link href={`/missions/nouvelle/${mission.id}/competences`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
+              <Link href={`/missions/nouvelle/${mission.id}/competences?from=recap`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
                 <Edit3 size={10} />Modifier
               </Link>
             </div>

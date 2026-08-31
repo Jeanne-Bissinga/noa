@@ -205,7 +205,15 @@ export default async function DashboardPage() {
           <h2 className="font-bold text-[#010101] text-sm mb-3">Actions rapides</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "Ajouter un candidat", desc: "Importer un CV", icon: <Users size={15} />, color: "text-[#6b4ec4] bg-[#CCB8FF]/12", href: "/candidats/nouveau" },
+              // Un candidat s'ajoute depuis une campagne : sans campagne, l'action
+              // mène à la création ; avec, à la liste où en choisir une.
+              {
+                label: "Ajouter un candidat",
+                desc: missions.length === 0 ? "Créez d'abord une campagne" : "Choisir une campagne",
+                icon: <Users size={15} />,
+                color: "text-[#6b4ec4] bg-[#CCB8FF]/12",
+                href: missions.length === 0 ? "/missions/nouvelle" : "/missions",
+              },
               { label: "Nouvelle campagne", desc: "Créer une fiche de poste", icon: <Briefcase size={15} />, color: "text-[#3a6fd4] bg-[#99BAF8]/12", href: "/missions/nouvelle" },
             ].map((a) => (
               <Link

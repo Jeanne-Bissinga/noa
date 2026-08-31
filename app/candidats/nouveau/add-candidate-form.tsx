@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import Link from "next/link";
 import { Briefcase, ChevronRight, Check, Upload, Plus, Zap, FileText } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink } from "@/components/noa/ui-primitives";
@@ -106,28 +107,59 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
   };
 
   const prefilled = Boolean(profile && (profile.firstName || profile.lastName || profile.title || profile.location));
-  const canSubmit = Boolean(mission) && cvDone && firstName.trim() && lastName.trim() && !pending && !parsing;
+  const canSubmit = cvDone && firstName.trim() && lastName.trim() && !pending && !parsing;
+
+  // Un candidat se rattache toujours à une campagne. Sans elle, proposer un
+  // import de CV n'a pas de sens : on l'annonce et on donne la marche à suivre
+  // plutôt que d'afficher un formulaire inutilisable sous un bandeau d'erreur.
+  if (!mission) {
+    return (
+      <AppLayout headerTitle="Ajouter un candidat">
+        <div className="max-w-xl mx-auto">
+          <BackLink href="/candidats" />
+          <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>
+            Choisissez d&apos;abord une campagne
+          </h1>
+          <p className="text-gray-400 text-sm mb-7">
+            Un candidat est toujours rattaché à une campagne de recrutement : c&apos;est elle qui porte la fiche de poste
+            et la grille d&apos;évaluation sur lesquelles il sera évalué.
+          </p>
+          <Card className="p-5 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <Briefcase size={15} className="text-gray-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm leading-relaxed text-gray-600">
+                Ouvrez la campagne concernée, puis utilisez son bouton « Ajouter un candidat ». Si vous n&apos;en avez pas
+                encore, commencez par en créer une.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <Link href="/missions">
+                <Btn variant="primary">Voir mes campagnes<ChevronRight size={15} /></Btn>
+              </Link>
+              <Link href="/missions/nouvelle">
+                <Btn variant="secondary"><Plus size={15} />Créer une campagne</Btn>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout headerTitle="Ajouter un candidat">
       <div className="max-w-xl mx-auto">
-        <BackLink href={mission ? `/missions/${mission.id}` : "/candidats"} />
+        <BackLink href={`/missions/${mission.id}`} />
         <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Importer un candidat</h1>
         <p className="text-gray-400 text-sm mb-7">noa crée automatiquement la fiche candidat à partir du CV importé.</p>
 
-        {!mission ? (
-          <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-500 text-sm">
-            Aucune campagne associée. Revenez à la fiche d'une campagne pour ajouter un candidat via le bouton « Ajouter un candidat ».
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 p-3.5 bg-white rounded-xl border border-gray-100 mb-7">
+        <div className="flex items-center gap-3 p-3.5 bg-white rounded-xl border border-gray-100 mb-7">
             <Briefcase size={14} className="text-gray-400 flex-shrink-0" />
             <div>
               <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Campagne associée</div>
-              <div className="text-sm font-semibold text-[#010101]">{mission.title}</div>
-            </div>
+            <div className="text-sm font-semibold text-[#010101]">{mission.title}</div>
           </div>
-        )}
+        </div>
 
         {state?.error && (
           <div className="mb-5 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-500 text-sm">
