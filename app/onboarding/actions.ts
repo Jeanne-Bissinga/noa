@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 
@@ -12,11 +11,20 @@ export type OnboardingAnswers = {
   hrChallenges: string;
 };
 
-export async function completeOnboarding(answers: OnboardingAnswers) {
+// L'action ne redirige pas elle-même : Next implémente `redirect()` en levant
+// une exception, que le formulaire attrapait et affichait telle quelle, en
+// rouge et en anglais, alors que l'enregistrement avait réussi. Elle renvoie
+// donc une destination, et c'est le formulaire qui navigue.
+export type CompleteOnboardingResult = {
+  error?: string;
+  redirectTo?: string;
+};
+
+export async function completeOnboarding(answers: OnboardingAnswers): Promise<CompleteOnboardingResult> {
   const recruiter = await getCurrentRecruiter();
 
   if (!recruiter) {
-    redirect("/connexion");
+    return { redirectTo: "/connexion" };
   }
 
   const supabase = await createClient();
@@ -34,8 +42,9 @@ export async function completeOnboarding(answers: OnboardingAnswers) {
     .eq("id", recruiter.company_id);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Enregistrement de l'onboarding échoué :", error.message);
+    return { error: "Nous n'avons pas pu enregistrer vos réponses. Merci de réessayer." };
   }
 
-  redirect("/dashboard");
+  return { redirectTo: "/dashboard" };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight, FileText, Plus, X } from "lucide-react";
 import { NoaLogo, Card, Btn, Textarea } from "@/components/noa/ui-primitives";
 import { completeOnboarding } from "./actions";
@@ -38,6 +39,7 @@ export default function OnboardingPage() {
   const [stackInput, setStackInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Persisted answers across steps
   const [activityDescription, setActivityDescription] = useState("");
@@ -85,15 +87,20 @@ export default function OnboardingPage() {
     setError(null);
     startTransition(async () => {
       try {
-        await completeOnboarding({
+        const result = await completeOnboarding({
           activityDescription,
           sector,
           techStack: stack,
           cultureValues: finalCultureValues,
           hrChallenges: finalHrChallenges.join(", "),
         });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Une erreur est survenue.");
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        if (result.redirectTo) router.push(result.redirectTo);
+      } catch {
+        setError("Une erreur est survenue. Merci de réessayer.");
       }
     });
   };
