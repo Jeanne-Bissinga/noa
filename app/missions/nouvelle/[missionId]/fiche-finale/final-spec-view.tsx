@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Edit3, FileText, Target, Award, Plus } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
-import { Card, LinkBtn } from "@/components/noa/ui-primitives";
-import { saveFinalSpec } from "../actions";
+import { Card, LinkBtn, Btn } from "@/components/noa/ui-primitives";
+import { finalizeMission, saveFinalSpec } from "../actions";
 import type { Mission, MissionObjective } from "@/lib/noa/types";
 
 export function FinalSpecView({
@@ -130,10 +130,12 @@ export function FinalSpecView({
 
         <div className="flex items-center justify-between">
           <LinkBtn href={`/missions/nouvelle/${mission.id}/coherence`} variant="secondary"><ArrowLeft size={15} />Retour</LinkBtn>
-          <LinkBtn href={`/missions/nouvelle/${mission.id}/transition-candidat`} variant="primary" size="lg">
-            Ajouter des candidats
-            <Plus size={17} />
-          </LinkBtn>
+          <form action={finalizeMission.bind(null, mission.id)}>
+            <Btn variant="primary" size="lg" type="submit">
+              Ajouter des candidats
+              <Plus size={17} />
+            </Btn>
+          </form>
         </div>
       </div>
     </AppLayout>
