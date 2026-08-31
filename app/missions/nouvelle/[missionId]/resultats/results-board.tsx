@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   ChevronRight, Plus, X, Zap, Target, AlertTriangle,
 } from "lucide-react";
@@ -157,23 +157,39 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   // Modification lancée depuis le récapitulatif : on y ramène plutôt que de
   // renvoyer vers l'étape suivante, déjà validée.
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const fromRecap = searchParams.get("from") === "recap";
+
   // Le choix « suggérer / manuellement » est porté par l'URL : sans cela il ne
   // laisse aucune trace dans l'historique, et le bouton Retour ne peut pas y
   // ramener. Les deux branches empilent une entrée que Retour vient dépiler.
-  const mode = searchParams.get("mode");
+  //
+  // L'entrée est posée avec l'API History plutôt qu'avec le routeur : les
+  // actions serveur de cet écran appellent revalidatePath sur le chemin sans
+  // paramètre, et le rafraîchissement qui s'ensuit écrasait la navigation du
+  // routeur avant qu'elle n'aboutisse. On suit donc nous-mêmes l'état, et
+  // popstate nous prévient quand l'utilisateur revient en arrière.
+  const [mode, setMode] = useState<string | null>(() => searchParams.get("mode"));
+
   // Renseigné seulement quand l'utilisateur est passé par l'écran de choix
   // pendant cette visite : sans lui, un simple retour sur une campagne déjà
   // remplie ne doit rien effacer.
   const lastModeRef = useRef<string | null>(null);
 
+  const modeUrl = (next: string) => `${pathname}?mode=${next}${fromRecap ? "&from=recap" : ""}`;
+
   const enterMode = (next: "manuel" | "suggestions") => {
     if (objectives.length > 0 || mode) return;
     lastModeRef.current = next;
-    router.push(`${pathname}?mode=${next}${fromRecap ? "&from=recap" : ""}`);
+    window.history.pushState(null, "", modeUrl(next));
+    setMode(next);
   };
+
+  useEffect(() => {
+    const onPopState = () => setMode(new URLSearchParams(window.location.search).get("mode"));
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   // Mêmes appels que ceux déclenchés par la saisie manuelle (addObjective au
   // clic "Ajouter", updateObjective au blur) : pas d'IA, valeurs fixes.
@@ -218,7 +234,9 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
         "Revenir au choix supprimera les objectifs déjà présents. Continuer ?",
       );
       if (!confirmed) {
-        router.push(`${pathname}?mode=${lastModeRef.current}${fromRecap ? "&from=recap" : ""}`);
+        const previous = lastModeRef.current;
+        window.history.pushState(null, "", `${pathname}?mode=${previous}${fromRecap ? "&from=recap" : ""}`);
+        setMode(previous);
         return;
       }
     }
@@ -229,7 +247,7 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
       await Promise.all(toRemove.map((o) => removeObjective(o.id, mission.id)));
       setObjectives([]);
     });
-  }, [mode, objectives, mission.id, pathname, router, fromRecap]);
+  }, [mode, objectives, mission.id, pathname, fromRecap]);
 
   // Chargées une seule fois (paresseusement, au premier clic sur une carte
   // vierge) puis partagées par toutes les cartes : un seul appel noa pour
