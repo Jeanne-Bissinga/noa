@@ -75,6 +75,29 @@ export async function saveMissionText(
   redirect(`/missions/nouvelle/${mission.id}/resultats`);
 }
 
+/**
+ * Validation de la fiche de poste, dernière étape du parcours de création.
+ * C'est ce passage qui fait exister la campagne pour l'utilisateur : avant lui,
+ * elle est en base mais n'apparaît dans aucune liste ni aucun compteur.
+ */
+export async function finalizeMission(missionId: string) {
+  const { mission } = await assertOwnedMission(missionId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("missions")
+    .update({ finalized: true, updated_at: new Date().toISOString() })
+    .eq("id", mission.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/missions");
+  revalidatePath("/dashboard");
+  redirect(`/missions/nouvelle/${mission.id}/transition-candidat`);
+}
+
 // ─── Objectifs (mission_objectives) ────────────────────────────────────────
 export async function addObjective(missionId: string, position: number) {
   const { mission } = await assertOwnedMission(missionId);

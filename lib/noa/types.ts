@@ -65,6 +65,9 @@ export interface Mission {
   target_objective: string | null;
   mission_text: string | null;
   final_spec_text: string | null;
+  // false tant que les 5 étapes ne sont pas franchies et la fiche de poste
+  // validée : la campagne existe en base mais n'est listée nulle part.
+  finalized: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -106,12 +106,19 @@ export async function getCompany(companyId: string): Promise<Company | null> {
   return data as Company | null;
 }
 
+/**
+ * Campagnes visibles par l'utilisateur : uniquement celles dont le parcours de
+ * création est allé jusqu'au bout. Une campagne abandonnée en route reste en
+ * base, pour pouvoir être reprise par son URL, mais n'apparaît dans aucune
+ * liste ni dans aucun compteur.
+ */
 export async function getMissions(companyId: string): Promise<Mission[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("missions")
     .select("*")
     .eq("company_id", companyId)
+    .eq("finalized", true)
     .order("created_at", { ascending: false });
   return (data ?? []) as Mission[];
 }
