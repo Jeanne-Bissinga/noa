@@ -72,7 +72,11 @@ export async function saveMissionText(
   }
 
   revalidatePath(`/missions/nouvelle/${mission.id}/resume`);
-  redirect(`/missions/nouvelle/${mission.id}/resultats`);
+
+  // Une modification lancée depuis le récapitulatif y ramène, au lieu de
+  // relancer l'utilisateur dans les étapes suivantes qu'il a déjà validées.
+  const fromRecap = formData.get("from") === "recap";
+  redirect(`/missions/nouvelle/${mission.id}/${fromRecap ? "coherence" : "resultats"}`);
 }
 
 /**

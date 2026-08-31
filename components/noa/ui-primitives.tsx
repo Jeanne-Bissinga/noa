@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
 // ─── Logo ───────────────────────────────────────────────────────────────────
@@ -140,6 +141,7 @@ export const StepBar = ({ steps, current }: { steps: string[]; current: number }
 );
 
 export const BackLink = ({ onClick, href, label = "Retour" }: { onClick?: () => void; href?: string; label?: string }) => {
+  const router = useRouter();
   const className = "flex items-center gap-1.5 text-gray-400 hover:text-gray-500 text-xs font-medium mb-5 transition-colors group w-fit";
   const content = (
     <>
@@ -148,8 +150,23 @@ export const BackLink = ({ onClick, href, label = "Retour" }: { onClick?: () => 
     </>
   );
   if (href) {
+    // « Retour » doit ramener à la page réellement quittée, pas à une
+    // destination écrite en dur : venant du dashboard, on veut revenir au
+    // dashboard, pas à la liste des campagnes.
+    //
+    // On garde une vraie balise <a> pour que le clic droit et l'ouverture dans
+    // un nouvel onglet continuent de fonctionner, et on intercepte le clic
+    // simple pour remonter l'historique. Sans historique (arrivée directe par
+    // URL, lien partagé, nouvel onglet), le href sert de repli.
+    const goBack = (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        e.preventDefault();
+        router.back();
+      }
+    };
     return (
-      <Link href={href} className={className}>
+      <Link href={href} onClick={goBack} className={className}>
         {content}
       </Link>
     );

@@ -17,7 +17,7 @@ const CAND_KANBAN_COLS: { key: CandidateStatus; label: string; border: string; b
   { key: "Non retenu", label: "Non retenu", border: "border-gray-200", bg: "bg-gray-50", dot: "bg-gray-300", emptyText: "Aucun candidat non retenu" },
 ];
 
-export function CandidatesBoard({ candidates: initialCandidates, interviews }: { candidates: Candidate[]; interviews: Interview[] }) {
+export function CandidatesBoard({ candidates: initialCandidates, interviews, hasMission }: { candidates: Candidate[]; interviews: Interview[]; hasMission: boolean }) {
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const interviewByCandidate = new Map(interviews.map((i) => [`${i.candidate_id}-${i.type}`, i]));
   const [dragging, setDragging] = useState<string | null>(null);
@@ -84,8 +84,10 @@ export function CandidatesBoard({ candidates: initialCandidates, interviews }: {
               {inProgressCount} candidat{inProgressCount !== 1 ? "s" : ""} en cours d'évaluation
             </p>
           </div>
-          <LinkBtn href="/missions" variant="primary">
-            <Plus size={15} />Ajouter un candidat
+          {/* Un candidat s'ajoute depuis la fiche d'une campagne. Sans campagne,
+              on propose d'en créer une plutôt que de renvoyer vers une liste vide. */}
+          <LinkBtn href={hasMission ? "/missions" : "/missions/nouvelle"} variant="primary">
+            <Plus size={15} />{hasMission ? "Ajouter un candidat" : "Créer une campagne"}
           </LinkBtn>
         </div>
 

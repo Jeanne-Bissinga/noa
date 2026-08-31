@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronRight, Zap, Edit3, Check, X } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink, StepBar } from "@/components/noa/ui-primitives";
@@ -13,6 +14,9 @@ const initialState: SaveMissionTextState = {};
 export function ResumeForm({ mission, noaFallback = false }: { mission: Mission; noaFallback?: boolean }) {
   const boundAction = saveMissionText.bind(null, mission.id);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
+  // Modification lancée depuis le récapitulatif : on y renvoie après
+  // enregistrement, plutôt que de repartir dans les étapes suivantes.
+  const fromRecap = useSearchParams().get("from") === "recap";
   const [editing, setEditing] = useState(!mission.mission_text);
   const [draft, setDraft] = useState(mission.mission_text ?? "");
 
@@ -51,6 +55,7 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
         )}
 
         <form action={formAction}>
+          {fromRecap && <input type="hidden" name="from" value="recap" />}
           <Card className="p-6 mb-4">
             {!editing ? (
               <>
@@ -133,7 +138,7 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
             {editing && <div />}
             {!editing && (
               <Btn variant="primary" size="lg" type="submit" disabled={pending}>
-                Ça me convient, on continue
+                {fromRecap ? "Enregistrer et revenir au récapitulatif" : "Ça me convient, on continue"}
                 <ChevronRight size={17} />
               </Btn>
             )}
