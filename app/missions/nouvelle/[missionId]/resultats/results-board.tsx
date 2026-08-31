@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight, Plus, X, Zap, Target, AlertTriangle,
 } from "lucide-react";
@@ -156,7 +156,14 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   const [, startTransition] = useTransition();
   // Modification lancée depuis le récapitulatif : on y ramène plutôt que de
   // renvoyer vers l'étape suivante, déjà validée.
-  const fromRecap = useSearchParams().get("from") === "recap";
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const fromRecap = searchParams.get("from") === "recap";
+  // Le choix « suggérer / manuellement » est porté par l'URL : sans cela il ne
+  // laisse aucune trace dans l'historique, et le bouton Retour ne peut pas y
+  // ramener. `mode=manuel` empile une entrée que Retour vient dépiler.
+  const manualMode = searchParams.get("mode") === "manuel";
 
   // Mêmes appels que ceux déclenchés par la saisie manuelle (addObjective au
   // clic "Ajouter", updateObjective au blur) : pas d'IA, valeurs fixes.
@@ -183,11 +190,27 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   const localRemove = (id: string) => setObjectives((prev) => prev.filter((o) => o.id !== id));
 
   const handleAdd = () => {
+    if (objectives.length === 0 && !manualMode) {
+      router.push(`${pathname}?mode=manuel${fromRecap ? "&from=recap" : ""}`);
+    }
     startTransition(async () => {
       const created = await addObjective(mission.id, objectives.length);
       if (created) setObjectives((prev) => [...prev, created]);
     });
   };
+
+  // Retour depuis le mode manuel : les cartes encore vierges sont supprimées,
+  // ce qui fait réapparaître l'écran de choix. Dès qu'une carte contient
+  // quelque chose, rien n'est touché : on ne détruit jamais une saisie.
+  useEffect(() => {
+    if (manualMode || objectives.length === 0) return;
+    if (!objectives.every(isBlank)) return;
+    const blanks = objectives;
+    startTransition(async () => {
+      await Promise.all(blanks.map((o) => removeObjective(o.id, mission.id)));
+      setObjectives([]);
+    });
+  }, [manualMode, objectives, mission.id]);
 
   // Chargées une seule fois (paresseusement, au premier clic sur une carte
   // vierge) puis partagées par toutes les cartes : un seul appel noa pour
