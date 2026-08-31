@@ -284,20 +284,6 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section className="border-t border-gray-100 bg-white py-14">
-          <div className={`${CONTAINER} mx-auto max-w-xl text-center`}>
-            <p className="mb-2 text-[48px] font-extrabold leading-none text-[#010101]">
-              {PROOF.value}
-              <span className="text-[#99BAF8]">{PROOF.suffix}</span>
-            </p>
-            <p className="text-sm leading-[1.65] text-gray-500">{PROOF.label}</p>
-            <p className="mt-3 text-xs text-gray-400">{PROOF.source}</p>
-            <p className="mt-6 text-xs leading-[1.6] text-gray-400">
-              Noa est en phase de lancement : nous n&apos;avons pas encore de résultats chiffrés qui lui sont propres.
-              Cette méthode a inspiré la nôtre — les résultats obtenus avec Noa seront publiés dès qu&apos;ils seront disponibles.
-            </p>
-          </div>
-        </section>
 
         <section
           id="plans"
