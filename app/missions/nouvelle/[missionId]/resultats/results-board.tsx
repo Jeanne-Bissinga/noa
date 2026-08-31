@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight, Plus, X, Zap, Target, AlertTriangle,
@@ -162,8 +162,18 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   const fromRecap = searchParams.get("from") === "recap";
   // Le choix « suggérer / manuellement » est porté par l'URL : sans cela il ne
   // laisse aucune trace dans l'historique, et le bouton Retour ne peut pas y
-  // ramener. `mode=manuel` empile une entrée que Retour vient dépiler.
-  const manualMode = searchParams.get("mode") === "manuel";
+  // ramener. Les deux branches empilent une entrée que Retour vient dépiler.
+  const mode = searchParams.get("mode");
+  // Renseigné seulement quand l'utilisateur est passé par l'écran de choix
+  // pendant cette visite : sans lui, un simple retour sur une campagne déjà
+  // remplie ne doit rien effacer.
+  const lastModeRef = useRef<string | null>(null);
+
+  const enterMode = (next: "manuel" | "suggestions") => {
+    if (objectives.length > 0 || mode) return;
+    lastModeRef.current = next;
+    router.push(`${pathname}?mode=${next}${fromRecap ? "&from=recap" : ""}`);
+  };
 
   // Mêmes appels que ceux déclenchés par la saisie manuelle (addObjective au
   // clic "Ajouter", updateObjective au blur) : pas d'IA, valeurs fixes.
@@ -190,27 +200,36 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   const localRemove = (id: string) => setObjectives((prev) => prev.filter((o) => o.id !== id));
 
   const handleAdd = () => {
-    if (objectives.length === 0 && !manualMode) {
-      router.push(`${pathname}?mode=manuel${fromRecap ? "&from=recap" : ""}`);
-    }
+    enterMode("manuel");
     startTransition(async () => {
       const created = await addObjective(mission.id, objectives.length);
       if (created) setObjectives((prev) => [...prev, created]);
     });
   };
 
-  // Retour depuis le mode manuel : les cartes encore vierges sont supprimées,
-  // ce qui fait réapparaître l'écran de choix. Dès qu'une carte contient
-  // quelque chose, rien n'est touché : on ne détruit jamais une saisie.
+  // Retour vers l'écran de choix : on défait ce que la branche choisie avait
+  // créé, sans quoi le choix ne réapparaîtrait jamais. Les cartes vierges
+  // partent sans rien demander ; du contenu ne part qu'après confirmation.
   useEffect(() => {
-    if (manualMode || objectives.length === 0) return;
-    if (!objectives.every(isBlank)) return;
-    const blanks = objectives;
+    if (mode || !lastModeRef.current || objectives.length === 0) return;
+
+    if (!objectives.every(isBlank)) {
+      const confirmed = window.confirm(
+        "Revenir au choix supprimera les objectifs déjà présents. Continuer ?",
+      );
+      if (!confirmed) {
+        router.push(`${pathname}?mode=${lastModeRef.current}${fromRecap ? "&from=recap" : ""}`);
+        return;
+      }
+    }
+
+    const toRemove = objectives;
+    lastModeRef.current = null;
     startTransition(async () => {
-      await Promise.all(blanks.map((o) => removeObjective(o.id, mission.id)));
+      await Promise.all(toRemove.map((o) => removeObjective(o.id, mission.id)));
       setObjectives([]);
     });
-  }, [manualMode, objectives, mission.id]);
+  }, [mode, objectives, mission.id, pathname, router, fromRecap]);
 
   // Chargées une seule fois (paresseusement, au premier clic sur une carte
   // vierge) puis partagées par toutes les cartes : un seul appel noa pour
@@ -226,6 +245,7 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   };
 
   const handleFillSuggestions = () => {
+    enterMode("suggestions");
     setFilling(true);
     startTransition(async () => {
       const created = await fillObjectiveSuggestions(mission.id, objectives.length);
