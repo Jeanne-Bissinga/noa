@@ -12,23 +12,17 @@ const ARTICLES: LegalArticle[] = [
     n: 1,
     title: "Éditeur du site",
     blocks: [
-      { p: "Le site et le service Noa Recrutement sont édités par :" },
-      { address: { name: "Jeanne Bissinga", lines: ["71 Rue Villeneuve", "92110 Clichy", "France"] } },
+      { p: "L'application Noa est un projet réalisé dans le cadre d'un cursus de master par :" },
+      { dl: [
+        { term: "Responsable du projet", def: "Jeanne Bissinga" },
+        { term: "Établissement", def: "Hetic" },
+        { term: "Adresse", def: "59 Rue Nationale, 75013 Paris" },
+      ] },
       { contact: [
         { label: "Téléphone", value: "07 69 91 99 95", href: "tel:+33769919995" },
         { label: "Email", value: "noa.recrutement@gmail.com", href: "mailto:noa.recrutement@gmail.com" },
       ] },
-      { p: "Noa Recrutement est le nom sous lequel le service est présenté et exploité." },
-      { p: "Tant que l'activité n'est pas exploitée par une société ou une autre structure juridique immatriculée, Jeanne Bissinga agit en qualité d'éditrice du site." },
-      { p: "Les présentes mentions légales seront mises à jour en cas de création d'une structure juridique afin d'y faire figurer, selon la situation applicable :" },
-      { ul: [
-        "la dénomination sociale ;",
-        "la forme juridique ;",
-        "l'adresse du siège social ;",
-        "le numéro SIREN ou SIRET ;",
-        "les informations d'immatriculation au RNE ou au RCS, lorsqu'elles sont applicables ;",
-        "le numéro de TVA intracommunautaire, lorsqu'il est applicable.",
-      ] },
+      { p: "Ce projet est réalisé à titre pédagogique et non commercial." },
     ],
   },
   {
