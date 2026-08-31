@@ -305,6 +305,20 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
             )}
           </Card>
 
+          <Card className="p-5 mb-7">
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Pièces jointes supplémentaires (optionnel)</div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled
+                className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-200 opacity-60 cursor-not-allowed transition-all text-left"
+              >
+                <Plus size={14} className="text-gray-400" />
+                <span className="text-xs text-gray-400">Ajouter une pièce jointe (portfolio, lettre de motivation…), bientôt disponible</span>
+              </button>
+            </div>
+          </Card>
+
           <div className="flex justify-end">
             <Btn variant="primary" size="lg" type="submit" disabled={!canSubmit}>
               {pending ? "Création en cours…" : (
