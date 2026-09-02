@@ -238,30 +238,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section id="pourquoi" className="bg-gray-50 py-16">
-          <div className={CONTAINER}>
-            <div className="mx-auto max-w-3xl text-center">
-              <h2 className="text-[27px] font-bold leading-[1.25] text-[#010101] min-[641px]:text-[30px]">Pourquoi noa ?</h2>
-              <p className="mt-3 text-sm font-bold text-[#8B7FD9] min-[641px]:text-base">
-                Décider sans expertise RH, avec la même rigueur qu&apos;un professionnel du recrutement.
-              </p>
-              <p className="mt-4 text-sm leading-[1.75] text-gray-500">
-                Recruter ne s&apos;improvise pas, mais vous n&apos;avez pas besoin d&apos;une équipe RH pour le faire sérieusement.
-                Noa intègre une méthode éprouvée directement dans votre parcours de décision, pour que chaque recrutement
-                repose sur des critères clairs plutôt que sur l&apos;instinct.
-              </p>
-            </div>
 
-            <div className="mt-10 grid gap-4 min-[901px]:grid-cols-3">
-              {WHY.map(w => (
-                <article key={w.title} className="rounded-2xl border border-[#CCB8FF]/50 bg-white p-6 text-center">
-                  <h3 className="mb-2 text-sm font-bold text-[#010101]">{w.title}</h3>
-                  <p className="text-sm leading-[1.65] text-gray-500">{w.text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
 
         <section className="bg-white py-16">
           <div className={CONTAINER}>
