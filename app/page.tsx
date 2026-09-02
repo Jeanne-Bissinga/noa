@@ -34,20 +34,20 @@ const STATS = [
   {
     value: "15x",
     label: "le salaire annuel : coût d'un mauvais recrutement",
-    source: "Geoff Smart, Who",
+    source: "Geoff Smart, auteur de « Who »",
   },
   {
     value: "50 %",
     label: "des décisions d'embauche sont des erreurs",
-    source: "Peter Drucker",
+    source: "Peter Drucker, consultant en management d'entreprise",
   },
 ];
 
 const STEPS = [
-  { n: "1", color: "bg-[#FEE831]", title: "Grille de scoring", text: "Définir les critères qui comptent vraiment pour le poste." },
-  { n: "2", color: "bg-[#CCB8FF]", title: "Entretien structuré", text: "Mener un entretien guidé, candidat par candidat." },
-  { n: "3", color: "bg-[#75DA9F]", title: "Synthèse", text: "Obtenir une synthèse claire et comparable pour chaque profil." },
-  { n: "4", color: "bg-[#99BAF8]", title: "Décision", text: "Comparer les profils sur les mêmes critères et trancher en confiance." },
+  { n: "1", color: "bg-[#FEE831]", title: "Définissez le profil recherché", text: "Identifiez ce qui compte vraiment pour le poste : compétences, expérience, valeurs." },
+  { n: "2", color: "bg-[#CCB8FF]", title: "Menez vos entretiens", text: "Un déroulé guidé, avec les bonnes questions pour chaque candidat." },
+  { n: "3", color: "bg-[#75DA9F]", title: "Obtenez vos synthèses", text: "Un résumé clair et comparable de chaque profil, généré automatiquement." },
+  { n: "4", color: "bg-[#99BAF8]", title: "Décidez en confiance", text: "Comparez les candidats sur les mêmes critères et faites votre choix." },
 ];
 
 const WHY = [
@@ -211,7 +211,8 @@ export default async function LandingPage() {
               ))}
             </div>
             <p className="mt-10 text-center text-sm text-gray-500">
-              <span className="font-bold text-[#010101]">Noa</span> vous aide à éviter ça. Grâce à une méthode structurée, pas à l&apos;instinct.
+              <span className="font-bold text-[#010101]">Noa</span>{" "}
+              vous aide à éviter ça. Grâce à une méthode structurée, pas à l&apos;instinct.
             </p>
           </div>
         </section>
@@ -220,7 +221,7 @@ export default async function LandingPage() {
           <div className={CONTAINER}>
             <p className="mb-2 text-xs font-medium uppercase tracking-[2px] text-white/50">La méthode A-Player</p>
             <h2 className="text-[27px] font-bold leading-[1.25] text-white min-[641px]:text-[30px]">
-              Évaluer, étape par étape.
+              Simplifier le recrutement, étape par étape.
             </h2>
             <p className="mb-10 mt-2 text-sm text-white/50">Un parcours guidé en 4 étapes, pour comparer vos candidats sur des bases objectives.</p>
 
