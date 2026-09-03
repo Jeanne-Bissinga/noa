@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <form action={formAction} className="w-full max-w-sm py-8">
-          <div className="lg:hidden mb-8"><NoaLogo /></div>
+          <div className="lg:hidden mb-8"><NoaLogo dark /></div>
 
           <BackLink href="/connexion" />
 

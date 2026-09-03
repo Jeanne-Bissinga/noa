@@ -3,7 +3,7 @@
 import { use, useActionState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { NoaLogo, Btn } from "@/components/noa/ui-primitives";
+import { NoaLogo, Btn, BackLink } from "@/components/noa/ui-primitives";
 import { login, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
@@ -43,7 +43,8 @@ export default function LoginPage({
 
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <form action={formAction} className="w-full max-w-sm py-8">
-          <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo /></Link></div>
+          <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo dark /></Link></div>
+          <BackLink href="/" label="Retour à l'accueil" />
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Se connecter</h2>
           <p className="text-gray-400 text-sm mb-8">Accédez à votre espace noa.</p>
 

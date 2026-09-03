@@ -42,7 +42,7 @@ export default function DemoPage() {
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         {state?.message ? (
           <div className="w-full max-w-lg py-8">
-            <div className="lg:hidden mb-8"><NoaLogo /></div>
+            <div className="lg:hidden mb-8"><NoaLogo dark /></div>
             <BackLink href="/" label="Retour à l'accueil" />
             <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={poppins}>Demande envoyée</h2>
             <div className="mt-4 px-4 py-3 rounded-xl bg-[#75DA9F]/10 border border-[#75DA9F]/30 text-[#1e8f52] text-sm">
@@ -51,7 +51,7 @@ export default function DemoPage() {
           </div>
         ) : (
           <form action={formAction} className="w-full max-w-lg py-8">
-            <div className="lg:hidden mb-8"><NoaLogo /></div>
+            <div className="lg:hidden mb-8"><NoaLogo dark /></div>
             <BackLink href="/" label="Retour à l'accueil" />
             <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={poppins}>Demander une démo</h2>
             <p className="text-gray-400 text-sm mb-8">Dites-nous en un peu plus, on vous recontacte pour fixer un rendez-vous.</p>

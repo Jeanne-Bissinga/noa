@@ -32,7 +32,7 @@ export default function NewPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <form action={formAction} className="w-full max-w-sm py-8">
-          <div className="lg:hidden mb-8"><NoaLogo /></div>
+          <div className="lg:hidden mb-8"><NoaLogo dark /></div>
 
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={poppins}>Nouveau mot de passe</h2>
           <p className="text-gray-400 text-sm mb-8">

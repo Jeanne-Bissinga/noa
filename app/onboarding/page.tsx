@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight, FileText, Plus, X } from "lucide-react";
 import { NoaLogo, Card, Btn, Textarea } from "@/components/noa/ui-primitives";
@@ -109,7 +110,9 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-[#f8f9fb] flex items-start justify-center p-8">
       <div className="w-full max-w-xl pt-8">
         <div className="flex items-center justify-between mb-10">
-          <NoaLogo scale={0.78} />
+          <Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit">
+            <NoaLogo scale={0.78} dark />
+          </Link>
           <span className="text-xs text-gray-400 font-medium">{step + 1} / {QUESTIONS.length}</span>
         </div>
 

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Check } from "lucide-react";
-import { NoaLogo, Btn, InputField } from "@/components/noa/ui-primitives";
+import { NoaLogo, Btn, InputField, BackLink } from "@/components/noa/ui-primitives";
 import { signup, type SignupState } from "./actions";
 
 const initialState: SignupState = {};
@@ -40,7 +40,8 @@ export default function SignupPage() {
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         {state?.message ? (
           <div className="w-full max-w-lg py-8">
-            <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo /></Link></div>
+            <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo dark /></Link></div>
+            <BackLink href="/" label="Retour à l'accueil" />
             <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Vérifiez votre boîte mail</h2>
             <div className="mt-4 px-4 py-3 rounded-xl bg-[#75DA9F]/10 border border-[#75DA9F]/30 text-[#1e8f52] text-sm">
               {state.message}
@@ -52,7 +53,8 @@ export default function SignupPage() {
           </div>
         ) : (
         <form action={formAction} className="w-full max-w-lg py-8">
-          <div className="lg:hidden mb-8"><NoaLogo /></div>
+          <div className="lg:hidden mb-8"><Link href="/" aria-label="Retour à l'accueil" className="inline-flex w-fit"><NoaLogo dark /></Link></div>
+          <BackLink href="/" label="Retour à l'accueil" />
           <h2 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Créer mon compte</h2>
           <p className="text-gray-400 text-sm mb-8">Commencez à recruter avec méthode en moins de 5 minutes.</p>
 
