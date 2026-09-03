@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import { NoaLogo } from "@/components/noa/ui-primitives";
 import { ScrollLink } from "@/components/noa/scroll-link";
 import { HeroKanban } from "@/components/noa/hero-kanban";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentRecruiter } from "@/lib/noa/queries";
 
 export const metadata: Metadata = {
   title: "Recruter avec méthode",
@@ -63,16 +63,6 @@ const PROOF = {
   source: "Bradford D. Smart, créateur de la méthode Topgrading — pas un résultat propre à Noa",
 };
 
-// Seule la méthode a une section dédiée sur la page. Les quatre étapes qui
-// suivent sont listées à titre indicatif : les rendre cliquables vers la même
-// ancre laissait croire à quatre destinations différentes.
-const PRODUCT_LINKS: { label: string; href: string | null }[] = [
-  { label: "Méthode A-Player", href: "#methode" },
-  { label: "Grille de scoring", href: null },
-  { label: "Entretien structuré", href: null },
-  { label: "Synthèse", href: null },
-  { label: "Décision", href: null },
-];
 // `href: null` = page pas encore rédigée, le libellé reste affiché mais n'est
 // pas présenté comme cliquable (cf. ticket « Pages légales absentes »).
 const LEGAL_LINKS: { label: string; href: string | null }[] = [
@@ -119,13 +109,12 @@ const PLANS = [
 ];
 
 export default async function LandingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Un utilisateur déjà connecté est renvoyé directement vers son espace.
-  if (user) {
+  // Un utilisateur déjà connecté ET dont l'onboarding est terminé est renvoyé
+  // directement vers son espace. Onboarding incomplet -> on laisse voir la
+  // landing (ex. clic sur "Retour à l'accueil" depuis l'onboarding) plutôt que
+  // de le renvoyer en boucle vers /onboarding via /dashboard.
+  const recruiter = await getCurrentRecruiter();
+  if (recruiter?.company?.onboarding_completed) {
     redirect("/dashboard");
   }
 
@@ -369,7 +358,7 @@ export default async function LandingPage() {
 
       <footer className="bg-[#010101] pb-8 pt-12 text-white">
         <div
-          className={`${CONTAINER} grid gap-8 min-[641px]:grid-cols-3 min-[641px]:gap-10`}
+          className={`${CONTAINER} grid gap-8 min-[641px]:grid-cols-2 min-[641px]:gap-10`}
         >
           <div>
             <Link
@@ -383,15 +372,14 @@ export default async function LandingPage() {
               Structurer le recrutement. Trouver le bon candidat.
             </p>
             <div className="mt-6 flex items-center gap-4">
-              {["Instagram", "LinkedIn", "TikTok"].map((s) => (
-                <ScrollLink
-                  key={s}
-                  href="#"
-                  className="text-xs text-white/40 transition-colors hover:text-white"
-                >
-                  {s}
-                </ScrollLink>
-              ))}
+              <a
+                href="https://www.linkedin.com/company/noa-recrutement/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-white/40 transition-colors hover:text-white"
+              >
+                LinkedIn
+              </a>
             </div>
             <a
               href="mailto:noa.recrutement@gmail.com"
@@ -399,25 +387,6 @@ export default async function LandingPage() {
             >
               noa.recrutement@gmail.com
             </a>
-          </div>
-
-          <div>
-            <p className="mb-4 text-xs uppercase tracking-[1.6px] text-white/30">
-              Produit
-            </p>
-            {PRODUCT_LINKS.map((l) =>
-              l.href ? (
-                <ScrollLink
-                  key={l.label}
-                  href={l.href}
-                  className="mb-2 block text-sm text-white/60 transition-colors hover:text-white"
-                >
-                  {l.label}
-                </ScrollLink>
-              ) : (
-                <p key={l.label} className="mb-2 block text-sm text-white/40">{l.label}</p>
-              )
-            )}
           </div>
 
           <div>
