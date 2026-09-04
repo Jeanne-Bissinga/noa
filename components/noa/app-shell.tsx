@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Search, Bell, Settings, LogOut, Briefcase, Users, BarChart2,
+  Settings, LogOut, Briefcase, Users, BarChart2,
 } from "lucide-react";
 import { NoaLogo } from "@/components/noa/ui-primitives";
 import { signOut } from "@/app/(app)/actions";
@@ -68,16 +68,18 @@ const Sidebar = () => {
   );
 };
 
-const useCurrentUserInitials = () => {
-  const [value, setValue] = useState<string | null>(null);
+type CurrentUser = { firstName: string; lastName: string; jobTitle: string | null };
+
+const useCurrentUser = () => {
+  const [value, setValue] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/me")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { firstName: string | null; lastName: string | null } | null) => {
+      .then((data: { firstName: string | null; lastName: string | null; jobTitle: string | null } | null) => {
         if (cancelled || !data?.firstName || !data?.lastName) return;
-        setValue(initials(data.firstName, data.lastName));
+        setValue({ firstName: data.firstName, lastName: data.lastName, jobTitle: data.jobTitle });
       })
       .catch(() => {});
     return () => {
@@ -88,22 +90,63 @@ const useCurrentUserInitials = () => {
   return value;
 };
 
+const UserMenu = ({ user }: { user: CurrentUser | null }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative ml-auto" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Menu du profil"
+        aria-expanded={open}
+        className="w-8 h-8 rounded-full bg-[#CCB8FF]/30 flex items-center justify-center text-xs font-bold text-[#6b4ec4] select-none hover:bg-[#CCB8FF]/45 transition-all cursor-pointer"
+      >
+        {user ? initials(user.firstName, user.lastName) : ""}
+      </button>
+
+      {open && user && (
+        <div className="absolute right-0 top-11 w-56 rounded-2xl border border-black/[0.06] bg-white shadow-lg shadow-black/[0.08] py-2 z-30 ">
+          <div className="px-4 py-2.5 border-b border-black/[0.06]">
+            <p className="text-sm font-semibold text-[#010101] truncate">{user.firstName} {user.lastName}</p>
+            {user.jobTitle && <p className="text-xs text-gray-400 truncate">{user.jobTitle}</p>}
+          </div>
+          <Link
+            href="/parametres"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-[#010101] transition-all"
+          >
+            <Settings size={15} />
+            Voir / modifier le profil
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AppHeader = ({ title }: { title?: string }) => {
-  const userInitials = useCurrentUserInitials();
+  const user = useCurrentUser();
   return (
     <header className="h-15 bg-white border-b border-black/[0.06] flex items-center px-6 gap-4 flex-shrink-0" style={{ height: 60 }}>
       {title && <span className="font-semibold text-[#010101] text-sm mr-auto">{title}</span>}
-      <div className={`flex items-center gap-2 bg-gray-50 rounded-xl px-3.5 py-2 border border-gray-100 ${title ? "" : "flex-1 max-w-xs"}`}>
-        <Search size={14} className="text-gray-400 flex-shrink-0" />
-        <input placeholder="Rechercher..." className="bg-transparent text-sm focus:outline-none text-gray-600 placeholder-gray-400 w-full" />
-      </div>
-      <button className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-all">
-        <Bell size={17} className="text-gray-500" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#99BAF8] rounded-full border-2 border-white" />
-      </button>
-      <div className="w-8 h-8 rounded-full bg-[#CCB8FF]/30 flex items-center justify-center text-xs font-bold text-[#6b4ec4] select-none">
-        {userInitials ?? ""}
-      </div>
+      <UserMenu user={user} />
     </header>
   );
 };
