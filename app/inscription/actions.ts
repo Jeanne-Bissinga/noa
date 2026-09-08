@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ERROR_MESSAGE, authError, userError } from "@/lib/noa/errors";
 
 export type SignupState = {
   error?: string;
@@ -47,10 +48,9 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
   });
 
   if (signUpError) {
-    if (signUpError.message.toLowerCase().includes("already registered") || signUpError.message.toLowerCase().includes("already been registered")) {
-      return { error: "Un compte existe déjà avec cet email." };
-    }
-    return { error: signUpError.message };
+    // Traduction centralisée : « compte déjà existant », « mot de passe trop
+    // court » restent des messages utiles, le reste devient générique.
+    return { error: authError("signUp", signUpError, ERROR_MESSAGE.inscription) };
   }
 
   const {
@@ -90,7 +90,7 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
         error: "Votre session précédente n'était plus valide et vient d'être nettoyée. Merci de réessayer l'inscription.",
       };
     }
-    return { error: rpcError.message };
+    return { error: userError("createCompanyAndRecruiter", rpcError, ERROR_MESSAGE.inscription) };
   }
 
   redirect("/onboarding");

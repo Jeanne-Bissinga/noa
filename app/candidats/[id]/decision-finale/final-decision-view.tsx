@@ -65,10 +65,13 @@ export function FinalDecisionView({
   globalRecommendation: Synthesis | null;
 }) {
   const [pendingAction, setPendingAction] = useState<"non_retenu" | "retenu" | null>(null);
-  // Une fois le candidat marqué "recruté", on demande d'abord au recruteur si
-  // la mission est désormais pourvue (elle peut viser plusieurs postes, donc
-  // rester active) avant de le renvoyer vers la liste des candidats.
-  const [missionPrompt, setMissionPrompt] = useState<{ missionId: string } | null>(null);
+  // Un écran de suite s'affiche toujours après un recrutement, même sans
+  // campagne rattachée. C'est une correction de fond : l'ancien code
+  // conditionnait tout cet écran à l'existence d'une mission, si bien qu'un
+  // candidat créé hors campagne laissait le recruteur sur une page aux boutons
+  // désactivés, alors que la décision était bien enregistrée.
+  const [hired, setHired] = useState<{ missionId: string | null; href: string } | null>(null);
+  const [fillMission, setFillMission] = useState(false);
   const [missionPending, setMissionPending] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -114,42 +117,69 @@ export function FinalDecisionView({
     startTransition(async () => {
       const result = await decideFinal(candidate.id, action, score);
       // action "non_retenu" : decideFinal redirige lui-même côté serveur.
-      if (action === "retenu" && result?.missionId) {
-        setMissionPrompt({ missionId: result.missionId });
-        setPendingAction(null);
-      }
+      if (action !== "retenu") return;
+      setHired({
+        missionId: result?.missionId ?? null,
+        href: result?.integrationHref ?? `/integrations/${candidate.id}`,
+      });
+      setPendingAction(null);
     });
   };
 
-  const handleMissionChoice = (fillMission: boolean) => {
-    if (!missionPrompt) return;
+  const leave = (destination: string) => {
     setMissionPending(true);
     startTransition(async () => {
-      if (fillMission) {
-        await markMissionFilled(missionPrompt.missionId);
+      // Marquer la campagne pourvue est un geste annexe : s'il échoue, il ne
+      // doit pas retenir le recruteur sur cet écran.
+      if (fillMission && hired?.missionId) {
+        try {
+          await markMissionFilled(hired.missionId);
+        } catch {
+          // sans effet sur la suite
+        }
       }
-      router.push("/candidats");
+      router.push(destination);
     });
   };
 
-  if (missionPrompt) {
+  if (hired) {
     return (
       <AppLayout headerTitle={name}>
         <div className="max-w-md mx-auto">
           <Card className="p-8 text-center">
             <div className="w-12 h-12 rounded-2xl bg-[#75DA9F]/15 flex items-center justify-center mx-auto mb-4">
-              <PartyPopper size={22} className="text-[#1e8f52]" />
+              <PartyPopper size={20} className="text-[#1e8f52]" />
             </div>
-            <h1 className="text-lg font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>{name} a été marqué comme recruté</h1>
-            <p className="text-sm text-gray-500 leading-relaxed mb-6">
-              Cette campagne cherche-t-elle encore d'autres profils, ou le recrutement est-il terminé ?
+            <h1 className="text-lg font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>
+              {name} a été marqué comme recruté
+            </h1>
+            <p className="text-sm text-gray-500 mt-2.5 leading-relaxed">
+              Son plan d&apos;intégration a été préparé à partir de la campagne. Il reste à le relire
+              et à le valider.
             </p>
-            <div className="flex flex-col gap-2">
-              <Btn variant="primary" size="lg" onClick={() => handleMissionChoice(true)} disabled={missionPending}>
-                <Check size={15} />{missionPending ? "…" : "Marquer la campagne comme pourvue"}
+
+            {hired.missionId && (
+              <label className="flex items-start gap-2.5 mt-6 text-left cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={fillMission}
+                  onChange={(e) => setFillMission(e.target.checked)}
+                  className="mt-0.5 accent-[#99BAF8]"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  Cette campagne est désormais pourvue. Laissez décoché si elle cherche encore
+                  d&apos;autres profils.
+                </span>
+              </label>
+            )}
+
+            <div className="flex flex-col gap-2 mt-6">
+              <Btn variant="primary" size="lg" onClick={() => leave(hired.href)} disabled={missionPending}>
+                Préparer son intégration
+                <ChevronRight size={15} />
               </Btn>
-              <Btn variant="secondary" size="lg" onClick={() => handleMissionChoice(false)} disabled={missionPending}>
-                Non, je continue à recruter sur cette campagne
+              <Btn variant="secondary" onClick={() => leave("/candidats")} disabled={missionPending}>
+                Revenir aux candidats
               </Btn>
             </div>
           </Card>

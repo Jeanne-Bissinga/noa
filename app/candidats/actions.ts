@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter, getCandidate, getMission } from "@/lib/noa/queries";
 import { STATUS_FIELDS, canMoveCandidate } from "@/lib/noa/labels";
 import { extractCandidateProfile, CV_SUPPORTED_MIME, CV_DOCX_MIME, type CandidateProfileExtract } from "@/lib/noa/ai";
@@ -63,7 +64,7 @@ export async function moveCandidate(candidateId: string, newStatus: CandidateSta
     .eq("id", candidateId);
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(userError("moveCandidate", error, ERROR_MESSAGE.candidat));
   }
 
   // Retour en arrière : les décisions des étapes réouvertes sont caduques.
@@ -274,7 +275,7 @@ export async function createCandidate(
     .upload(path, buffer, { contentType: mediaType });
 
   if (uploadError) {
-    return { error: `Échec de l'import du CV : ${uploadError.message}` };
+    return { error: userError("addCandidate.cvUpload", uploadError, ERROR_MESSAGE.cvImport) };
   }
 
   // noa extrait le profil (titre, localisation, expériences, compétences…) du CV.
@@ -317,7 +318,7 @@ export async function createCandidate(
     .single();
 
   if (error || !data) {
-    return { error: error?.message ?? "Impossible de créer la fiche candidat." };
+    return { error: userError("addCandidate", error, ERROR_MESSAGE.candidatCreation) };
   }
 
   // Un poste "pourvu" redevient "en_cours" dès qu'on ajoute un nouveau

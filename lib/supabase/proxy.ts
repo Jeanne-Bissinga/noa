@@ -8,6 +8,13 @@ const PUBLIC_PATHS = ['/', '/inscription', '/connexion', '/demo', '/cgu', '/conf
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true
   if (pathname.startsWith('/auth/')) return true
+  // Préférences de travail du collaborateur recruté
+  // (/integration/preferences/[token]) : il n'a pas de
+  // compte Noa et ne doit pas en créer un. L'accès est contrôlé par le token
+  // présent dans l'URL, vérifié côté serveur (lib/noa/onboarding/tokens.ts),
+  // pas par une session — exiger une connexion ici rendrait le lien
+  // inutilisable. `/integrations` (pluriel, vue manager) n'est pas concerné.
+  if (pathname.startsWith('/integration/')) return true
   return false
 }
 

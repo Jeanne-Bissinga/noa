@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { TestFillProvider } from '@/components/noa/test-fill-context'
+import { ToastProvider } from '@/components/noa/toast'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -43,7 +44,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <TestFillProvider>{children}</TestFillProvider>
+        <ToastProvider>
+          <TestFillProvider>{children}</TestFillProvider>
+        </ToastProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
         {process.env.NODE_ENV === 'production' && (
           <Script id="clarity-script" strategy="afterInteractive">

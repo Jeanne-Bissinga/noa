@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter, getMission, getMissionObjectives, getMissionSkills } from "@/lib/noa/queries";
 import type { Company, Mission, MissionSkill, MissionSkillCategory } from "@/lib/noa/types";
 import {
@@ -68,7 +69,7 @@ export async function saveMissionText(
     .eq("id", mission.id);
 
   if (error) {
-    return { error: error.message };
+    return { error: userError("missionStep", error, ERROR_MESSAGE.mission) };
   }
 
   revalidatePath(`/missions/nouvelle/${mission.id}/resume`);
@@ -94,7 +95,7 @@ export async function finalizeMission(missionId: string) {
     .eq("id", mission.id);
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(userError("missionStep", error, ERROR_MESSAGE.mission));
   }
 
   revalidatePath("/missions");
@@ -351,7 +352,7 @@ export async function validateJobSpec(missionId: string) {
     .eq("id", mission.id);
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(userError("missionStep", error, ERROR_MESSAGE.mission));
   }
 
   revalidatePath(`/missions/nouvelle/${mission.id}/coherence`);

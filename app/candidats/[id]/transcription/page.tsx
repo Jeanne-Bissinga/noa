@@ -1,14 +1,9 @@
 import { notFound } from "next/navigation";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, BackLink } from "@/components/noa/ui-primitives";
-import { initials } from "@/lib/noa/labels";
+import { initials, INTERVIEW_LABEL, parseRecruitmentInterviewType } from "@/lib/noa/labels";
 import { requireRecruiter, getCandidate, getInterview } from "@/lib/noa/queries";
-import type { InterviewType } from "@/lib/noa/types";
 
-const STEP_LABEL: Record<InterviewType, string> = {
-  screening: "Premier entretien",
-  topgrading: "Entretien technique",
-};
 
 export default async function CandidateTranscriptPage({
   params, searchParams,
@@ -25,14 +20,14 @@ export default async function CandidateTranscriptPage({
     notFound();
   }
 
-  const stepType: InterviewType | null = step === "screening" || step === "topgrading" ? step : null;
+  const stepType = parseRecruitmentInterviewType(step);
   const interview = stepType ? await getInterview(candidate.id, stepType) : null;
 
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = "bg-[#99BAF8]/20 text-[#3a6fd4]";
 
   return (
-    <AppLayout headerTitle={`Entretien, ${stepType ? STEP_LABEL[stepType] : name}`}>
+    <AppLayout headerTitle={`Entretien, ${stepType ? INTERVIEW_LABEL[stepType] : name}`}>
       <div className="max-w-2xl mx-auto">
         <BackLink href={stepType ? `/candidats/${candidate.id}/synthese?step=${stepType}` : `/candidats/${candidate.id}`} />
 
@@ -46,7 +41,7 @@ export default async function CandidateTranscriptPage({
             <Avatar initials={initials(candidate.first_name, candidate.last_name)} color={avatarColor} size="md" />
             <div>
               <p className="text-sm font-bold text-[#010101]">{name}</p>
-              <p className="text-[10px] text-gray-400">{stepType ? STEP_LABEL[stepType] : "-"}</p>
+              <p className="text-[10px] text-gray-400">{stepType ? INTERVIEW_LABEL[stepType] : "-"}</p>
             </div>
           </div>
 

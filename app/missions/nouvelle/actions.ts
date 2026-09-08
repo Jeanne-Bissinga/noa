@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 import { generateMissionText } from "@/lib/noa/ai";
 
@@ -72,7 +73,7 @@ export async function createMission(
     .single();
 
   if (error || !data) {
-    return { error: error?.message ?? "Impossible de créer la mission." };
+    return { error: userError("createMission", error, ERROR_MESSAGE.missionCreation) };
   }
 
   // Si noa n'a pas pu rédiger (repli sur le texte brut), on le signale à

@@ -8,7 +8,7 @@ import { RecordingGuidance } from "@/components/noa/recording-guidance";
 import { TranscriptCapture } from "@/components/noa/transcript-capture";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
-import { finishInterview, finishInterviewTest } from "../actions";
+import { finishInterview, finishInterviewTest, saveTranscript } from "../actions";
 import type { Candidate } from "@/lib/noa/types";
 import type { PrepGuideSection } from "@/lib/noa/interview-content";
 
@@ -136,7 +136,12 @@ export function ScreeningGridView({
           </div>
         </Card>
 
-        <TranscriptCapture candidateId={candidate.id} type="screening" value={transcript} onChange={setTranscript} accent="blue" />
+        <TranscriptCapture
+            value={transcript}
+            onChange={setTranscript}
+            onPersist={(text) => saveTranscript(candidate.id, "screening", text)}
+            accent="blue"
+          />
 
         <Card className="p-4 mb-6">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Notes complémentaires (optionnel)</p>

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter, getMission, getCandidates } from "@/lib/noa/queries";
 
 async function assertOwnedMission(missionId: string) {
@@ -88,7 +89,7 @@ export async function deleteMissionPermanently(missionId: string, confirmCandida
 
   const { error } = await supabase.from("missions").delete().eq("id", mission.id);
   if (error) {
-    throw new Error(error.message);
+    throw new Error(userError("missions", error, ERROR_MESSAGE.mission));
   }
 
   revalidatePath("/missions");

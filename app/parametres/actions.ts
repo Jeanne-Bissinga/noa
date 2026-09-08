@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ERROR_MESSAGE, userError as reportError, authError as translateAuthError } from "@/lib/noa/errors";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 
 export type SettingsFormState = { error?: string; success?: boolean; message?: string };
@@ -26,7 +27,7 @@ export async function updateProfile(
 
   if (emailChanged) {
     const { error: authError } = await supabase.auth.updateUser({ email });
-    if (authError) return { error: authError.message };
+    if (authError) return { error: translateAuthError("updateProfile.email", authError) };
   }
 
   const { error } = await supabase
@@ -39,7 +40,7 @@ export async function updateProfile(
     })
     .eq("user_id", recruiter.user_id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: reportError("updateProfile", error, ERROR_MESSAGE.profil) };
 
   revalidatePath("/parametres");
   return {
@@ -81,7 +82,7 @@ export async function updateCompany(
     })
     .eq("id", recruiter.company_id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: reportError("updateCompany", error, ERROR_MESSAGE.entreprise) };
 
   revalidatePath("/parametres");
   return { success: true };
@@ -113,10 +114,10 @@ export async function deleteAccount(
   }
 
   const { error: companyError } = await admin.from("companies").delete().eq("id", recruiter.company_id);
-  if (companyError) return { error: companyError.message };
+  if (companyError) return { error: reportError("deleteAccount.company", companyError, ERROR_MESSAGE.suppressionCompte) };
 
-  const { error: userError } = await admin.auth.admin.deleteUser(recruiter.user_id);
-  if (userError) return { error: userError.message };
+  const { error: authDeleteError } = await admin.auth.admin.deleteUser(recruiter.user_id);
+  if (authDeleteError) return { error: reportError("deleteAccount.user", authDeleteError, ERROR_MESSAGE.suppressionCompte) };
 
   const supabase = await createClient();
   await supabase.auth.signOut();

@@ -2,6 +2,7 @@
 
 import { Mic, Square, X } from "lucide-react";
 import { Card } from "@/components/noa/ui-primitives";
+import { ACCENT, type AccentName } from "@/lib/noa/interview-accent";
 import { useInterviewRecorder } from "@/components/noa/use-interview-recorder";
 
 function formatElapsed(totalSeconds: number) {
@@ -10,10 +11,6 @@ function formatElapsed(totalSeconds: number) {
   return `${m}:${s}`;
 }
 
-const ACCENT = {
-  blue: { icon: "text-[#3a6fd4] bg-[#99BAF8]/12" },
-  violet: { icon: "text-[#6b4ec4] bg-[#CCB8FF]/12" },
-};
 
 // Affiché avant le guide d'entretien : le recruteur démarre l'enregistrement
 // ici, avant de dérouler l'entretien (cf. TranscriptCapture, affiché après le
@@ -23,7 +20,7 @@ export function RecordingGuidance({
 }: {
   value: string;
   onChange: (value: string) => void;
-  accent?: "blue" | "violet";
+  accent?: AccentName;
 }) {
   const colors = ACCENT[accent];
 

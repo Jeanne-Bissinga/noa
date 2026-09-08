@@ -15,6 +15,23 @@
 
 import type { ScreeningCriterion, TopgradingEpisode, ScreeningAnswer } from "@/lib/noa/synthesis";
 
+
+/**
+ * Grille d'entretien d'intégration : ni notée, ni synthétisée par ce module.
+ * Ces entretiens ont leur propre rédaction et n'entrent jamais dans
+ * l'évaluation d'un recrutement. La forme objet les rend déjà invisibles aux
+ * deux prédicats ci-dessous ; cette garde explicite existe pour que l'erreur
+ * se voie si quelqu'un aplatissait un jour la structure.
+ */
+function isIntegrationCriteria(criteria: unknown): boolean {
+  return (
+    !!criteria &&
+    typeof criteria === "object" &&
+    !Array.isArray(criteria) &&
+    (criteria as { kind?: unknown }).kind === "integration_interview"
+  );
+}
+
 function isScreeningCriteria(criteria: unknown): criteria is ScreeningCriterion[] {
   return Array.isArray(criteria) && criteria.length > 0 && typeof (criteria[0] as any)?.q === "string" && !("qs" in (criteria[0] as any));
 }
@@ -46,6 +63,13 @@ export function computeAggregateScore(
   topgrading: { criteria: unknown; answers: Record<string, unknown> } | null,
 ): number | null {
   const scores: number[] = [];
+
+  // Un entretien d'intégration ne pèse jamais sur la note d'un recrutement.
+  // La garde vit ici plutôt que chez les appelants : cette fonction écrit
+  // indirectement `candidates.score`, on ne s'en remet pas à leur prudence.
+  if (isIntegrationCriteria(screening?.criteria) || isIntegrationCriteria(topgrading?.criteria)) {
+    return null;
+  }
 
   if (screening && isScreeningCriteria(screening.criteria)) {
     const s = scoreScreeningGrid(screening.criteria, screening.answers as Record<string, ScreeningAnswer>);

@@ -11,7 +11,21 @@ export type CandidateStatus = "Screening" | "Topgrading" | "Decision finale" | "
 
 export type StageStatus = "done" | "current" | "pending" | "none";
 
-export type InterviewType = "screening" | "topgrading";
+/** Étapes d'entretien du recrutement. */
+export type RecruitmentInterviewType = "screening" | "topgrading";
+
+/**
+ * Les quatre entretiens des 90 premiers jours. Ils vivent dans la même table
+ * que ceux du recrutement : même guide, même enregistrement, même
+ * transcription, même synthèse — il n'y a pas deux moteurs d'entretien.
+ */
+export type IntegrationInterviewType =
+  | "integration_j1"
+  | "integration_j30"
+  | "integration_j60"
+  | "integration_j90";
+
+export type InterviewType = RecruitmentInterviewType | IntegrationInterviewType;
 
 export type InterviewStatus = "planifie" | "termine";
 
@@ -182,4 +196,142 @@ export interface Decision {
   reason: string | null;
   decided_by: string | null;
   decided_at: string;
+}
+
+// ─── Intégration 30-60-90 (scripts/010_onboarding.sql) ──────────────────────
+
+export type DiscProfile = "D" | "I" | "S" | "C";
+
+export type DiscSource = "manuel" | "externe";
+
+export type OnboardingStatus = "brouillon" | "actif" | "termine";
+
+export type OnboardingPhase = "j30" | "j60" | "j90";
+
+export type OnboardingGoalKind = "numeric" | "qualitative";
+
+export type OnboardingGoalStatus = "non_commence" | "en_cours" | "atteint" | "bloque";
+
+
+
+
+
+export type ManagerConclusion = "conforme" | "ajustements" | "attention";
+
+export interface Onboarding {
+  id: string;
+  company_id: string;
+  candidate_id: string;
+  mission_id: string | null;
+  manager_id: string | null;
+  status: OnboardingStatus;
+  /**
+   * Date d'arrivée. null tant que le manager ne l'a pas fixée : l'interface
+   * affiche « À définir » et les quatre entretiens ne sont pas encore datés
+   * (cf. scripts/013_integration_parcours.sql).
+   */
+  start_date: string | null;
+  mission_text: string | null;
+  disc_primary: DiscProfile | null;
+  disc_secondary: DiscProfile | null;
+  disc_source: DiscSource | null;
+  disc_assessed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnboardingGoal {
+  id: string;
+  onboarding_id: string;
+  mission_objective_id: string | null;
+  phase: OnboardingPhase;
+  label: string;
+  kind: OnboardingGoalKind;
+  metric: string | null;
+  target_value: number | null;
+  current_value: number | null;
+  status: OnboardingGoalStatus;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ActionStatus = "todo" | "done" | "cancelled";
+
+/**
+ * Engagement concret pris pendant un entretien. Troisième niveau d'objectif,
+ * distinct de l'outcome J90 (Scorecard) et du jalon J30/J60 : ceux-là disent
+ * où l'on va, une action dit ce que quelqu'un fait d'ici au prochain échange.
+ */
+export interface OnboardingAction {
+  id: string;
+  onboarding_id: string;
+  /** Entretien qui l'a décidée. null si celui-ci a été supprimé depuis. */
+  source_interview_id: string | null;
+  label: string;
+  due_date: string | null;
+  /** Texte libre : le porteur n'a pas forcément de compte Noa. */
+  owner: string | null;
+  status: ActionStatus;
+  position: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+/** Ce que le manager retient d'un entretien. Jamais une décision RH. */
+export interface OnboardingInterviewConclusion {
+  id: string;
+  interview_id: string;
+  conclusion: ManagerConclusion;
+  note: string | null;
+  decided_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Préférences de travail (scripts/012_work_preferences.sql) ──────────────
+
+export type WorkPreferencesStatus = "invited" | "completed";
+
+export type WorkPreferencesSource = "declared_test" | "noa_questionnaire";
+
+export type AssessmentType = "disc" | "mbti" | "big_five" | "noa_work_preferences";
+
+/** Les six préférences mesurées par le questionnaire Noa. */
+export type WorkPreferenceDimension =
+  | "structure"
+  | "autonomy"
+  | "interaction"
+  | "initiative"
+  | "change"
+  | "feedback";
+
+/** Lecture d'une préférence : orientation nette, ou pas de préférence marquée. */
+export type PreferenceOrientation = "low_preference" | "mixed" | "high_preference";
+
+export type BigFiveLevel = "low" | "medium" | "high";
+
+export type BigFiveTrait =
+  | "openness"
+  | "conscientiousness"
+  | "extraversion"
+  | "agreeableness"
+  | "emotional_stability";
+
+export interface OnboardingWorkPreferences {
+  id: string;
+  onboarding_id: string;
+  status: WorkPreferencesStatus;
+  source: WorkPreferencesSource | null;
+  assessment_type: AssessmentType | null;
+  /** Forme validée côté serveur selon assessment_type (cf. declared-tests.ts, work-preferences.ts). */
+  structured_result: Record<string, unknown> | null;
+  questionnaire_answers: Record<string, number> | null;
+  questionnaire_scores: Record<string, unknown> | null;
+  token_hash: string | null;
+  token_expires_at: string | null;
+  invited_at: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

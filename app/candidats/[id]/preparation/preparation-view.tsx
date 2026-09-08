@@ -11,19 +11,15 @@ import {
   generateTopgradingGrid, generateTopgradingGuide,
 } from "../actions";
 import { GUIDE_FORMATS, GUIDE_DURATIONS, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
-import { ELIMINATOIRE_CRIT } from "@/lib/noa/labels";
-import type { Candidate, InterviewGuide, InterviewType } from "@/lib/noa/types";
+import { ELIMINATOIRE_CRIT, INTERVIEW_LABEL } from "@/lib/noa/labels";
+import type { Candidate, InterviewGuide, RecruitmentInterviewType } from "@/lib/noa/types";
 
-const STEP_LABEL: Record<InterviewType, string> = {
-  screening: "Premier entretien",
-  topgrading: "Entretien technique",
-};
 
 export function PreparationView({
   candidate, step, meta, existingGuide,
 }: {
   candidate: Candidate;
-  step: InterviewType;
+  step: RecruitmentInterviewType;
   meta: {
     goal: string;
     gridIntro: string;
@@ -64,7 +60,7 @@ export function PreparationView({
   });
 
   const canGenerateGuide = gridGenerated && format && duration;
-  const stepLabel = STEP_LABEL[step];
+  const stepLabel = INTERVIEW_LABEL[step];
   const name = `${candidate.first_name} ${candidate.last_name}`;
 
   const handleGenerateGrid = async () => {

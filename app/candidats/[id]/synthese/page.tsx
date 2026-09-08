@@ -3,16 +3,11 @@ import { notFound } from "next/navigation";
 import { FileText, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, BackLink } from "@/components/noa/ui-primitives";
-import { initials } from "@/lib/noa/labels";
+import { initials, INTERVIEW_LABEL, parseRecruitmentInterviewType } from "@/lib/noa/labels";
 import {
   requireRecruiter, getCandidate, getSyntheses, getInterview,
 } from "@/lib/noa/queries";
-import type { InterviewType } from "@/lib/noa/types";
 
-const STEP_LABEL: Record<InterviewType, string> = {
-  screening: "Premier entretien",
-  topgrading: "Entretien technique",
-};
 
 export default async function CandidateSynthesisPage({
   params, searchParams,
@@ -29,7 +24,7 @@ export default async function CandidateSynthesisPage({
     notFound();
   }
 
-  const stepType: InterviewType | null = step === "screening" || step === "topgrading" ? step : null;
+  const stepType = parseRecruitmentInterviewType(step);
 
   const interview = stepType ? await getInterview(candidate.id, stepType) : null;
   const allSyntheses = await getSyntheses(candidate.id);
@@ -41,7 +36,7 @@ export default async function CandidateSynthesisPage({
   const avatarColor = "bg-[#99BAF8]/20 text-[#3a6fd4]";
 
   return (
-    <AppLayout headerTitle={`Synthèse, ${stepType ? STEP_LABEL[stepType] : name}`}>
+    <AppLayout headerTitle={`Synthèse, ${stepType ? INTERVIEW_LABEL[stepType] : name}`}>
       <div className="max-w-2xl mx-auto">
         <BackLink href={`/candidats/${candidate.id}`} />
 
@@ -50,7 +45,7 @@ export default async function CandidateSynthesisPage({
             <Avatar initials={initials(candidate.first_name, candidate.last_name)} color={avatarColor} size="md" />
             <div>
               <p className="text-sm font-bold text-[#010101]">{name}</p>
-              <p className="text-[10px] text-gray-400">{stepType ? STEP_LABEL[stepType] : "Toutes étapes"}</p>
+              <p className="text-[10px] text-gray-400">{stepType ? INTERVIEW_LABEL[stepType] : "Toutes étapes"}</p>
             </div>
           </div>
 

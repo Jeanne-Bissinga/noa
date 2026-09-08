@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Edit3, FileText, Target, Award, Plus } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
+import { useToast } from "@/components/noa/toast";
+import { ERROR_MESSAGE } from "@/lib/noa/errors";
 import { Card, LinkBtn, Btn } from "@/components/noa/ui-primitives";
 import { finalizeMission, saveFinalSpec } from "../actions";
 import type { Mission, MissionObjective } from "@/lib/noa/types";
@@ -19,6 +21,7 @@ export function FinalSpecView({
   finalSpecText: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   // Persist the composed final spec the first time this screen is reached
   // (mission.final_spec_text was null), without needing an explicit save action.
@@ -29,11 +32,18 @@ export function FinalSpecView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(finalSpecText).then(() => {
+  // Le presse-papiers refuse l'écriture pour de vraies raisons — page non
+  // sécurisée, permission refusée — et la promesse rejetée n'était pas
+  // attrapée : l'échec passait pour un succès, sans même une trace.
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(finalSpecText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+      toast("Fiche de poste copiée");
+    } catch {
+      toast(ERROR_MESSAGE.copieTexte, "error");
+    }
   };
 
   return (
