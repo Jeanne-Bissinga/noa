@@ -6,7 +6,7 @@ import { buildPreferenceContext } from "@/lib/noa/onboarding/personalization";
 import { buildTimeline } from "@/lib/noa/onboarding/timeline";
 import { IntegrationDetail } from "./integration-view";
 
-// Fiche d'intégration, dans la section Intégrations.
+// Fiche d'un plan d'onboarding, dans la section Plans d'onboarding.
 //
 // Elle existe dès que la personne est recrutée — il n'y a pas d'écran
 // intermédiaire à traverser. Tout le vocabulaire d'état vient de
@@ -44,7 +44,6 @@ export default async function IntegrationPage({ params }: { params: Promise<{ id
   const timeline = buildTimeline({
     arrivalDate: overview.startDate,
     interviews,
-    alerts: overview.alerts,
     // Un préparatif reste à mener tant que l'action principale en réclame un
     // qui ne soit pas un entretien.
     beforeArrivalPending:
@@ -62,7 +61,6 @@ export default async function IntegrationPage({ params }: { params: Promise<{ id
       overview={overview}
       timeline={timeline}
       goals={bundle?.goals ?? []}
-      actions={bundle?.actions ?? []}
       conclusions={bundle?.conclusions ?? []}
       preparedInterviewIds={preparedInterviewIds}
       preferences={bundle?.preferences ?? null}

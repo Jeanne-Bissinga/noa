@@ -106,3 +106,90 @@ describe("nettoyage de l'ancienne direction DISC", () => {
     expect(flow).not.toMatch(/test psychométrique|test de personnalité|test DISC Noa/i);
   });
 });
+
+// Le module s'appelle « Plans d'onboarding » dans l'interface. Les routes, les
+// tables et les types gardent « integration » : les renommer casserait des
+// liens partagés, et surtout la garde qui tient /integration/ — les pages
+// publiques du recruté — hors de la section authentifiée.
+describe("le module s'appelle « Plans d'onboarding »", () => {
+  it("le dit dans la barre latérale, la liste et la fiche", () => {
+    const shell = readFileSync(path.join(ROOT, "components/noa/app-shell.tsx"), "utf8");
+    expect(shell).toContain(`label: "Plans d'onboarding"`);
+    expect(shell).toContain(`href: "/integrations"`);
+
+    const board = readFileSync(path.join(ROOT, "app/integrations/integrations-board.tsx"), "utf8");
+    expect(board).toContain(`headerTitle="Plans d'onboarding"`);
+    expect(board).toContain("Plans d&apos;onboarding");
+
+    const view = readFileSync(path.join(ROOT, "app/integrations/[id]/integration-view.tsx"), "utf8");
+    expect(view).toContain(`label="Plans d'onboarding"`);
+    expect(view).toContain("Plan d&apos;onboarding de");
+  });
+
+  it("nomme le document 30-60-90 autrement que le module", () => {
+    // « Plan d'onboarding » désigne le dossier d'une personne ; le document
+    // généré depuis le recrutement garde son nom de recrutement.
+    const editor = readFileSync(path.join(ROOT, "app/integrations/[id]/plan/plan-editor.tsx"), "utf8");
+    expect(editor).toContain("Plan 30-60-90 de {firstName}");
+  });
+});
+
+describe("la liste ne montre plus que ce qui a quelque chose à dire", () => {
+  const board = () =>
+    readFileSync(path.join(ROOT, "app/integrations/integrations-board.tsx"), "utf8");
+
+  it("n'imprime plus de négation sur les lignes saines", () => {
+    expect(board()).not.toContain("Aucun point d");
+  });
+
+  it("n'a plus de colonne Préférences", () => {
+    // Trois états, dont deux qui ne demandaient rien : l'information vit dans
+    // la fiche, avec le geste qui va avec.
+    expect(board()).not.toContain("WORK_PREFERENCES_STATUS_LABEL");
+  });
+
+  it("n'offre que quatre filtres", () => {
+    const filters = board().match(/const FILTERS: OverviewFilter\[\] = \[([^\]]*)\]/);
+    expect(filters).not.toBeNull();
+    expect(filters![1].split(",").filter((s) => s.trim()).length).toBe(4);
+  });
+});
+
+// L'écran affiché juste après « Marquer comme recruté ». Les garanties se
+// lisent dans le source : les tests tournent sous `environment: "node"`, sans
+// DOM ni bibliothèque de rendu.
+describe("l'écran d'après-recrutement", () => {
+  const view = () =>
+    readFileSync(path.join(ROOT, "app/candidats/[id]/decision-finale/final-decision-view.tsx"), "utf8");
+
+  it("confirme le recrutement sans accorder en genre", () => {
+    // Le produit ne stocke ni genre ni civilité, et déduire l'un de l'autre
+    // depuis le prénom se tromperait sur une partie des gens.
+    expect(view()).toContain("Recrutement de {name} confirmé");
+    expect(view()).not.toMatch(/marqué\w* comme recruté/);
+  });
+
+  it("dit ce que fait la case à cocher, et dans quel sens", () => {
+    expect(view()).toContain("Marquer cette campagne comme pourvue");
+    expect(view()).toContain("Cochez cette case si vous ne recrutez plus");
+    expect(view()).toContain("Laissez-la décochée si la campagne reste ouverte");
+  });
+
+  it("coche pour pourvoir, décoche pour laisser la campagne ouverte", () => {
+    // La case pilote fillMission, et markMissionFilled n'est appelé que sous
+    // cette garde : cochée vaut pourvue, décochée ne touche à rien.
+    expect(view()).toContain("checked={fillMission}");
+    expect(view()).toContain("onChange={(e) => setFillMission(e.target.checked)}");
+    expect(view()).toMatch(/if \(fillMission && hired\?\.missionId\) \{[\s\S]{0,120}markMissionFilled/);
+  });
+
+  it("renvoie vers un plan déjà généré, qu'il reste à relire", () => {
+    expect(view()).toContain("Relire le plan d&apos;onboarding");
+    expect(view()).not.toContain("Préparer son intégration");
+  });
+
+  it("parle de plan d'onboarding, plus de plan d'intégration", () => {
+    expect(view()).toContain("Son plan d&apos;onboarding a été préparé à partir des éléments");
+    expect(view()).not.toMatch(/plan d(&apos;|')intégration/);
+  });
+});

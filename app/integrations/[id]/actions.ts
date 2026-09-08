@@ -47,7 +47,7 @@ async function assertOwnedOnboarding(onboardingId: string) {
   const { data } = await supabase.from("onboardings").select("*").eq("id", onboardingId).maybeSingle();
   const onboarding = data as Onboarding | null;
   if (!onboarding || onboarding.company_id !== recruiter.company_id) {
-    throw new Error("Intégration introuvable.");
+    throw new Error("Plan d'onboarding introuvable.");
   }
   return { recruiter, onboarding, supabase };
 }
@@ -74,7 +74,7 @@ export async function prepareOnboarding(candidateId: string): Promise<{ error?: 
   const { recruiter, candidate } = await assertOwnedCandidate(candidateId);
 
   if (candidate.status !== "Recrute") {
-    return { error: "L'intégration ne se prépare qu'une fois le candidat recruté." };
+    return { error: "Le plan d'onboarding ne se prépare qu'une fois le candidat recruté." };
   }
 
   const result = await createDraftOnboarding(candidate, recruiter.id);

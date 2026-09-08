@@ -144,11 +144,11 @@ export function PlanEditor({
   return (
     <AppLayout headerTitle={candidateName}>
       <div className="max-w-2xl mx-auto">
-        <BackLink href={`/integrations/${candidateId}`} label="Retour à l'intégration" />
+        <BackLink href={`/integrations/${candidateId}`} label="Retour au plan d'onboarding" />
 
         <div className="mb-5">
           <h1 className="text-xl font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Plan d&apos;intégration de {firstName}
+            Plan 30-60-90 de {firstName}
           </h1>
           <p className="text-xs text-gray-400 mt-1">
             Généré à partir des éléments définis pendant le recrutement
@@ -197,7 +197,7 @@ export function PlanEditor({
             Avant l&apos;arrivée
           </p>
           <p className="text-[11px] text-gray-400 mb-3">
-            Rappel. Ces points se pilotent depuis la fiche d&apos;intégration.
+            Rappel. Ces points se pilotent depuis le plan d&apos;onboarding.
           </p>
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">

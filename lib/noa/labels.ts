@@ -183,6 +183,23 @@ export const INTEGRATION_INTERVIEW_SHORT: Record<IntegrationInterviewType, strin
   integration_j90: "J90",
 };
 
+/**
+ * Ce que le manager lit avant d'inviter quelqu'un à décrire ses préférences.
+ *
+ * Une chaîne construite ici, et non du texte JSX. Écrite dans la modale sur
+ * deux lignes de source, « {firstName} peut renseigner… » perdait l'espace
+ * après le prénom : un bloc de texte JSX qui déborde sur une deuxième ligne est
+ * reflué en rognant les blancs de bord de chaque ligne, y compris celui qui
+ * précédait le premier mot. L'écran affichait « Alexpeut ». Un gabarit de
+ * chaîne ne peut pas perdre cet espace.
+ */
+export function workPreferencesInviteIntro(firstName: string): string {
+  return (
+    `${firstName} peut renseigner le résultat d'un test DISC, MBTI ou Big Five déjà réalisé. ` +
+    `S'il n'en a pas, il peut répondre au questionnaire Noa de 24 questions.`
+  );
+}
+
 const RECRUITMENT_TYPES: RecruitmentInterviewType[] = ["screening", "topgrading"];
 
 export function isRecruitmentInterview(type: string): type is RecruitmentInterviewType {

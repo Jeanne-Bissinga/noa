@@ -150,12 +150,15 @@ export function FinalDecisionView({
             <div className="w-12 h-12 rounded-2xl bg-[#75DA9F]/15 flex items-center justify-center mx-auto mb-4">
               <PartyPopper size={20} className="text-[#1e8f52]" />
             </div>
+            {/* Tournure neutre : le produit ne connaît pas le genre de la
+                personne, et le déduire du prénom se tromperait sur une partie
+                des gens. */}
             <h1 className="text-lg font-bold text-[#010101]" style={{ fontFamily: "Poppins, sans-serif" }}>
-              {name} a été marqué comme recruté
+              Recrutement de {name} confirmé
             </h1>
             <p className="text-sm text-gray-500 mt-2.5 leading-relaxed">
-              Son plan d&apos;intégration a été préparé à partir de la campagne. Il reste à le relire
-              et à le valider.
+              Son plan d&apos;onboarding a été préparé à partir des éléments de la campagne. Il
+              reste à le relire et à le valider.
             </p>
 
             {hired.missionId && (
@@ -166,16 +169,21 @@ export function FinalDecisionView({
                   onChange={(e) => setFillMission(e.target.checked)}
                   className="mt-0.5 accent-[#99BAF8]"
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  Cette campagne est désormais pourvue. Laissez décoché si elle cherche encore
-                  d&apos;autres profils.
+                <span>
+                  <span className="block text-xs font-semibold text-[#010101]">
+                    Marquer cette campagne comme pourvue
+                  </span>
+                  <span className="block text-[11px] text-gray-400 leading-relaxed mt-0.5">
+                    Cochez cette case si vous ne recrutez plus d&apos;autres personnes pour ce
+                    poste. Laissez-la décochée si la campagne reste ouverte.
+                  </span>
                 </span>
               </label>
             )}
 
             <div className="flex flex-col gap-2 mt-6">
               <Btn variant="primary" size="lg" onClick={() => leave(hired.href)} disabled={missionPending}>
-                Préparer son intégration
+                Relire le plan d&apos;onboarding
                 <ChevronRight size={15} />
               </Btn>
               <Btn variant="secondary" onClick={() => leave("/candidats")} disabled={missionPending}>

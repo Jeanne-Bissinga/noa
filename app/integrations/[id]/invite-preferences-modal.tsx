@@ -6,6 +6,7 @@ import { Copy, Send, X } from "lucide-react";
 import { Btn, InputField } from "@/components/noa/ui-primitives";
 import { useToast } from "@/components/noa/toast";
 import { ERROR_MESSAGE } from "@/lib/noa/errors";
+import { workPreferencesInviteIntro } from "@/lib/noa/labels";
 import { issueWorkPreferencesLink } from "./actions";
 
 // Modale d'invitation aux préférences de travail.
@@ -13,6 +14,10 @@ import { issueWorkPreferencesLink } from "./actions";
 // Noa ne connaît pas l'adresse e-mail du collaborateur : elle est demandée
 // ici, uniquement pour l'envoi, et n'est pas stockée. « Copier le lien »
 // n'en a pas besoin — le manager le partage par le canal qu'il veut.
+//
+// La phrase d'introduction vit dans labels.ts : composée en JSX autour de
+// {firstName}, elle perdait l'espace après le prénom (cf. le commentaire de
+// workPreferencesInviteIntro).
 //
 // Une seule logique derrière les deux boutons (issueWorkPreferencesLink) :
 // c'est la même que depuis /integrations.
@@ -77,8 +82,7 @@ export function InvitePreferencesModal({
         </div>
 
         <p className="text-xs text-gray-500 leading-relaxed mb-5">
-          {firstName} pourra renseigner le résultat d&apos;un test DISC, MBTI ou Big Five déjà réalisé.
-          S&apos;il n&apos;en possède pas, il pourra répondre au questionnaire Noa de 24 questions.
+          {workPreferencesInviteIntro(firstName)}
         </p>
 
         <InputField

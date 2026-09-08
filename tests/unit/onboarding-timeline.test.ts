@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { buildTimeline, interviewTypeOfStep, nextStep } from "@/lib/noa/onboarding/timeline";
-import type { OnboardingAlert } from "@/lib/noa/onboarding/overview";
 import type { IntegrationInterviewType, Interview } from "@/lib/noa/types";
 
 function interview(type: IntegrationInterviewType, offsetDays: number, partial: Partial<Interview> = {}): Interview {
@@ -25,7 +24,6 @@ const build = (over: Partial<Parameters<typeof buildTimeline>[0]> = {}) =>
   buildTimeline({
     arrivalDate: "2026-03-02",
     interviews: INTERVIEWS,
-    alerts: [],
     beforeArrivalPending: false,
     now: NOW,
     ...over,
@@ -51,17 +49,18 @@ describe("buildTimeline", () => {
 
   it("marque la préparation « à faire » tant qu'un préparatif reste", () => {
     const timeline = build({ arrivalDate: null, interviews: [], beforeArrivalPending: true });
-    expect(timeline[0].state).toBe("en_attente");
+    expect(timeline[0].state).toBe("courante");
     // Les préférences n'appartiennent pas à la chronologie : elles ne bloquent
     // jamais le J1.
     expect(timeline[1].state).toBe("a_venir");
   });
 
-  it("distingue mené, dû sans avoir eu lieu, et à venir", () => {
+  it("distingue mené, en cours, et en attente", () => {
     const states = Object.fromEntries(build().map((s) => [s.key, s.state]));
     expect(states.avant_arrivee).toBe("termine");
     expect(states.j1).toBe("termine");
-    expect(states.j30).toBe("a_venir");
+    expect(states.j30).toBe("courante");
+    expect(states.j60).toBe("a_venir");
   });
 
   it("ne marque pas une étape terminée parce que sa date est passée", () => {
@@ -71,16 +70,22 @@ describe("buildTimeline", () => {
     expect(states.j30).not.toBe("termine");
   });
 
-  it("bascule en point d'attention quand le retard est signalé", () => {
-    const alert: OnboardingAlert = {
-      id: "j30_retard",
-      level: "attention",
-      title: "Entretien en retard",
-      detail: "L'entretien J30 était prévu et n'a pas encore eu lieu.",
-    };
-    const j45 = new Date("2026-04-16T12:00:00.000Z");
-    const states = Object.fromEntries(build({ now: j45, alerts: [alert] }).map((s) => [s.key, s.state]));
-    expect(states.j30).toBe("attention");
+  it("ne met en avant qu'une seule étape, même quand plusieurs dates sont dépassées", () => {
+    // Au jour 95 sans aucun entretien mené, les quatre dates sont derrière
+    // nous. Signaler les quatre ne dirait pas où reprendre : seule la première
+    // non menée prend la main, les autres restent en attente.
+    const j95 = new Date("2026-06-05T12:00:00.000Z");
+    const rien = INTERVIEWS.map((i) => ({ ...i, status: "planifie" as const }));
+    const states = Object.fromEntries(build({ now: j95, interviews: rien }).map((s) => [s.key, s.state]));
+    expect(states.j1).toBe("courante");
+    expect([states.j30, states.j60, states.j90]).toEqual(["a_venir", "a_venir", "a_venir"]);
+  });
+
+  it("ne met aucune étape en avant tant qu'aucun entretien n'est programmé", () => {
+    // Le plan n'est pas validé : le parcours se lit, mais rien n'y est « à
+    // faire » — le geste attendu est ailleurs, dans les préparatifs.
+    const timeline = build({ interviews: [] });
+    expect(timeline.slice(1).every((s) => s.state === "a_venir")).toBe(true);
   });
 
   it("laisse la préparation à venir avant la date d'arrivée", () => {
@@ -91,7 +96,7 @@ describe("buildTimeline", () => {
 });
 
 describe("nextStep", () => {
-  it("désigne la première étape due, sinon la première à venir", () => {
+  it("désigne l'étape en cours, sinon la première à venir", () => {
     const j45 = new Date("2026-04-16T12:00:00.000Z");
     expect(nextStep(build({ now: j45 }))?.key).toBe("j30");
     expect(nextStep(build())?.key).toBe("j30");

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   getIntegrationOverview, coarseStepOf, matchesFilter, matchesSearch, requiresManagerAction,
-  stepOfInterview, STEP_LABEL, TIMELINE_STEPS,
-  type IntegrationOverview, type NextActionKind, type OverviewInput,
+  situationLabel, stepOfInterview, STEP_LABEL, TIMELINE_STEPS,
+  type IntegrationOverview, type NextActionKind, type OverviewFilter, type OverviewInput,
 } from "@/lib/noa/onboarding/overview";
 import type {
   Candidate, IntegrationInterviewType, Interview, Onboarding,
@@ -169,9 +169,9 @@ describe("les quatre entretiens", () => {
     });
   });
 
-  it("situe l'étape par le calendrier, pas par ce qui reste à faire", () => {
-    // Au 20 mars, la personne est à J19 : l'étape est J1, et le retard se lit
-    // dans l'action, pas dans l'étape.
+  it("situe l'étape sur la première non menée, et le temps écoulé à côté", () => {
+    // Au 20 mars, la personne est à J19 et son J1 n'a pas eu lieu : l'étape est
+    // J1. Le temps écoulé se lit séparément, il ne fait pas avancer le parcours.
     expect(overviewOf().currentStep).toBe("j1");
     expect(overviewOf().dayNumber).toBe(19);
   });
@@ -188,6 +188,60 @@ describe("les quatre entretiens", () => {
     expect(o.primaryNextAction.interviewType).toBe("integration_j30");
   });
 
+  it("reste au J1 au jour 94 quand aucun entretien n'a eu lieu", () => {
+    // Le cas qui a motivé la correction : la règle du calendrier affichait
+    // « J90 » pendant que l'action demandait de réaliser le J1.
+    const j94 = new Date("2026-06-04T12:00:00.000Z");
+    const o = overviewOf({ now: j94 });
+    expect(o.currentStep).toBe("j1");
+    expect(o.stepQualifier).toBe("en_retard");
+    expect(o.primaryNextAction.interviewType).toBe("integration_j1");
+    expect(situationLabel(o)).toBe("J1 en retard");
+  });
+
+  it("compte les échéances dépassées sans les confondre avec l'étape courante", () => {
+    // Au jour 94 : J1, J30 et J60 sont dépassés ; le J90, prévu quatre jours
+    // plus tôt, est encore dans son délai de grâce.
+    const j94 = new Date("2026-06-04T12:00:00.000Z");
+    expect(overviewOf({ now: j94 }).overdueCount).toBe(3);
+  });
+
+  it("saute au premier jalon non mené, pas au dernier dont la date est passée", () => {
+    // Jour 70, J1 mené et J30 sauté : l'ancienne règle disait « J60 ».
+    const j70 = new Date("2026-05-11T12:00:00.000Z");
+    const done = SCHEDULE.map((i) =>
+      i.type === "integration_j1" ? { ...i, status: "termine" as const } : i,
+    );
+    const o = overviewOf({ interviews: done, now: j70 });
+    expect(o.currentStep).toBe("j30");
+    expect(o.stepQualifier).toBe("en_retard");
+  });
+
+  it("ouvre l'entretien une semaine avant sa date, pour qu'il y ait de quoi préparer", () => {
+    // Jour 27, J1 mené : le J30 tombe dans quatre jours. La situation et
+    // l'action doivent dire la même chose au même moment.
+    const j27 = new Date("2026-03-29T12:00:00.000Z");
+    const done = SCHEDULE.map((i) =>
+      i.type === "integration_j1" ? { ...i, status: "termine" as const } : i,
+    );
+    const o = overviewOf({ interviews: done, now: j27 });
+    expect(situationLabel(o)).toBe("J30 à préparer");
+    expect(o.primaryNextAction.kind).toBe("preparer_entretien");
+  });
+
+  it("laisse un jalon lointain « à venir », sans rien réclamer", () => {
+    // Jour 44, J1 et J30 menés : le J60 est encore à trois semaines.
+    const j44 = new Date("2026-04-15T12:00:00.000Z");
+    const done = SCHEDULE.map((i) =>
+      i.type === "integration_j1" || i.type === "integration_j30"
+        ? { ...i, status: "termine" as const }
+        : i,
+    );
+    const o = overviewOf({ interviews: done, now: j44 });
+    expect(situationLabel(o)).toBe("J60 à venir");
+    expect(requiresManagerAction(o.primaryNextAction)).toBe(false);
+  });
+
   it("passe au J60 une fois le J30 mené", () => {
     const j65 = new Date("2026-05-06T12:00:00.000Z");
     const done = SCHEDULE.map((i) =>
@@ -200,20 +254,26 @@ describe("les quatre entretiens", () => {
     expect(o.primaryNextAction.interviewType).toBe("integration_j60");
   });
 
-  it("signale un entretien en retard et le remonte en tête", () => {
+  it("remonte un retard en tête sans en faire un point d'attention", () => {
+    // Un point d'attention est un signalement du manager. Le retard se dit
+    // ailleurs — dans la situation, et dans le compte des étapes dépassées.
     const j45 = new Date("2026-04-16T12:00:00.000Z");
     const o = overviewOf({ interviews: SCHEDULE, now: j45 });
-    expect(o.hasActiveAttention).toBe(true);
     expect(o.sortWeight).toBe(0);
+    expect(o.overdueCount).toBeGreaterThan(0);
+    expect(o.hasActiveAttention).toBe(false);
+    expect(o.alerts).toHaveLength(0);
   });
 
-  it("n'alerte pas dans la semaine qui suit la date prévue", () => {
+  it("ne parle pas de retard dans la semaine qui suit la date prévue", () => {
     // Un entretien se cale sur deux agendas : le jour dit n'est pas une échéance.
     const j33 = new Date("2026-04-04T12:00:00.000Z");
     const done = SCHEDULE.map((i) =>
       i.type === "integration_j1" ? { ...i, status: "termine" as const } : i,
     );
-    expect(overviewOf({ interviews: done, now: j33 }).hasActiveAttention).toBe(false);
+    const o = overviewOf({ interviews: done, now: j33 });
+    expect(o.overdueCount).toBe(0);
+    expect(o.stepQualifier).not.toBe("en_retard");
   });
 });
 
@@ -226,11 +286,21 @@ describe("fin de parcours", () => {
     expect(o.sortWeight).toBe(90);
   });
 
-  it("conserve les points d'attention d'une intégration terminée", () => {
+  it("conserve les points d'attention d'un parcours terminé", () => {
+    const conclusion: OnboardingInterviewConclusion = {
+      id: "c1", interview_id: "integration_j30", conclusion: "attention", note: null,
+      decided_by: null, created_at: "2026-04-02", updated_at: "2026-04-02",
+    };
     const j100 = new Date("2026-06-15T12:00:00.000Z");
-    const o = overviewOf({ onboarding: onboarding({ status: "termine" }), now: j100 });
-    // La boucle est close : l'alerte reste consultable mais ne remonte plus.
-    expect(o.attentionCount).toBeGreaterThan(0);
+    const o = overviewOf({
+      onboarding: onboarding({ status: "termine" }),
+      conclusions: [conclusion],
+      now: j100,
+    });
+    // La boucle est close : le signalement reste consultable mais ne remonte
+    // plus, et un parcours clos ne compte plus d'échéance dépassée.
+    expect(o.attentionCount).toBe(1);
+    expect(o.overdueCount).toBe(0);
     expect(o.sortWeight).toBe(90);
   });
 
@@ -249,16 +319,38 @@ describe("fin de parcours", () => {
 
 describe("filtres et recherche", () => {
   it("classe chaque personne dans les bons filtres", () => {
-    const aPreparer = overviewOf({ onboarding: null, interviews: [] });
-    const enCours = overviewOf();
+    const aFaire = overviewOf({ onboarding: null, interviews: [] });
+    // J1 et J30 menés, J60 encore loin : rien n'est attendu du manager.
+    const enCours = overviewOf({
+      interviews: SCHEDULE.map((i) =>
+        i.type === "integration_j1" || i.type === "integration_j30"
+          ? { ...i, status: "termine" as const }
+          : i,
+      ),
+      now: new Date("2026-04-15T12:00:00.000Z"),
+    });
     const termine = overviewOf({ onboarding: onboarding({ status: "termine" }) });
 
-    expect(matchesFilter(aPreparer, "a_preparer")).toBe(true);
-    expect(matchesFilter(aPreparer, "action_requise")).toBe(true);
+    expect(matchesFilter(aFaire, "a_faire")).toBe(true);
     expect(matchesFilter(enCours, "en_cours")).toBe(true);
     expect(matchesFilter(termine, "termines")).toBe(true);
-    expect(matchesFilter(termine, "preferences_en_attente")).toBe(false);
-    expect([aPreparer, enCours, termine].every((o) => matchesFilter(o, "tous"))).toBe(true);
+    expect([aFaire, enCours, termine].every((o) => matchesFilter(o, "tous"))).toBe(true);
+  });
+
+  it("partage la liste entre les trois filtres, sans recouvrement", () => {
+    // Les sept filtres précédents comptaient un même dossier jusqu'à quatre
+    // fois : aucun compteur ne voulait dire quelque chose.
+    const trois: OverviewFilter[] = ["a_faire", "en_cours", "termines"];
+    const population = [
+      overviewOf({ onboarding: null, interviews: [] }),
+      overviewOf(),
+      overviewOf({ preferences: preferences(), interviews: [], now: new Date("2026-02-25T12:00:00.000Z") }),
+      overviewOf({ interviews: SCHEDULE, now: new Date("2026-06-04T12:00:00.000Z") }),
+      overviewOf({ onboarding: onboarding({ status: "termine" }) }),
+    ];
+    for (const o of population) {
+      expect(trois.filter((f) => matchesFilter(o, f))).toHaveLength(1);
+    }
   });
 
   it("cherche sans accents ni casse", () => {

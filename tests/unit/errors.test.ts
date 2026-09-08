@@ -70,7 +70,7 @@ describe("userError", () => {
       "Impossible de générer l'invitation pour le moment. Veuillez réessayer.",
     );
     expect(userError("x", ERREURS_TECHNIQUES[0], ERROR_MESSAGE.preparation)).toBe(
-      "Impossible de préparer l'intégration pour le moment. Veuillez réessayer.",
+      "Impossible de préparer le plan d'onboarding pour le moment. Veuillez réessayer.",
     );
   });
 

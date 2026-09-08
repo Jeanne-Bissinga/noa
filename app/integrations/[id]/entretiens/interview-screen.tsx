@@ -550,7 +550,7 @@ function Restitution({
         <Card className="p-5 mb-4">
           <Eyebrow>Jalons et résultats</Eyebrow>
           <p className="text-[11px] text-gray-400 mt-1 mb-3">
-            Mettez-les à jour depuis la fiche d&apos;intégration.
+            Mettez-les à jour depuis le plan d&apos;onboarding.
           </p>
           <ul className="flex flex-col gap-1.5">
             {goals.map((g) => (
@@ -638,7 +638,7 @@ function Restitution({
               });
             }}
           >
-            {pending ? "Enregistrement…" : isFinal ? "Clôturer l'intégration" : "Enregistrer la conclusion"}
+            {pending ? "Enregistrement…" : isFinal ? "Clôturer le parcours" : "Enregistrer la conclusion"}
           </Btn>
         </div>
 
@@ -682,7 +682,7 @@ export function InterviewScreen(props: {
   return (
     <AppLayout headerTitle={name}>
       <div className="max-w-2xl mx-auto">
-        <BackLink href={`/integrations/${candidate.id}`} label="Retour à l'intégration" />
+        <BackLink href={`/integrations/${candidate.id}`} label="Retour au plan d'onboarding" />
 
         <div className="flex items-start justify-between gap-3 mb-5">
           <div>

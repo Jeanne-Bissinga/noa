@@ -6,12 +6,14 @@
 // deux écrans disent toujours la même chose.
 //
 // ─── Pourquoi trois valeurs ne peuvent plus se contredire ───────────────────
-// L'étape courante est décidée en premier, à partir du calendrier. Le statut
-// global n'est pas calculé : il est *projeté* depuis l'étape par une table
-// exhaustive. L'action principale sort d'une cascade qui rend exactement une
-// valeur. L'ancienne version décidait le statut et l'étape dans deux branches
-// indépendantes, d'où le badge « Plan à valider » posé au-dessus d'une étape
-// « Plan à préparer » pour le même onboarding.
+// L'étape courante est décidée en premier : c'est la première étape du parcours
+// qui n'est pas franchie. Le statut global n'est pas calculé, il est *projeté*
+// depuis l'étape par une table exhaustive. L'action principale sort d'une
+// cascade qui rend exactement une valeur, et elle vise la même étape. Étape,
+// statut et action ne peuvent donc plus se contredire, ce qu'aucune des deux
+// versions précédentes ne garantissait — l'une décidait statut et étape dans
+// deux branches indépendantes, l'autre lisait l'étape sur le calendrier pendant
+// que l'action lisait ce qui restait à faire.
 //
 // Module pur : les données sont passées en argument, `now` aussi.
 import type {
@@ -51,7 +53,7 @@ export type IntegrationStep = TimelineStepKey | "plan_a_creer" | "plan_a_valider
 export const STEP_LABEL: Record<IntegrationStep, string> = {
   plan_a_creer: "Plan à créer",
   plan_a_valider: "Plan à valider",
-  avant_arrivee: "Préparation avant arrivée",
+  avant_arrivee: "Avant l'arrivée",
   j1: "J1",
   j30: "J30",
   j60: "J60",
@@ -66,6 +68,35 @@ export const STEP_SHORT_LABEL: Record<TimelineStepKey, string> = {
   j30: "J30",
   j60: "J60",
   j90: "J90",
+};
+
+/**
+ * Fenêtre autour d'un entretien, en jours.
+ *
+ * Elle sert deux fois, dans les deux sens : un entretien devient actionnable
+ * une semaine avant sa date — c'est le moment où l'on prépare un rendez-vous —
+ * et il n'est dit en retard qu'une semaine après. Un entretien se cale sur deux
+ * agendas : le jour dit n'est pas une échéance.
+ */
+export const INTERVIEW_WINDOW_DAYS = 7;
+
+const WINDOW_MS = INTERVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * Où en est l'étape courante, sur l'axe du temps.
+ *
+ * L'étape dit *laquelle*, le qualificatif dit *comment elle se présente*. Les
+ * deux se composent en une phrase — « J1 en retard », « J30 à préparer » — au
+ * lieu d'obliger le lecteur à croiser une colonne d'étape et une colonne de
+ * date.
+ */
+export type StepQualifier = "a_venir" | "a_preparer" | "a_realiser" | "en_retard";
+
+export const STEP_QUALIFIER_LABEL: Record<StepQualifier, string> = {
+  a_venir: "à venir",
+  a_preparer: "à préparer",
+  a_realiser: "à réaliser",
+  en_retard: "en retard",
 };
 
 // ─── Statut global ──────────────────────────────────────────────────────────
@@ -167,7 +198,10 @@ const ACTION_WEIGHT: Record<NextActionKind, number> = {
   aucune: 80,
 };
 
-const ATTENTION_WEIGHT = 0;
+// Un retard passe devant tout le reste, puis les signalements du manager. Ces
+// deux rangs sont hors du barème d'action : ils disent l'urgence, pas le geste.
+const OVERDUE_WEIGHT = 0;
+const ATTENTION_WEIGHT = 5;
 const TERMINE_WEIGHT = 90;
 
 // ─── Résultat ───────────────────────────────────────────────────────────────
@@ -177,7 +211,12 @@ export interface IntegrationOverview {
   onboardingId: string | null;
   /** Cycle de vie. Sert aux filtres et au tri — plus aucun badge ne l'affiche. */
   globalStatus: GlobalStatus;
+  /** Première étape du parcours qui n'est pas franchie. */
   currentStep: IntegrationStep;
+  /** Comment cette étape se présente. null avant l'arrivée et après la clôture. */
+  stepQualifier: StepQualifier | null;
+  /** Étapes non menées dont la date est dépassée, délai de grâce déduit. */
+  overdueCount: number;
   /** Toujours exactement une action : jamais zéro, jamais deux. */
   primaryNextAction: NextAction;
   /** Date d'arrivée. null = « À définir ». */
@@ -185,7 +224,7 @@ export interface IntegrationOverview {
   /** Jour d'intégration. null tant que la date est inconnue, 0 avant l'arrivée. */
   dayNumber: number | null;
   workPreferencesStatus: WorkPreferencesDisplayStatus;
-  /** Alertes actives, texte compris : un seul calcul pour la liste et la fiche. */
+  /** Signalements du manager, texte compris : un seul calcul pour les deux écrans. */
   alerts: OnboardingAlert[];
   hasActiveAttention: boolean;
   attentionCount: number;
@@ -235,13 +274,41 @@ function ordered(interviews: Interview[]): Interview[] {
 }
 
 /**
- * Étape atteinte : le dernier entretien dont la date est passée.
+ * Le premier entretien du parcours qui n'a pas été mené.
  *
- * Fondée sur le calendrier, volontairement, et non sur ce qui reste à faire.
- * « Où en est-on » est une question de dates ; « que faut-il faire » est celle
- * à laquelle répond l'action principale, séparément. Au jour 45 avec un J30
- * jamais mené, l'étape est donc J30 et l'action « Réaliser l'entretien J30 » —
- * ce qui se lit exactement comme un retard.
+ * L'ordre chronologique fait le travail : tant que le J30 n'est pas terminé, il
+ * reste le premier de la liste, et le J60 ne prend jamais la main — même si sa
+ * propre date est passée. Une étape ne devient pas faite parce que sa date
+ * l'est.
+ */
+function firstUnfinishedInterview(interviews: Interview[]): Interview | null {
+  return ordered(interviews).find((i) => i.status !== "termine") ?? null;
+}
+
+/** Un entretien est actionnable dès une semaine avant sa date. */
+function isActionable(interview: Interview, now: Date): boolean {
+  if (!interview.scheduled_at) return false;
+  return new Date(interview.scheduled_at).getTime() - WINDOW_MS <= now.getTime();
+}
+
+/** Entretiens non menés dont la date est dépassée, délai de grâce déduit. */
+function overdueInterviews(interviews: Interview[], now: Date): Interview[] {
+  return interviews.filter(
+    (i) =>
+      i.status !== "termine" &&
+      i.scheduled_at !== null &&
+      new Date(i.scheduled_at).getTime() + WINDOW_MS < now.getTime(),
+  );
+}
+
+/**
+ * Étape courante : la première étape obligatoire qui n'est pas franchie.
+ *
+ * Elle se lisait auparavant sur le calendrier — la dernière étape dont la date
+ * était passée. Au jour 94 sans aucun entretien mené, la fiche affichait donc
+ * « J90 » et demandait « Réaliser l'entretien J1 » : deux phrases qui se
+ * contredisaient. C'est désormais la même étape qui nomme la situation et qui
+ * porte l'action. Le temps écoulé reste lisible à côté, en « jour N sur 90 ».
  */
 export function currentStepOf(
   onboarding: Onboarding | null,
@@ -254,31 +321,30 @@ export function currentStepOf(
   if (!onboarding.start_date) return "avant_arrivee";
   if (new Date(`${onboarding.start_date}T00:00:00`) > now) return "avant_arrivee";
 
-  let reached: TimelineStepKey = "avant_arrivee";
-  for (const interview of ordered(interviews)) {
-    if (!interview.scheduled_at || new Date(interview.scheduled_at) > now) continue;
-    const step = stepOfInterview(interview.type);
-    if (step && TIMELINE_STEPS.indexOf(step) > TIMELINE_STEPS.indexOf(reached)) reached = step;
-  }
-  // La date d'arrivée est passée : on est au moins à J1, même si l'entretien
-  // n'a pas encore de créneau enregistré.
-  return reached === "avant_arrivee" ? "j1" : reached;
+  const pending = firstUnfinishedInterview(interviews);
+  if (pending) return stepOfInterview(pending.type) ?? "j1";
+
+  // Les quatre entretiens sont menés sans que le bilan soit enregistré : la
+  // dernière étape reste le J90, qui porte cette clôture. Sans calendrier du
+  // tout, le parcours commence au J1.
+  return interviews.length > 0 ? "j90" : "j1";
 }
 
 /**
- * Le premier entretien dû qui n'a pas été mené.
- *
- * L'ordre chronologique fait le travail : tant que le J30 n'est pas terminé, il
- * reste le premier de la liste, et le J60 ne prend jamais la main — même si sa
- * propre date est passée. Une étape ne devient pas faite parce que sa date
- * l'est.
+ * Comment se présente l'étape courante : à venir, à préparer, à réaliser ou en
+ * retard. `null` avant l'arrivée et une fois le parcours clos, où le temps
+ * n'est pas la bonne grille de lecture.
  */
-function firstPendingInterview(interviews: Interview[], now: Date): Interview | null {
-  return (
-    ordered(interviews).find(
-      (i) => i.status !== "termine" && i.scheduled_at !== null && new Date(i.scheduled_at) <= now,
-    ) ?? null
-  );
+function stepQualifierOf(
+  pending: Interview | null,
+  prepared: Set<string>,
+  now: Date,
+): StepQualifier | null {
+  if (!pending?.scheduled_at) return null;
+  const due = new Date(pending.scheduled_at).getTime();
+  if (due + WINDOW_MS < now.getTime()) return "en_retard";
+  if (due - WINDOW_MS > now.getTime()) return "a_venir";
+  return prepared.has(pending.id) ? "a_realiser" : "a_preparer";
 }
 
 /**
@@ -298,14 +364,16 @@ function primaryNextActionOf(args: {
   const { onboarding, interviews, prepared, prefStatus, now } = args;
 
   if (!onboarding) {
-    return { kind: "creer_plan", label: "Préparer l'intégration", interviewId: null, interviewType: null };
+    return { kind: "creer_plan", label: "Préparer le plan", interviewId: null, interviewType: null };
   }
   if (onboarding.status === "termine") return AUCUNE;
 
-  // 1. Un entretien dû passe devant tout : c'est un rendez-vous daté, et c'est
-  //    le moment où l'information se perd si on tarde.
-  const pending = firstPendingInterview(interviews, now);
-  if (pending) {
+  // 1. Un entretien proche passe devant tout : c'est un rendez-vous daté, et
+  //    c'est le moment où l'information se perd si on tarde. La fenêtre s'ouvre
+  //    une semaine avant, pour que « J30 à préparer » et « Préparer J30 »
+  //    apparaissent ensemble plutôt que l'un après l'autre.
+  const pending = firstUnfinishedInterview(interviews);
+  if (pending && isActionable(pending, now)) {
     const step = stepOfInterview(pending.type);
     const jalon = step ? STEP_LABEL[step] : "";
     const isPrepared = prepared.has(pending.id);
@@ -345,50 +413,36 @@ function primaryNextActionOf(args: {
 }
 
 // ─── Points d'attention ─────────────────────────────────────────────────────
-// Déterministes, et fondés sur des faits du parcours plutôt que sur des
-// réponses à un questionnaire : un entretien passé sans avoir été mené, ou une
-// conclusion de manager marquée « point d'attention ». Rien ici ne juge la
-// personne.
+// Un point d'attention est un signalement du manager, coché en concluant un
+// entretien. Rien d'autre n'en produit : un entretien en retard n'en est pas
+// un, puisque le retard se lit déjà dans la situation de la personne et dans le
+// compte des étapes dépassées. Les mélanger revenait à noyer les trois
+// signalements de la semaine sous vingt rappels de calendrier.
 
 export interface OnboardingAlert {
   id: string;
-  level: "attention" | "info";
   title: string;
   detail: string;
 }
 
-function computeAlerts(interviews: Interview[], conclusions: OnboardingInterviewConclusion[], now: Date): OnboardingAlert[] {
+function computeAlerts(
+  interviews: Interview[],
+  conclusions: OnboardingInterviewConclusion[],
+): OnboardingAlert[] {
   const alerts: OnboardingAlert[] = [];
 
   for (const interview of ordered(interviews)) {
-    const step = stepOfInterview(interview.type);
-    if (!step) continue;
-    const short = INTEGRATION_INTERVIEW_SHORT[interview.type as IntegrationInterviewType];
-
-    // Une semaine de battement avant de parler de retard : un entretien se cale
-    // sur deux agendas, le jour dit n'est pas une échéance.
-    if (
-      interview.status !== "termine" &&
-      interview.scheduled_at &&
-      new Date(interview.scheduled_at).getTime() + 7 * 24 * 60 * 60 * 1000 < now.getTime()
-    ) {
-      alerts.push({
-        id: `${interview.type}_retard`,
-        level: "attention",
-        title: "Entretien en retard",
-        detail: `L'entretien ${short} était prévu et n'a pas encore eu lieu.`,
-      });
-    }
+    if (!stepOfInterview(interview.type)) continue;
 
     const conclusion = conclusions.find((c) => c.interview_id === interview.id);
-    if (conclusion?.conclusion === "attention") {
-      alerts.push({
-        id: `${interview.type}_conclusion`,
-        level: "info",
-        title: "Point d'attention",
-        detail: `Vous avez signalé un point d'attention à l'issue de l'entretien ${short}.`,
-      });
-    }
+    if (conclusion?.conclusion !== "attention") continue;
+
+    const short = INTEGRATION_INTERVIEW_SHORT[interview.type as IntegrationInterviewType];
+    alerts.push({
+      id: `${interview.type}_conclusion`,
+      title: "Point d'attention",
+      detail: `Vous avez signalé un point d'attention à l'issue de l'entretien ${short}.`,
+    });
   }
 
   return alerts;
@@ -405,16 +459,25 @@ export function getIntegrationOverview(input: OverviewInput): IntegrationOvervie
   const globalStatus = STATUS_OF_STEP[currentStep];
 
   const prefStatus = preferencesStatus(input.preferences);
-  const alerts = computeAlerts(interviews, input.conclusions, now);
+  const alerts = computeAlerts(interviews, input.conclusions);
   const primaryNextAction = primaryNextActionOf({ onboarding, interviews, prepared, prefStatus, now });
 
-  const nextScheduled = ordered(interviews).find((i) => i.status !== "termine")?.scheduled_at ?? null;
+  // Le qualificatif ne vaut que pour les quatre jalons : avant l'arrivée comme
+  // après la clôture, le temps n'est pas la grille de lecture.
+  const pending = firstUnfinishedInterview(interviews);
+  const onInterviewStep = currentStep !== "termine" && globalStatus === "en_cours";
+  const stepQualifier = onInterviewStep ? stepQualifierOf(pending, prepared, now) : null;
+  const overdueCount = globalStatus === "termine" ? 0 : overdueInterviews(interviews, now).length;
 
-  // Une intégration terminée reste en bas même avec une alerte : la boucle est
-  // close, l'alerte reste consultable mais n'appelle plus de geste.
+  const nextScheduled = pending?.scheduled_at ?? null;
+
+  // Une intégration terminée reste en bas même avec un signalement : la boucle
+  // est close, le point reste consultable mais n'appelle plus de geste.
   const sortWeight =
     globalStatus === "termine"
       ? TERMINE_WEIGHT
+      : overdueCount > 0
+      ? OVERDUE_WEIGHT
       : alerts.length > 0
       ? ATTENTION_WEIGHT
       : ACTION_WEIGHT[primaryNextAction.kind];
@@ -424,6 +487,8 @@ export function getIntegrationOverview(input: OverviewInput): IntegrationOvervie
     onboardingId: onboarding?.id ?? null,
     globalStatus,
     currentStep,
+    stepQualifier,
+    overdueCount,
     primaryNextAction,
     startDate: onboarding?.start_date ?? null,
     dayNumber: dayOfOnboarding(onboarding?.start_date ?? null, now),
@@ -451,42 +516,47 @@ export function coarseStepOf(onboarding: Onboarding | null): IntegrationStep {
 
 // ─── Filtres et recherche ───────────────────────────────────────────────────
 
-export type OverviewFilter =
-  | "tous"
-  | "action_requise"
-  | "a_preparer"
-  | "en_cours"
-  | "preferences_en_attente"
-  | "attention"
-  | "termines";
+/**
+ * Quatre filtres qui se partagent la liste, sans recouvrement.
+ *
+ * Les sept précédents mélangeaient deux axes — le cycle de vie et l'urgence —
+ * si bien qu'un même dossier était compté dans quatre pilules et qu'aucun
+ * compteur ne voulait dire quelque chose. Ici, chaque personne tombe dans
+ * exactement un des trois filtres autres que « Tous », dont les compteurs
+ * s'additionnent pour donner le sien.
+ */
+export type OverviewFilter = "tous" | "a_faire" | "en_cours" | "termines";
 
 export const OVERVIEW_FILTER_LABEL: Record<OverviewFilter, string> = {
   tous: "Tous",
-  action_requise: "Action requise",
-  a_preparer: "À préparer",
+  a_faire: "À faire",
   en_cours: "En cours",
-  preferences_en_attente: "Préférences en attente",
-  attention: "Points d'attention",
   termines: "Terminés",
 };
 
 export function matchesFilter(overview: IntegrationOverview, filter: OverviewFilter): boolean {
+  const closed = overview.globalStatus === "termine";
   switch (filter) {
     case "tous":
       return true;
-    case "action_requise":
-      return requiresManagerAction(overview.primaryNextAction);
-    case "a_preparer":
-      return overview.globalStatus === "preparation";
+    case "a_faire":
+      return !closed && requiresManagerAction(overview.primaryNextAction);
     case "en_cours":
-      return overview.globalStatus === "en_cours";
-    case "preferences_en_attente":
-      return overview.globalStatus !== "termine" && overview.workPreferencesStatus !== "complete";
-    case "attention":
-      return overview.hasActiveAttention;
+      return !closed && !requiresManagerAction(overview.primaryNextAction);
     case "termines":
-      return overview.globalStatus === "termine";
+      return closed;
   }
+}
+
+/**
+ * La situation en une phrase : l'étape, et comment elle se présente.
+ *
+ * Seul endroit où les deux se composent — la liste et la fiche affichent la
+ * même chaîne, elles ne peuvent pas la formuler différemment.
+ */
+export function situationLabel(overview: IntegrationOverview): string {
+  const step = STEP_LABEL[overview.currentStep];
+  return overview.stepQualifier ? `${step} ${STEP_QUALIFIER_LABEL[overview.stepQualifier]}` : step;
 }
 
 /** Recherche insensible à la casse et aux accents sur prénom, nom, poste. */

@@ -240,7 +240,7 @@ export function CandidateDetail({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-[#010101]">
-                    Intégration · {STEP_LABEL[integrationStep]}
+                    Plan d'onboarding · {STEP_LABEL[integrationStep]}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Plan 30-60-90 et entretiens J1 / J30 / J60 / J90.
