@@ -71,10 +71,37 @@ const LEGAL_LINKS: { label: string; href: string | null }[] = [
   { label: "CGU", href: "/cgu" },
 ];
 
-const PLANS = [
+// Fonctionnalités identiques sur Starter et Growth : seuls les volumes (crédits,
+// plans d'onboarding) et le niveau de support différencient les deux forfaits.
+const CORE_FEATURES = [
+  "Définition du poste",
+  "Suivi de tous les candidats",
+  "Préparation & entretiens (Screening & Topgrading)",
+  "Synthèses par entretien & globale",
+  "Plan d'onboarding personnalisé",
+];
+
+type Plan = {
+  slug: string;
+  name: string;
+  target: string;
+  // Carte démo : ni prix ni volumes, d'où les champs suivants tous optionnels.
+  free?: true;
+  monthly?: string;
+  credits?: string;
+  creditsHint?: string;
+  onboardingPlans?: string;
+  support?: string;
+  highlight: boolean;
+  features: string[];
+  cta: { label: string; href: string };
+};
+
+const PLANS: Plan[] = [
   {
     slug: "free",
     name: "Noa Free",
+    target: "Pour découvrir la méthode",
     free: true,
     highlight: false,
     features: [
@@ -85,25 +112,27 @@ const PLANS = [
   {
     slug: "starter",
     name: "Noa Starter",
-    monthly12: "49",
-    monthly3: "69",
+    target: "PME tech · 5 à 10 recrutements/an",
+    monthly: "99",
+    credits: "6 000 crédits IA / an",
+    creditsHint: "environ 90 candidats évalués par an",
+    onboardingPlans: "10 plans d'onboarding inclus / an",
+    support: "Support standard (email)",
     highlight: false,
-    features: [
-      "500 crédits mensuels",
-      "Environ 8 candidats évalués complètement par mois",
-    ],
+    features: CORE_FEATURES,
     cta: { label: "Souscrire", href: "/inscription?plan=starter" },
   },
   {
     slug: "growth",
     name: "Noa Growth",
-    monthly12: "99",
-    monthly3: "139",
+    target: "PME tech en scaling · 20 à 40 recrutements/an",
+    monthly: "199",
+    credits: "18 000 crédits IA / an",
+    creditsHint: "environ 300 candidats évalués par an",
+    onboardingPlans: "30 plans d'onboarding inclus / an",
+    support: "Support prioritaire",
     highlight: true,
-    features: [
-      "1 500 crédits mensuels",
-      "Environ 27 candidats évalués complètement par mois",
-    ],
+    features: CORE_FEATURES,
     cta: { label: "Souscrire", href: "/inscription?plan=growth" },
   },
 ];
@@ -296,6 +325,9 @@ export default async function LandingPage() {
               <p className="mt-4 text-sm text-white/50">
                 Accès immédiat. Aucune expertise RH requise.
               </p>
+              <p className="mt-2 text-xs text-white/40">
+                Tarifs HT. Engagement 12 mois, paiement mensuel.
+              </p>
             </div>
 
             <div className="mx-auto mt-12 grid max-w-5xl gap-6 min-[641px]:grid-cols-3">
@@ -314,6 +346,7 @@ export default async function LandingPage() {
                     </span>
                   )}
                   <h3 className="text-lg font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>{plan.name}</h3>
+                  <p className="mt-1.5 text-xs text-white/40">{plan.target}</p>
 
                   {plan.free ? (
                     <div className="mt-6 flex items-end gap-1.5">
@@ -325,16 +358,37 @@ export default async function LandingPage() {
                     <>
                       <div className="mt-6 flex items-end gap-1.5">
                         <span className="text-[40px] font-extrabold leading-none" style={{ fontFamily: "Poppins, sans-serif" }}>
-                          {plan.monthly12} € HT
+                          {plan.monthly} € HT
                         </span>
                         <span className="mb-1 text-sm text-white/50">/mois</span>
                       </div>
-                      <p className="mt-2 text-xs text-white/40">avec engagement 12 mois</p>
-                      <p className="mt-1 text-xs text-white/40">soit {plan.monthly3} € HT/mois avec engagement 3 mois</p>
+                      <p className="mt-2 text-xs text-white/40">Engagement 12 mois · paiement mensuel</p>
+
+                      <ul className="mt-6 flex flex-col gap-3">
+                        <li className="flex items-start gap-2.5 text-sm text-white/70">
+                          <Check size={16} className="mt-0.5 flex-none text-[#75DA9F]" />
+                          <span>
+                            {plan.credits}
+                            <span className="mt-0.5 block text-xs text-white/40">{plan.creditsHint}</span>
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2.5 text-sm text-white/70">
+                          <Check size={16} className="mt-0.5 flex-none text-[#75DA9F]" />
+                          {plan.onboardingPlans}
+                        </li>
+                        <li className="flex items-start gap-2.5 text-sm text-white/70">
+                          <Check size={16} className="mt-0.5 flex-none text-[#75DA9F]" />
+                          {plan.support}
+                        </li>
+                      </ul>
                     </>
                   )}
 
-                  <ul className="mt-6 flex flex-1 flex-col gap-3">
+                  <ul
+                    className={`flex flex-1 flex-col gap-3 ${
+                      plan.free ? "mt-6" : "mt-6 border-t border-white/10 pt-6"
+                    }`}
+                  >
                     {plan.features.map(f => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-white/70">
                         <Check size={16} className="mt-0.5 flex-none text-[#75DA9F]" />
