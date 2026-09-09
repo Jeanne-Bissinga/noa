@@ -8,6 +8,8 @@ import {
   getMission, getMissionObjectives, getMissionSkills, getCandidateExperiences, getCandidateSkills,
 } from "@/lib/noa/queries";
 import { STATUS_FIELDS } from "@/lib/noa/labels";
+import { createDraftOnboarding } from "@/lib/noa/onboarding/create";
+import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { generateNoaSynthesis } from "@/lib/noa/synthesis";
 import { SCREENING_CRITERIA, TOPGRADING_EPISODES, PREP_META, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
 import { TEST_USER_ID } from "@/lib/noa/test-account";
@@ -24,7 +26,7 @@ import {
   type JobSpecContext,
   type CandidateContext,
 } from "@/lib/noa/ai";
-import type { InterviewType, DecisionStage, CandidateStatus, Candidate, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
+import type { InterviewType, RecruitmentInterviewType, DecisionStage, CandidateStatus, Candidate, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
 
 async function assertOwnedCandidate(candidateId: string) {
   const recruiter = await getCurrentRecruiter();
@@ -39,7 +41,7 @@ async function assertOwnedCandidate(candidateId: string) {
 }
 
 // ─── Get-or-create the interviews row for a candidate+type ─────────────────
-async function getOrCreateInterview(candidateId: string, type: InterviewType) {
+async function getOrCreateInterview(candidateId: string, type: RecruitmentInterviewType) {
   const supabase = await createClient();
   const existing = await getInterview(candidateId, type);
   if (existing) return existing;
@@ -51,7 +53,7 @@ async function getOrCreateInterview(candidateId: string, type: InterviewType) {
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? "Impossible de créer l'entretien.");
+    throw new Error(userError("getOrCreateInterview", error, ERROR_MESSAGE.entretien));
   }
   return data;
 }
@@ -65,7 +67,7 @@ async function getOrCreateInterview(candidateId: string, type: InterviewType) {
  * étrangère à sa campagne — d'où des "Non" en cascade. Repli sur le statique
  * seulement si l'IA échoue, pour ne jamais bloquer l'ouverture de l'entretien.
  */
-async function seedGridCriteria(type: InterviewType, candidate: Candidate, recruiter: RecruiterWithCompany) {
+async function seedGridCriteria(type: RecruitmentInterviewType, candidate: Candidate, recruiter: RecruiterWithCompany) {
   try {
     const { job, cand } = await buildScreeningContext(candidate, recruiter);
 
@@ -95,7 +97,7 @@ async function seedGridCriteria(type: InterviewType, candidate: Candidate, recru
 
 async function getOrCreateEvaluationGrid(
   interviewId: string,
-  type: InterviewType,
+  type: RecruitmentInterviewType,
   candidate: Candidate,
   recruiter: RecruiterWithCompany,
 ) {
@@ -119,12 +121,12 @@ async function getOrCreateEvaluationGrid(
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? "Impossible de créer la grille d'évaluation.");
+    throw new Error(userError("getOrCreateGrid", error, ERROR_MESSAGE.grille));
   }
   return data;
 }
 
-export async function ensureInterviewAndGrid(candidateId: string, type: InterviewType) {
+export async function ensureInterviewAndGrid(candidateId: string, type: RecruitmentInterviewType) {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   const interview = await getOrCreateInterview(candidateId, type);
   const grid = await getOrCreateEvaluationGrid(interview.id, type, candidate, recruiter);
@@ -270,7 +272,7 @@ export async function generateTopgradingGuide(
 // ─── Préparation d'entretien (grid edits + guide format/duration) ──────────
 export async function savePreparation(
   candidateId: string,
-  step: InterviewType,
+  step: RecruitmentInterviewType,
   gridSections: PrepGridSection[],
   guideSections: PrepGuideSection[],
   format: string,
@@ -297,7 +299,7 @@ export async function savePreparation(
     );
 
   if (guideError) {
-    throw new Error(guideError.message);
+    throw new Error(userError("getOrCreateGuide", guideError, ERROR_MESSAGE.guide));
   }
 
   await supabase
@@ -350,7 +352,7 @@ export async function savePreparation(
 
 // ─── Save the transcript pasted by the recruiter (from an external recording/
 // transcription tool, since noa doesn't record audio itself) ───────────────
-export async function saveTranscript(candidateId: string, type: InterviewType, transcript: string) {
+export async function saveTranscript(candidateId: string, type: RecruitmentInterviewType, transcript: string) {
   await assertOwnedCandidate(candidateId);
   const supabase = await createClient();
 
@@ -368,7 +370,7 @@ export type AskQuestionState = { answer?: string; error?: string };
 
 const ASK_ERROR = "noa n'a pas réussi à répondre à cette question. Réessayez dans un instant.";
 
-export async function askAboutInterview(candidateId: string, type: InterviewType, question: string): Promise<AskQuestionState> {
+export async function askAboutInterview(candidateId: string, type: RecruitmentInterviewType, question: string): Promise<AskQuestionState> {
   const trimmed = question.trim();
   if (!trimmed) {
     return { error: "Saisissez une question avant de lancer la recherche." };
@@ -424,7 +426,7 @@ function renderFilledGrid(criteria: unknown, answers: Record<string, string>): s
 // consulter le guide et de coller la transcription en amont.
 export type FinishInterviewState = { error?: string };
 
-export async function finishInterview(candidateId: string, type: InterviewType, transcript: string): Promise<FinishInterviewState> {
+export async function finishInterview(candidateId: string, type: RecruitmentInterviewType, transcript: string): Promise<FinishInterviewState> {
   const trimmed = transcript.trim();
   if (!trimmed) {
     return { error: "Collez la transcription de l'entretien avant de lancer l'analyse." };
@@ -497,14 +499,14 @@ export async function finishInterview(candidateId: string, type: InterviewType, 
 // appeler l'IA (generateNoaSynthesis est le même repli déterministe que celui
 // utilisé plus haut quand l'IA échoue), pour pouvoir tester tout le parcours
 // sans consommer de crédits.
-const FIXED_TRANSCRIPTS: Record<InterviewType, string> = {
+const FIXED_TRANSCRIPTS: Record<RecruitmentInterviewType, string> = {
   screening:
     "Transcription de test (screening) : le candidat confirme 5 ans d'expérience React/TypeScript, une expérience en startup de 30 personnes, une disponibilité sous 3 semaines, des prétentions salariales à 68 k€ et un mentorat de deux développeurs juniors.",
   topgrading:
     "Transcription de test (topgrading) : parcours détaillé sur Scaleway, Skello et une période freelance, avec des exemples concrets de réalisations, de désaccords gérés sainement et de raisons de départ cohérentes.",
 };
 
-export async function finishInterviewTest(candidateId: string, type: InterviewType): Promise<FinishInterviewState> {
+export async function finishInterviewTest(candidateId: string, type: RecruitmentInterviewType): Promise<FinishInterviewState> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   if (recruiter.user_id !== TEST_USER_ID) {
     return { error: "Cette action est réservée au compte de test." };
@@ -527,13 +529,13 @@ export async function finishInterviewTest(candidateId: string, type: InterviewTy
     .from("evaluation_grids")
     .update({ answers, updated_at: new Date().toISOString() })
     .eq("id", grid.id);
-  if (gridError) return { error: gridError.message };
+  if (gridError) return { error: userError("saveGrid.grid", gridError, ERROR_MESSAGE.grille) };
 
   const { error: interviewError } = await supabase
     .from("interviews")
     .update({ status: "termine", completed_at: new Date().toISOString(), transcript: FIXED_TRANSCRIPTS[type] })
     .eq("id", interview.id);
-  if (interviewError) return { error: interviewError.message };
+  if (interviewError) return { error: userError("saveGrid.interview", interviewError, ERROR_MESSAGE.grille) };
 
   const { content, advice } = generateNoaSynthesis(grid.criteria, answers);
   await supabase.from("syntheses").insert({
@@ -652,11 +654,16 @@ export async function ensureFinalRecommendation(
       .select("*")
       .single();
 
-    if (error) throw new Error(error.message);
+    // Échec d'écriture : journalisé et abandonné sans lever. La page sait
+    // s'afficher sans recommandation, elle ne doit pas casser pour autant.
+    if (error) {
+      userError("ensureFinalRecommendation.insert", error);
+      return null;
+    }
     return data as Synthesis;
   } catch (e) {
-    const err = e as { message?: string };
-    console.error(`[noa] Recommandation finale échouée : ${err?.message ?? String(e)}`);
+    // Échec de la génération elle-même (appel au modèle).
+    userError("ensureFinalRecommendation", e);
     return null;
   }
 }
@@ -690,7 +697,10 @@ export async function ensureFinalRecommendationTest(candidateId: string): Promis
 }
 
 // ─── Final decision ─────────────────────────────────────────────────────────
-export type DecideFinalResult = { missionId: string | null } | void;
+// L'intégration naît avec le recrutement : il n'y a plus d'écran « Préparer
+// l'intégration » à traverser plus tard, et un plan en brouillon n'engage rien
+// — c'est une proposition que le manager relit.
+export type DecideFinalResult = { missionId: string | null; integrationHref: string } | void;
 
 export async function decideFinal(candidateId: string, action: "non_retenu" | "retenu", score: number | null): Promise<DecideFinalResult> {
   const { recruiter, candidate } = await assertOwnedCandidate(candidateId);
@@ -726,7 +736,16 @@ export async function decideFinal(candidateId: string, action: "non_retenu" | "r
   // plusieurs postes) : on laisse la vue cliente demander au recruteur s'il
   // marque la campagne comme pourvue avant de rediriger.
   if (action === "retenu") {
-    return { missionId: candidate.mission_id };
+    // Le recrutement est enregistré : rater la création du brouillon ne doit
+    // pas le faire échouer. La fiche sait afficher « Plan à créer » et propose
+    // le geste.
+    try {
+      await createDraftOnboarding({ ...candidate, status: newStatus }, recruiter.id);
+    } catch (e) {
+      userError("decideFinal.createDraftOnboarding", e, ERROR_MESSAGE.preparation);
+    }
+    revalidatePath("/integrations");
+    return { missionId: candidate.mission_id, integrationHref: `/integrations/${candidateId}` };
   }
 
   redirect("/candidats");
@@ -761,7 +780,7 @@ export async function updateCandidateProfile(
     .eq("id", candidate.id);
 
   if (error) {
-    return { error: error.message };
+    return { error: userError("updateCandidateProfile", error, ERROR_MESSAGE.candidat) };
   }
 
   revalidatePath(`/candidats/${candidate.id}`);
@@ -781,7 +800,7 @@ export async function deleteCandidate(candidateId: string) {
 
   const { error } = await supabase.from("candidates").delete().eq("id", candidate.id);
   if (error) {
-    throw new Error(error.message);
+    throw new Error(userError("deleteCandidate", error, ERROR_MESSAGE.candidat));
   }
 
   revalidatePath("/candidats");

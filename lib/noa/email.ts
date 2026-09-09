@@ -29,6 +29,17 @@ export function isEmailConfigured() {
 }
 
 export async function sendMail(opts: {
+  /**
+   * Destinataire, obligatoire et sans valeur par défaut.
+   *
+   * Tant que DEMO_RECIPIENT servait de repli, un `to` oublié dans une
+   * fonctionnalité future aurait silencieusement expédié à la boîte Noa un
+   * message destiné à quelqu'un d'autre — un collaborateur recruté, par
+   * exemple. C'est le genre de fuite qui ne se voit qu'une fois arrivée : le
+   * repli est donc porté par l'appelant qui le veut (app/demo/actions.ts),
+   * jamais par ce transport générique.
+   */
+  to: string;
   subject: string;
   text: string;
   html?: string;
@@ -37,9 +48,12 @@ export async function sendMail(opts: {
   const t = getTransporter();
   if (!t) throw new Error("Envoi d'e-mail non configuré (GMAIL_USER / GMAIL_APP_PASSWORD manquants).");
 
+  const to = opts.to.trim();
+  if (!to) throw new Error("Destinataire manquant : aucun e-mail n'a été envoyé.");
+
   await t.sendMail({
     from: `Noa <${process.env.GMAIL_USER}>`,
-    to: DEMO_RECIPIENT,
+    to,
     subject: opts.subject,
     text: opts.text,
     html: opts.html,

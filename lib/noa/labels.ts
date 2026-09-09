@@ -1,7 +1,7 @@
 // Shared display labels/colors for mission & candidate statuses, kept in one
 // place so dashboard / missions / mission-detail stay visually consistent.
 import type { BadgeColor } from "@/components/noa/ui-primitives";
-import type { MissionStatus, CandidateStatus, StageStatus, Interview } from "@/lib/noa/types";
+import type { MissionStatus, CandidateStatus, StageStatus, Interview, InterviewType, IntegrationInterviewType, RecruitmentInterviewType } from "@/lib/noa/types";
 
 export const MISSION_STATUS_LABEL: Record<MissionStatus, string> = {
   brouillon: "En attente de candidat",
@@ -152,3 +152,71 @@ export function subStepFor(interview: Interview | undefined): SubStep {
 // Catégorie de critère de screening (lib/noa/ai.ts) marquant un prérequis
 // éliminatoire, affichée comme badge "Éliminatoire" dans les grilles/guides.
 export const ELIMINATOIRE_CRIT = "Prérequis non négociable";
+
+
+// ─── Entretiens ─────────────────────────────────────────────────────────────
+// Une seule table de libellés pour les six types. Elle était recopiée dans
+// quatre écrans, qui divergeaient dès qu'on en modifiait un.
+
+export const INTERVIEW_LABEL: Record<InterviewType, string> = {
+  screening: "Premier entretien",
+  topgrading: "Entretien technique",
+  integration_j1: "Entretien J1",
+  integration_j30: "Entretien J30",
+  integration_j60: "Entretien J60",
+  integration_j90: "Entretien J90",
+};
+
+/** Sous-titre affiché sous le titre de chaque entretien d'intégration. */
+export const INTEGRATION_INTERVIEW_SUBTITLE: Record<IntegrationInterviewType, string> = {
+  integration_j1: "Aligner les attentes et préparer les premières semaines.",
+  integration_j30: "Vérifier que les conditions sont réunies pour réussir la prise de poste.",
+  integration_j60: "Confronter la prise de poste aux premiers résultats attendus.",
+  integration_j90: "Faire le bilan des 90 premiers jours et définir la suite.",
+};
+
+/** Jalon court, pour la frise et les tableaux où la place manque. */
+export const INTEGRATION_INTERVIEW_SHORT: Record<IntegrationInterviewType, string> = {
+  integration_j1: "J1",
+  integration_j30: "J30",
+  integration_j60: "J60",
+  integration_j90: "J90",
+};
+
+/**
+ * Ce que le manager lit avant d'inviter quelqu'un à décrire ses préférences.
+ *
+ * Une chaîne construite ici, et non du texte JSX. Écrite dans la modale sur
+ * deux lignes de source, « {firstName} peut renseigner… » perdait l'espace
+ * après le prénom : un bloc de texte JSX qui déborde sur une deuxième ligne est
+ * reflué en rognant les blancs de bord de chaque ligne, y compris celui qui
+ * précédait le premier mot. L'écran affichait « Alexpeut ». Un gabarit de
+ * chaîne ne peut pas perdre cet espace.
+ */
+export function workPreferencesInviteIntro(firstName: string): string {
+  return (
+    `${firstName} peut renseigner le résultat d'un test DISC, MBTI ou Big Five déjà réalisé. ` +
+    `S'il n'en a pas, il peut répondre au questionnaire Noa de 24 questions.`
+  );
+}
+
+const RECRUITMENT_TYPES: RecruitmentInterviewType[] = ["screening", "topgrading"];
+
+export function isRecruitmentInterview(type: string): type is RecruitmentInterviewType {
+  return (RECRUITMENT_TYPES as string[]).includes(type);
+}
+
+export function isIntegrationInterview(type: string): type is IntegrationInterviewType {
+  return type.startsWith("integration_");
+}
+
+/**
+ * Valide un paramètre d'URL en type d'entretien de recrutement.
+ *
+ * Le même ternaire était réécrit dans trois pages, dont une qui retombait
+ * silencieusement sur « screening » pour toute valeur inconnue — un `j30` y
+ * serait devenu un screening.
+ */
+export function parseRecruitmentInterviewType(value: string | undefined): RecruitmentInterviewType | null {
+  return value && isRecruitmentInterview(value) ? value : null;
+}

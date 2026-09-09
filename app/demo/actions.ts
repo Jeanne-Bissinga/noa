@@ -1,6 +1,6 @@
 "use server";
 
-import { sendMail } from "@/lib/noa/email";
+import { sendMail, DEMO_RECIPIENT } from "@/lib/noa/email";
 
 export type DemoState = {
   error?: string;
@@ -53,6 +53,9 @@ export async function requestDemo(_prevState: DemoState, formData: FormData): Pr
 
   try {
     await sendMail({
+      // Les demandes de démo vont à la boîte Noa : c'est le seul contexte où ce
+      // destinataire est le bon, il est donc nommé ici et pas dans sendMail.
+      to: DEMO_RECIPIENT,
       subject: `Demande de démo — ${firstName} ${lastName} (${companyName})`,
       text,
       html,

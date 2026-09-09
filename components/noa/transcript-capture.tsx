@@ -3,28 +3,35 @@
 import { useEffect, useRef, useTransition } from "react";
 import { FileText } from "lucide-react";
 import { Card } from "@/components/noa/ui-primitives";
-import { saveTranscript } from "@/app/candidats/[id]/actions";
-import type { InterviewType } from "@/lib/noa/types";
+import { ACCENT, type AccentName } from "@/lib/noa/interview-accent";
 
 // Affiché après le guide d'entretien (cf. RecordingGuidance, affiché avant,
 // qui porte le contrôle d'enregistrement) : le texte transcrit y apparaît
 // automatiquement à la fin de l'enregistrement, et le recruteur peut aussi y
 // coller une transcription obtenue autrement, ou corriger le texte.
-const ACCENT = {
-  blue: { ring: "focus:border-[#99BAF8] focus:ring-[#99BAF8]/20", icon: "text-[#3a6fd4] bg-[#99BAF8]/12" },
-  violet: { ring: "focus:border-[#CCB8FF] focus:ring-[#CCB8FF]/20", icon: "text-[#6b4ec4] bg-[#CCB8FF]/12" },
-};
 
 export function TranscriptCapture({
-  candidateId, type, value, onChange, accent = "blue",
+  value, onChange, onPersist, accent = "blue",
 }: {
-  candidateId: string;
-  type: InterviewType;
   value: string;
   onChange: (value: string) => void;
-  accent?: "blue" | "violet";
+  /**
+   * Sauvegarde debouncée. Passée en prop plutôt qu'importée : un composant
+   * partagé n'a pas à connaître la Server Action d'une route particulière, et
+   * les entretiens d'intégration n'écrivent pas au même endroit que ceux du
+   * recrutement.
+   */
+  onPersist?: (value: string) => void | Promise<unknown>;
+  accent?: AccentName;
 }) {
   const [, startTransition] = useTransition();
+  // Une ref plutôt qu'une dépendance de l'effet : une fonction fléchée recréée
+  // à chaque rendu relancerait le debounce en boucle. Mise à jour dans un
+  // effet, pas pendant le rendu, que React interdit.
+  const persistRef = useRef(onPersist);
+  useEffect(() => {
+    persistRef.current = onPersist;
+  });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
   const colors = ACCENT[accent];
@@ -38,13 +45,12 @@ export function TranscriptCapture({
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       startTransition(async () => {
-        await saveTranscript(candidateId, type, value);
+        await persistRef.current?.(value);
       });
     }, 800);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   return (

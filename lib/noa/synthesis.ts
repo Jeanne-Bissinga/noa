@@ -16,6 +16,23 @@ export type TopgradingEpisode = { co: string; period?: string; role?: string; qs
 
 export type ScreeningAnswer = "Oui" | "Partiel" | "Non";
 
+
+/**
+ * Grille d'entretien d'intégration : ni notée, ni synthétisée par ce module.
+ * Ces entretiens ont leur propre rédaction et n'entrent jamais dans
+ * l'évaluation d'un recrutement. La forme objet les rend déjà invisibles aux
+ * deux prédicats ci-dessous ; cette garde explicite existe pour que l'erreur
+ * se voie si quelqu'un aplatissait un jour la structure.
+ */
+function isIntegrationCriteria(criteria: unknown): boolean {
+  return (
+    !!criteria &&
+    typeof criteria === "object" &&
+    !Array.isArray(criteria) &&
+    (criteria as { kind?: unknown }).kind === "integration_interview"
+  );
+}
+
 function isScreeningCriteria(criteria: unknown): criteria is ScreeningCriterion[] {
   return Array.isArray(criteria) && criteria.length > 0 && typeof (criteria[0] as any)?.q === "string" && !("qs" in (criteria[0] as any));
 }
@@ -34,6 +51,13 @@ export function generateNoaSynthesis(
   criteria: unknown,
   answers: Record<string, unknown>,
 ): { content: string; advice: string } {
+  if (isIntegrationCriteria(criteria)) {
+    return {
+      content: "Cet entretien d'intégration n'entre pas dans l'évaluation du recrutement.",
+      advice: "",
+    };
+  }
+
   if (isScreeningCriteria(criteria)) {
     return generateScreeningSynthesis(criteria, answers as Record<string, ScreeningAnswer>);
   }

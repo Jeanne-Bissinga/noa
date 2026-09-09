@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { parseRecruitmentInterviewType } from "@/lib/noa/labels";
 import { requireRecruiter, getCandidate, getInterview, getInterviewGuide } from "@/lib/noa/queries";
 import { PREP_META } from "@/lib/noa/interview-content";
 import { PreparationView } from "./preparation-view";
-import type { InterviewType } from "@/lib/noa/types";
 
 export default async function PreparationPage({
   params, searchParams,
@@ -19,7 +19,10 @@ export default async function PreparationPage({
     notFound();
   }
 
-  const stepType: InterviewType = step === "topgrading" ? "topgrading" : "screening";
+  // 404 plutôt qu'un repli silencieux sur « screening » : depuis que d'autres
+  // types d'entretien existent, une valeur inconnue doit se voir.
+  const stepType = parseRecruitmentInterviewType(step);
+  if (!stepType) notFound();
 
   const interview = await getInterview(candidate.id, stepType);
   const guide = interview ? await getInterviewGuide(interview.id) : null;

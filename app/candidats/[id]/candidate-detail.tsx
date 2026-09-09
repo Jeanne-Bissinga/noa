@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, Check, X, FileText, Edit3 } from "lucide-react";
+import { ChevronRight, Check, X, FileText, Edit3, Sparkles } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn, InputField } from "@/components/noa/ui-primitives";
 import { CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
@@ -12,6 +12,7 @@ import { CandidateDelete } from "./candidate-delete";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { updateCandidateProfile } from "./actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
+import { STEP_LABEL, type IntegrationStep } from "@/lib/noa/onboarding/overview";
 
 // Dernière décision actée (hors "reporté", qui ne clôt rien) pour une étape
 // donnée. STATUS_FIELDS marque les 3 étapes "done" dès que le candidat est
@@ -22,7 +23,7 @@ function lastDecision(decisions: Decision[], stage: Decision["stage"]): Decision
 }
 
 export function CandidateDetail({
-  candidate, experiences, skills, cvSignedUrl, decisions,
+  candidate, experiences, skills, cvSignedUrl, decisions, integrationStep,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidate: Candidate;
@@ -30,6 +31,8 @@ export function CandidateDetail({
   skills: CandidateSkill[];
   cvSignedUrl: string | null;
   decisions: Decision[];
+  /** Étape de l'intégration, dans le vocabulaire partagé avec /integrations. */
+  integrationStep: IntegrationStep;
   screeningStarted: boolean;
   screeningInterviewDone: boolean;
   topgradingStarted: boolean;
@@ -222,6 +225,32 @@ export function CandidateDetail({
             finalRejected={finalDecision?.status === "non_retenu"}
           />
         </Card>
+
+        {/* ── Intégration ──
+            Une fois la personne recrutée, la suite du parcours a sa propre
+            section : cette carte n'est qu'un point de passage vers elle, et
+            emploie le même vocabulaire d'étape que /integrations pour ne pas
+            raconter deux histoires du même état. */}
+        {candidate.status === "Recrute" && (
+          <Card className="p-5 mb-4">
+            <Link href={`/integrations/${candidate.id}`} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#CCB8FF]/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={16} className="text-[#6b4ec4]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#010101]">
+                    Plan d'onboarding · {STEP_LABEL[integrationStep]}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Plan 30-60-90 et entretiens J1 / J30 / J60 / J90.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
+            </Link>
+          </Card>
+        )}
 
         {/* ── Étapes réalisées ── */}
         {completedSteps.length > 0 && (

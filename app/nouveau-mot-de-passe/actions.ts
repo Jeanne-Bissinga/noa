@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MIN_PASSWORD_LENGTH } from "@/lib/noa/auth";
+import { authError } from "@/lib/noa/errors";
 
 export type NewPasswordState = {
   error?: string;
@@ -37,15 +38,9 @@ export async function updatePassword(
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
-    // Les messages de Supabase sont en anglais : on les traduit plutôt que de
-    // les afficher tels quels.
-    if (error.message.toLowerCase().includes("should be different")) {
-      return { error: "Votre nouveau mot de passe doit être différent de l'ancien." };
-    }
-    if (error.message.toLowerCase().includes("at least")) {
-      return { error: `Votre mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.` };
-    }
-    return { error: "La mise à jour a échoué. Merci de réessayer." };
+    // Traduction centralisée (lib/noa/errors.ts) : les messages de Supabase
+    // sont en anglais, et certains disent quelque chose d'utile.
+    return { error: authError("updatePassword", error, "La mise à jour a échoué. Merci de réessayer.") };
   }
 
   redirect("/dashboard");

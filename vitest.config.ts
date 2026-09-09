@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      // cf. tests/server-only-stub.ts
+      "server-only": path.resolve(__dirname, "tests/server-only-stub.ts"),
     },
   },
 });

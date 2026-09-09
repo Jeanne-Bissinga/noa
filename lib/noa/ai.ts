@@ -4,6 +4,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { REASON_LABEL } from "@/lib/noa/labels";
+import type { IntegrationInterviewType } from "@/lib/noa/types";
 
 // Plafond de temps pour l'appel LLM (ms). Au-delà, l'appel lève et l'appelant
 // retombe sur les données statiques, le flux de création ne fige jamais.
@@ -883,6 +884,107 @@ function stripFieldTags(text: string): string {
  * remplie, de la transcription (optionnelle) et du contexte. Lève en cas d'échec ;
  * l'appelant retombe sur la synthèse rule-based.
  */
+
+// ─── Synthèse d'un entretien d'intégration ──────────────────────────────────
+//
+// Prompt distinct de celui du recrutement, et pas seulement par le ton : celui
+// du recrutement demande explicitement « une recommandation claire pour la
+// décision (poursuivre, approfondir, écarter) », c'est-à-dire exactement ce
+// qui est proscrit ici.
+//
+// Le schéma de sortie y contribue autant que les consignes : il n'existe aucun
+// champ « recommandation » où loger un verdict. Ce qui sort, ce sont un état
+// des lieux et des actions concrètes — utilisables telles quelles par le
+// manager.
+
+const INTEGRATION_SYNTHESIS_SYSTEM = `Tu es noa. À partir des notes prises par le manager pendant un entretien d'intégration (et de la transcription si elle est fournie), tu rédiges une SYNTHÈSE de cet échange.
+
+Ce que tu produis sert à préparer l'accompagnement de la personne recrutée pendant ses premiers mois. Ce n'est PAS une évaluation, et cela ne sert à aucune décision d'emploi.
+
+Règles :
+- Appuie-toi uniquement sur ce qui a été dit. N'invente aucun fait, aucun résultat, aucun chiffre.
+- Si une information issue de l'entretien contredit une hypothèse antérieure, retiens l'entretien.
+- Parle de la situation et de l'accompagnement, jamais de la valeur de la personne.
+- Français, ton factuel et sobre, sans flatterie ni dramatisation.
+
+INTERDICTIONS ABSOLUES. Tu ne dois jamais :
+- porter un jugement sur la qualité du recrutement (« bon recrutement », « erreur de casting ») ;
+- recommander ou évoquer une fin de période d'essai, un licenciement, une séparation, une confirmation ou une non-confirmation d'embauche ;
+- produire un verdict de type « go / no-go », « garder », « écarter » ;
+- comparer la personne à d'autres collaborateurs.
+La décision d'emploi appartient au manager et se prend hors de cet outil.
+
+Tu rends :
+- content : 3 à 5 phrases. Ce qui va bien, ce qui reste à clarifier, les éventuels blocages, les progrès observés depuis le dernier échange.
+- nextSteps : 2 à 4 actions concrètes décidées ou à décider, formulées à l'infinitif, chacune sur une ligne. Une action est vérifiable et a un porteur implicite.`;
+
+const MILESTONE_FOCUS: Record<IntegrationInterviewType, string> = {
+  integration_j1: "Entretien J1 — alignement. Concentre-toi sur la clarté des attentes, les ressources nécessaires et le mode de fonctionnement convenu.",
+  integration_j30: "Entretien J30 — prise de poste. Concentre-toi sur les conditions de réussite, les ajustements utiles et les premiers freins.",
+  integration_j60: "Entretien J60 — premiers résultats. Concentre-toi sur les résultats observables, les écarts avec les attentes et ce qui doit être ajusté.",
+  integration_j90: "Entretien J90 — bilan. Concentre-toi sur les progrès des 90 jours, ce qui reste à développer et la suite de l'accompagnement.",
+};
+
+/**
+ * Rédige la synthèse d'un entretien d'intégration.
+ *
+ * Le résultat passe encore par un filtre déterministe côté appelant
+ * (containsHrVerdict) : un prompt n'est pas une garantie.
+ */
+export async function generateIntegrationSynthesis(input: {
+  milestone: IntegrationInterviewType;
+  notes: string;
+  transcript?: string | null;
+  job: JobSpecContext;
+  candidate: CandidateContext;
+  /** Jalons J30/J60 du plan, avec leur état. */
+  milestones: string[];
+  /** Résultats attendus à J90, avec leur état. */
+  outcomes: string[];
+}): Promise<{ content: string; nextSteps: string[] }> {
+  const user = `${MILESTONE_FOCUS[input.milestone]}
+
+${jobSpecLines(input.job)}
+
+Personne recrutée : ${input.candidate.fullName}${input.candidate.title ? ` — ${input.candidate.title}` : ""}
+
+Jalons du plan d'intégration :
+${input.milestones.length ? input.milestones.map((m) => `- ${m}`).join("\n") : "(aucun jalon défini)"}
+
+Résultats attendus à J90 :
+${input.outcomes.length ? input.outcomes.map((o) => `- ${o}`).join("\n") : "(aucun résultat défini)"}
+
+Notes prises pendant l'entretien :
+${input.notes || "(aucune note)"}
+${input.transcript ? `\nTranscription de l'entretien :\n${input.transcript}` : ""}`;
+
+  const result = await generateStructured<{ content: string; nextSteps: string[] }>({
+    system: INTEGRATION_SYNTHESIS_SYSTEM,
+    user,
+    toolName: "enregistrer_synthese_integration",
+    toolDescription: "Enregistre la synthèse de l'entretien et les actions décidées.",
+    schema: {
+      type: "object",
+      properties: {
+        content: { type: "string", description: "Synthèse de l'échange, 3 à 5 phrases." },
+        nextSteps: {
+          type: "array",
+          items: { type: "string" },
+          description: "2 à 4 actions concrètes, à l'infinitif.",
+        },
+      },
+      required: ["content", "nextSteps"],
+      additionalProperties: false,
+    },
+    maxTokens: 1200,
+  });
+
+  return {
+    content: stripFieldTags(result.content ?? ""),
+    nextSteps: (result.nextSteps ?? []).map((s) => stripFieldTags(s)).filter((s) => s.trim()),
+  };
+}
+
 export async function generateInterviewSynthesis(input: {
   type: "screening" | "topgrading";
   filledGrid: string;
