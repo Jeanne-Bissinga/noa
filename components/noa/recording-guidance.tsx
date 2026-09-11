@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Square, X } from "lucide-react";
+import { Info, Mic, Square, X } from "lucide-react";
 import { Card } from "@/components/noa/ui-primitives";
 import { ACCENT, type AccentName } from "@/lib/noa/interview-accent";
 import { useInterviewRecorder } from "@/components/noa/use-interview-recorder";
@@ -40,6 +40,13 @@ export function RecordingGuidance({
       <p className="text-xs text-gray-500 leading-relaxed mb-3">
         Enregistrez directement l&apos;entretien (haut-parleur activé pour capter les deux voix), ou collez le texte obtenu depuis un autre outil : noa s&apos;en servira pour analyser la grille et rédiger la synthèse.
       </p>
+
+      <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 mb-3">
+        <Info size={13} className="text-gray-400 flex-shrink-0 mt-0.5" />
+        <p className="text-[11px] text-gray-500 leading-relaxed">
+          Avant de démarrer, informez la personne que cet échange sera enregistré, transcrit et analysé par une intelligence artificielle afin d&apos;aider à la décision de recrutement ou de suivi.
+        </p>
+      </div>
 
       <div className="flex items-center gap-2">
         {recorder.status === "idle" || recorder.status === "error" ? (

@@ -146,7 +146,7 @@ export function ScreeningGridView({
         <Card className="p-4 mb-6">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Notes complémentaires (optionnel)</p>
           <p className="text-xs text-gray-500 leading-relaxed mb-3">
-            Si vous avez pris des notes pendant l&apos;entretien et souhaitez les transmettre à noa en plus de la transcription, ajoutez-les ici.
+            Si vous avez pris des notes pendant l&apos;entretien et souhaitez les transmettre à noa en plus de la transcription, ajoutez-les ici. Le non-verbal, les soft skills, ce que vous avez ressenti pendant l&apos;échange : rien de tout ça ne transparaît dans une transcription. Ce regard humain reste précieux, gardez-le ici.
           </p>
           <textarea
             value={notes}

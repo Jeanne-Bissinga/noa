@@ -455,9 +455,10 @@ export async function finishInterview(candidateId: string, type: RecruitmentInte
     return { error: "noa n'a pas réussi à analyser la transcription. Réessayez dans un instant." };
   }
 
+  const evaluatedAt = new Date().toISOString();
   await supabase
     .from("evaluation_grids")
-    .update({ answers, updated_at: new Date().toISOString() })
+    .update({ answers, answers_evaluated_at: evaluatedAt, updated_at: evaluatedAt })
     .eq("id", grid.id);
 
   await supabase
@@ -525,9 +526,10 @@ export async function finishInterviewTest(candidateId: string, type: Recruitment
           ),
         );
 
+  const testEvaluatedAt = new Date().toISOString();
   const { error: gridError } = await supabase
     .from("evaluation_grids")
-    .update({ answers, updated_at: new Date().toISOString() })
+    .update({ answers, answers_evaluated_at: testEvaluatedAt, updated_at: testEvaluatedAt })
     .eq("id", grid.id);
   if (gridError) return { error: userError("saveGrid.grid", gridError, ERROR_MESSAGE.grille) };
 

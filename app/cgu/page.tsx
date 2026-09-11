@@ -117,6 +117,35 @@ const ARTICLES: LegalArticle[] = [
   },
   {
     n: 7,
+    title: "Règlement européen sur l'intelligence artificielle",
+    blocks: [
+      { p: "Certaines fonctionnalités du Service reposent sur des systèmes d'intelligence artificielle utilisés dans le cadre de l'évaluation de candidats à un recrutement, au sens du règlement européen sur l'intelligence artificielle, dit règlement IA." },
+      { p: "Ces fonctionnalités sont susceptibles de relever de la catégorie des systèmes d'IA à haut risque définie par ce règlement." },
+      { p: "Au sens du règlement IA :" },
+      { ul: [
+        "Noa agit en qualité de fournisseur du système d'IA ;",
+        "le client, qui utilise le Service dans le cadre de son propre processus de recrutement, agit en qualité de déployeur du système d'IA.",
+      ] },
+      { p: "En sa qualité de déployeur, le client s'engage notamment à :" },
+      { ul: [
+        "utiliser le Service conformément à sa destination et à la documentation fournie par Noa ;",
+        "informer les candidats et collaborateurs concernés du recours à un système d'intelligence artificielle, conformément à l'article 8 de la Politique de confidentialité ;",
+        "exercer un contrôle humain effectif sur les résultats produits avant toute décision, conformément à l'article 6 des présentes CGU ;",
+        "confier l'utilisation du Service à des personnes disposant d'une compréhension suffisante de son fonctionnement et de ses limites ;",
+        "ne pas utiliser le Service à des fins autres que celles pour lesquelles il est fourni.",
+      ] },
+      { p: "En sa qualité de fournisseur, Noa s'engage notamment à :" },
+      { ul: [
+        "documenter le fonctionnement des systèmes d'IA proposés dans le Service ;",
+        "fournir aux clients les informations nécessaires à une utilisation conforme au règlement IA ;",
+        "assurer la traçabilité des résultats produits par ces systèmes ;",
+        "faire évoluer le Service afin de tenir compte des exigences du règlement IA et de ses évolutions.",
+      ] },
+      { p: "Les précisions relatives à l'usage de l'intelligence artificielle, aux prestataires concernés et aux droits des personnes évaluées figurent à l'article 8 de la Politique de confidentialité." },
+    ],
+  },
+  {
+    n: 8,
     title: "Données personnelles",
     blocks: [
       { p: "Le traitement des données personnelles des utilisateurs et des candidats est détaillé dans la Politique de confidentialité de Noa." },
@@ -138,7 +167,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 8,
+    n: 9,
     title: "Données relatives aux candidats",
     blocks: [
       { p: "L'utilisateur peut être amené à importer dans Noa des données relatives à des candidats." },
@@ -166,7 +195,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 9,
+    n: 10,
     title: "Propriété intellectuelle",
     blocks: [
       { p: "Le Service, sa technologie, son code, son design, son interface, ses fonctionnalités, son identité visuelle et sa marque sont la propriété exclusive de Noa, sous réserve des droits appartenant à des tiers." },
@@ -176,7 +205,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 10,
+    n: 11,
     title: "Disponibilité et évolution du Service",
     blocks: [
       { p: "Noa s'efforce d'assurer la disponibilité et le bon fonctionnement du Service." },
@@ -194,7 +223,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 11,
+    n: 12,
     title: "Limitation de responsabilité",
     blocks: [
       { p: "Dans les limites autorisées par la loi, Noa ne pourra être tenu responsable des dommages indirects résultant de l'utilisation ou de l'impossibilité d'utiliser le Service." },
@@ -211,7 +240,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 12,
+    n: 13,
     title: "Résiliation",
     blocks: [
       { p: "L'utilisateur peut demander la résiliation de son compte conformément aux conditions prévues dans les CGV, le devis ou le contrat applicable." },
@@ -220,7 +249,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 13,
+    n: 14,
     title: "Modification des CGU",
     blocks: [
       { p: "Noa peut modifier les présentes CGU afin notamment de tenir compte :" },
@@ -235,7 +264,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 14,
+    n: 15,
     title: "Droit applicable et litiges",
     blocks: [
       { p: "Les présentes CGU sont soumises au droit français." },
@@ -244,7 +273,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 15,
+    n: 16,
     title: "Contact",
     blocks: [
       { p: "Pour toute question relative aux présentes CGU ou à l'utilisation du Service :" },
@@ -258,7 +287,7 @@ export default function CguPage() {
   return (
     <LegalPage
       title="Conditions Générales d'Utilisation de Noa Recrutement"
-      lastUpdate="29 août 2026"
+      lastUpdate="11 septembre 2026"
       articles={ARTICLES}
     />
   );

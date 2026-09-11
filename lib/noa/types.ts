@@ -164,6 +164,8 @@ export interface EvaluationGrid {
   criteria: unknown[];
   answers: Record<string, unknown>;
   notes: Record<string, unknown>;
+  /** Horodatage de l'évaluation par noa, distinct de `updated_at` (aussi modifié par l'édition des critères par le recruteur). Trace exigée par l'article 12 du règlement IA. */
+  answers_evaluated_at: string | null;
   created_at: string;
   updated_at: string;
 }

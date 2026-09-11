@@ -165,6 +165,23 @@ const ARTICLES: LegalArticle[] = [
   },
   {
     n: 8,
+    title: "Transparence sur l'usage de l'intelligence artificielle",
+    blocks: [
+      { p: "Noa met à la disposition de ses clients recruteurs des fonctionnalités reposant sur l'intelligence artificielle, notamment pour l'aide à l'analyse des candidatures, la génération de synthèses, de grilles d'entretien et de recommandations." },
+      { p: "Ces fonctionnalités relèvent des systèmes d'IA utilisés dans le cadre du recrutement au sens du règlement européen sur l'intelligence artificielle, dit règlement IA." },
+      { p: "À ce titre :" },
+      { ul: [
+        "toute personne évaluée via Noa doit être informée, par le client recruteur, du recours à un système d'intelligence artificielle dans le cadre du processus de recrutement ou de suivi d'intégration ;",
+        "lorsqu'un entretien est enregistré, transcrit et analysé par Noa, le recruteur ou le manager qui conduit l'échange en informe la personne concernée avant l'enregistrement ;",
+        "aucune décision de recrutement, de refus ou d'évaluation n'est prise de façon automatisée par Noa : les analyses produites constituent une aide à la décision, la décision finale relevant exclusivement du client recruteur, comme rappelé aux articles 3 et 7 ;",
+        "un contrôle humain est exercé par le client recruteur sur les résultats produits par l'intelligence artificielle avant toute décision ;",
+        "toute personne concernée peut demander des explications sur le rôle de l'intelligence artificielle dans son évaluation, et s'y opposer, en s'adressant au client recruteur responsable du traitement ou à Noa selon les modalités prévues à l'article 9.",
+      ] },
+      { p: "Il appartient au client recruteur, en sa qualité de responsable du traitement, de respecter les obligations d'information et de transparence qui lui incombent à l'égard des candidats et collaborateurs évalués via Noa." },
+    ],
+  },
+  {
+    n: 9,
     title: "Vos droits",
     blocks: [
       { p: "Conformément au RGPD et à la réglementation applicable, vous pouvez disposer, selon votre situation, des droits suivants :" },
@@ -185,7 +202,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 9,
+    n: 10,
     title: "Sécurité",
     blocks: [
       { p: "Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables afin de protéger les données personnelles contre notamment :" },
@@ -201,7 +218,7 @@ const ARTICLES: LegalArticle[] = [
     ],
   },
   {
-    n: 10,
+    n: 11,
     title: "Contact",
     blocks: [
       { p: "Pour toute question relative à la présente Politique de confidentialité ou au traitement de vos données personnelles :" },
@@ -215,7 +232,7 @@ export default function ConfidentialitePage() {
   return (
     <LegalPage
       title="Politique de confidentialité de Noa Recrutement"
-      lastUpdate="29 août 2026"
+      lastUpdate="11 septembre 2026"
       articles={ARTICLES}
     />
   );
