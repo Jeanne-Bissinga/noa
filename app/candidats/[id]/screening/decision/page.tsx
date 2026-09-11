@@ -58,6 +58,7 @@ export default async function ScreeningDecisionPage({ params }: { params: Promis
       noaSynthesis={noaSynthesis}
       hasTranscript={Boolean(interview.transcript)}
       decision={stageDecision}
+      evaluatedAt={grid?.answers_evaluated_at ?? null}
     />
   );
 }

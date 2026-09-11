@@ -59,6 +59,7 @@ export default async function TopgradingDecisionPage({ params }: { params: Promi
       noaSynthesis={noaSynthesis}
       hasTranscript={Boolean(interview.transcript)}
       decision={stageDecision}
+      evaluatedAt={grid?.answers_evaluated_at ?? null}
     />
   );
 }

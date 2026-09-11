@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FileText, Zap, Check, X, ArrowRight, ChevronRight, AlertTriangle } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, Btn } from "@/components/noa/ui-primitives";
-import { CANDIDATE_AVATAR_COLOR, ELIMINATOIRE_CRIT, initials as initialsOf } from "@/lib/noa/labels";
+import { CANDIDATE_AVATAR_COLOR, ELIMINATOIRE_CRIT, formatDate, initials as initialsOf } from "@/lib/noa/labels";
 import { decideStage, askAboutInterview } from "./actions";
 import type { Candidate, Decision, Synthesis } from "@/lib/noa/types";
 
@@ -59,7 +59,7 @@ const STAGE_META = {
 } as const;
 
 export function DecisionView({
-  candidate, stage, stats, gridRows = [], noaSynthesis, hasTranscript, decision,
+  candidate, stage, stats, gridRows = [], noaSynthesis, hasTranscript, decision, evaluatedAt = null,
 }: {
   candidate: Candidate;
   stage: "screening" | "topgrading";
@@ -68,12 +68,15 @@ export function DecisionView({
   noaSynthesis: Synthesis | null;
   hasTranscript: boolean;
   decision: Decision | null;
+  /** Horodatage de l'évaluation IA de la grille (evaluation_grids.answers_evaluated_at), pour la traçabilité. */
+  evaluatedAt?: string | null;
 }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [askError, setAskError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [pendingAction, setPendingAction] = useState<"non_retenu" | "reporte" | "retenu" | null>(null);
+  const [adviceOpen, setAdviceOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   const meta = STAGE_META[stage];
@@ -115,7 +118,7 @@ export function DecisionView({
               </div>
             </div>
           </div>
-          <span className="text-[10px] text-gray-400 italic flex-shrink-0">Proposition d'analyse. La décision vous appartient.</span>
+          <span className="text-[10px] text-gray-400 italic flex-shrink-0 max-w-[160px] text-right">Proposition d'analyse générée par IA. La décision vous appartient.</span>
         </div>
 
         {/* Accès direct à la transcription intégrale, au-dessus du bloc d'évaluation */}
@@ -139,6 +142,7 @@ export function DecisionView({
           </div>
           <p className="text-xs text-gray-400 mb-5">
             Évaluée automatiquement à partir de la transcription, du profil du candidat et de la campagne de recrutement.
+            {evaluatedAt && ` Le ${formatDate(evaluatedAt)}.`}
           </p>
           <div className="grid grid-cols-3 gap-3">
             {stats.map((s) => (
@@ -207,12 +211,20 @@ export function DecisionView({
                 </div>
               )}
               {noaSynthesis.advice && (
-                <div className="bg-[#010101] rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="bg-[#010101] rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setAdviceOpen((v) => !v)}
+                    className="w-full flex items-center gap-2 p-4"
+                  >
                     <Zap size={12} className="text-[#FEE831]" />
                     <p className="text-[10px] font-bold text-[#FEE831] uppercase tracking-widest">Conseil noa</p>
-                  </div>
-                  <p className="text-xs text-white/80 leading-relaxed">{noaSynthesis.advice}</p>
+                    <span className="ml-auto text-[10px] text-white/50">{adviceOpen ? "Masquer" : "Afficher"}</span>
+                    <ChevronRight size={12} className={`text-white/50 transition-transform ${adviceOpen ? "rotate-90" : ""}`} />
+                  </button>
+                  {adviceOpen && (
+                    <p className="text-xs text-white/80 leading-relaxed px-4 pb-4">{noaSynthesis.advice}</p>
+                  )}
                 </div>
               )}
             </>
