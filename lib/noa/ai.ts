@@ -456,6 +456,75 @@ export async function extractCandidateProfile(input: {
   });
 }
 
+// ─── Repère CV/mission, à l'import (avant toute fiche, avant tout entretien) ─
+// Volontairement pas un filtre : chaque candidat garde sa chance d'être reçu
+// en entretien s'il le souhaite. Le verdict décrit l'écart avec le poste tel
+// que rédigé, jamais la valeur de la personne — et le mot "recruter" n'y
+// figure même pas, cette étape n'a rien à voir avec une décision d'embauche.
+const CV_FIT_VERDICTS = [
+  "Bon socle pour un premier entretien",
+  "Des points à creuser en entretien",
+  "Écart important avec le poste",
+] as const;
+export type CvFitVerdict = (typeof CV_FIT_VERDICTS)[number];
+
+export type CvFitSuggestion = {
+  verdict: CvFitVerdict;
+  reasoning: string;
+};
+
+const CV_FIT_SYSTEM = `Tu es noa, assistant de recrutement. Un CV vient d'être importé, avant toute création de fiche candidat et avant tout entretien. Compare le profil extrait aux compétences attendues du poste, pour donner au recruteur un premier repère — jamais un filtre ni une décision.
+
+Règles strictes :
+- Ce n'est JAMAIS un motif de refus. Le recruteur reste toujours libre de recevoir ce candidat en entretien, quel que soit le repère. N'emploie jamais les mots "rejeter", "refuser", "écarter", "ne pas retenir", "disqualifié", "recruter".
+- verdict : uniquement une des valeurs autorisées, qui décrit l'écart entre le CV et le poste tel que rédigé — jamais un jugement sur la personne.
+- reasoning : 1 à 2 phrases factuelles, citant les compétences du poste retrouvées ou non dans le CV. Aucun commentaire sur l'âge, le parcours scolaire, la présentation ou toute autre caractéristique personnelle.
+- N'invente rien qui ne figure pas dans le CV ou la fiche de poste.
+- Français.`;
+
+/**
+ * Repère de correspondance entre le CV importé et les compétences attendues
+ * de la mission. Purement informatif : un échec ou une mission sans
+ * compétences renseignées ne doit jamais bloquer l'import du CV, l'appelant
+ * traite ce cas en retombant sur `null`.
+ */
+export async function generateCvFitSuggestion(input: {
+  missionTitle: string;
+  missionText: string;
+  missionSkills: string[];
+  profile: CandidateProfileExtract;
+}): Promise<CvFitSuggestion> {
+  const experienceLines = input.profile.experiences
+    .map((e) => `${e.role || "(poste non précisé)"} chez ${e.company || "(entreprise non précisée)"} (${e.period || "période non précisée"})`)
+    .join(" ; ");
+
+  const user = `Poste : ${input.missionTitle || "(non renseigné)"}
+Mission : ${input.missionText || "(non renseignée)"}
+Compétences attendues : ${input.missionSkills.join(", ")}
+
+Profil extrait du CV :
+Résumé : ${input.profile.summary || "(non renseigné)"}
+Compétences citées sur le CV : ${input.profile.skills.length ? input.profile.skills.join(", ") : "(aucune)"}
+Expériences : ${experienceLines || "(aucune)"}`;
+
+  return generateStructured<CvFitSuggestion>({
+    system: CV_FIT_SYSTEM,
+    user,
+    toolName: "enregistrer_repere_cv",
+    toolDescription: "Enregistre un premier repère de correspondance entre le CV et la mission, jamais un filtre.",
+    maxTokens: 512,
+    schema: {
+      type: "object",
+      properties: {
+        verdict: { type: "string", enum: [...CV_FIT_VERDICTS] },
+        reasoning: { type: "string" },
+      },
+      required: ["verdict", "reasoning"],
+      additionalProperties: false,
+    },
+  });
+}
+
 // ─── Préparation du screening : grille (B) et guide (C) ─────────────────────
 // Contexte du poste (cadrage) et du candidat (CV extrait), pour cibler la
 // grille et le guide.
