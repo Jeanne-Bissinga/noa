@@ -12,9 +12,7 @@ import { CandidateDelete } from "./candidate-delete";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { updateCandidateProfile } from "./actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
-import { PreferencesStepCard } from "./preferences/preferences-step-card";
-import type { WorkPreferencesStepStatus } from "@/lib/noa/preferences/status";
-import type { ConductAdviceItem } from "@/lib/noa/preferences/communication";
+import { STEP_LABEL, type IntegrationStep } from "@/lib/noa/onboarding/overview";
 import type { ScoreBreakdown } from "@/lib/noa/score";
 
 // Dernière décision actée (hors "reporté", qui ne clôt rien) pour une étape
@@ -42,17 +40,9 @@ function scoreExplanation(breakdown: ScoreBreakdown): string | null {
   if (parts.length === 0) return null;
   return `Calculée à partir de ${parts.join(" et ")}.`;
 }
-// Libellé posé sur le trait de la frise, entre les deux entretiens. Court : il
-// n'a que la largeur d'un connecteur, et la carte dessous dit le reste.
-const PREFERENCES_MARKER: Record<WorkPreferencesStepStatus, string> = {
-  non_invite: "Préférences",
-  invite: "Préférences · envoyées",
-  complete: "Préférences · reçues",
-};
 
 export function CandidateDetail({
-  candidate, experiences, skills, cvSignedUrl, decisions, scoreBreakdown, compareHref,
-  preferencesStatus, preferencesGuidance, preferencesInvitedAt, preferencesExpiresAt,
+  candidate, experiences, skills, cvSignedUrl, decisions, integrationStep, scoreBreakdown, compareHref,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidate: Candidate;
@@ -63,10 +53,8 @@ export function CandidateDetail({
   scoreBreakdown: ScoreBreakdown;
   /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
   compareHref: string | null;
-  preferencesStatus: WorkPreferencesStepStatus;
-  preferencesGuidance: ConductAdviceItem[];
-  preferencesInvitedAt: string | null;
-  preferencesExpiresAt: string | null;
+  /** Étape de l'intégration, dans le vocabulaire partagé avec /integrations. */
+  integrationStep: IntegrationStep;
   screeningStarted: boolean;
   screeningInterviewDone: boolean;
   topgradingStarted: boolean;
@@ -258,7 +246,6 @@ export function CandidateDetail({
             topgradingRejected={topgradingDecision?.status === "non_retenu"}
             finalRejected={finalDecision?.status === "non_retenu"}
             compareHref={compareHref}
-            preferencesMarker={showPreferences ? PREFERENCES_MARKER[preferencesStatus] : null}
           />
         </Card>
 

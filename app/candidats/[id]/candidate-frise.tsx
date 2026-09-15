@@ -68,7 +68,6 @@ export function CandidateFrise({
   candidateId, screening, topgrading, decision,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
   screeningRejected = false, topgradingRejected = false, finalRejected = false, compareHref = null,
-  preferencesMarker = null,
 }: {
   candidateId: string;
   screening: StageStatus;
@@ -83,15 +82,6 @@ export function CandidateFrise({
   finalRejected?: boolean;
   /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
   compareHref?: string | null;
-  /**
-   * Libellé posé sur le trait entre les deux entretiens. `null` : rien.
-   *
-   * Volontairement sans cercle et sans numéro. Les préférences de travail ne
-   * sont pas une étape du processus : elles ne bloquent rien, elles peuvent ne
-   * jamais avoir lieu, et un quatrième cercle numéroté se lirait comme une
-   * case à cocher avant de pouvoir continuer.
-   */
-  preferencesMarker?: string | null;
 }) {
   // Un refus ferme le dossier à cette étape : les suivantes n'ont jamais eu
   // lieu, elles ne doivent donc jamais s'afficher "done" (vert) même si
