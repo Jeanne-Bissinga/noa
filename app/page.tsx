@@ -105,14 +105,13 @@ const LEGAL_LINKS: { label: string; href: string | null }[] = [
   { label: "CGU", href: "/cgu" },
 ];
 
-// Fonctionnalités identiques sur Starter et Growth : seuls les volumes (crédits,
-// plans d'onboarding) et le niveau de support différencient les deux forfaits.
+// Fonctionnalités identiques sur Starter et Growth : seuls le volume de
+// crédits et le niveau de support différencient les deux forfaits.
 const CORE_FEATURES = [
   "Définition du poste",
   "Suivi de tous les candidats",
   "Préparation & entretiens (premier entretien et entretien technique)",
   "Synthèses par entretien & globale",
-  "Plan d'onboarding personnalisé",
 ];
 
 type Plan = {
@@ -124,7 +123,6 @@ type Plan = {
   monthly?: string;
   credits?: string;
   creditsHint?: string;
-  onboardingPlans?: string;
   support?: string;
   highlight: boolean;
   features: string[];
@@ -148,7 +146,6 @@ const PLANS: Plan[] = [
     monthly: "99",
     credits: "6 000 crédits IA / an",
     creditsHint: "environ 90 candidats évalués par an",
-    onboardingPlans: "10 plans d'onboarding inclus / an",
     support: "Support standard (email)",
     highlight: false,
     features: CORE_FEATURES,
@@ -161,7 +158,6 @@ const PLANS: Plan[] = [
     monthly: "199",
     credits: "18 000 crédits IA / an",
     creditsHint: "environ 300 candidats évalués par an",
-    onboardingPlans: "30 plans d'onboarding inclus / an",
     support: "Support prioritaire",
     highlight: true,
     features: CORE_FEATURES,
@@ -309,8 +305,9 @@ export default async function LandingPage() {
               ))}
             </div>
             <p className="mt-10 text-center text-sm text-gray-500">
-              <span className="font-bold text-[#010101]">Noa</span> vous aide à
-              éviter ça. Grâce à une méthode structurée, pas à l&apos;instinct.
+              <span className="font-bold text-[#010101]">Noa</span>{" "}
+              vous aide à éviter ça. Grâce à une méthode structurée, pas à
+              l&apos;instinct.
             </p>
           </div>
         </section>
@@ -494,13 +491,6 @@ export default async function LandingPage() {
                               {plan.creditsHint}
                             </span>
                           </span>
-                        </li>
-                        <li className="flex items-start gap-2.5 text-sm text-white/70">
-                          <Check
-                            size={16}
-                            className="mt-0.5 flex-none text-[#75DA9F]"
-                          />
-                          {plan.onboardingPlans}
                         </li>
                         <li className="flex items-start gap-2.5 text-sm text-white/70">
                           <Check

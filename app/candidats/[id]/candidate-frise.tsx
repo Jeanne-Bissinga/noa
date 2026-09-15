@@ -67,7 +67,8 @@ const SUB_STEPS_HEADING: Record<"Screening" | "Topgrading", string> = {
 export function CandidateFrise({
   candidateId, screening, topgrading, decision,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
-  screeningRejected = false, topgradingRejected = false, finalRejected = false, compareHref = null,
+  screeningRejected = false, topgradingRejected = false, finalRejected = false,
+  compareHref = null, preferencesMarker = null,
 }: {
   candidateId: string;
   screening: StageStatus;
@@ -82,6 +83,15 @@ export function CandidateFrise({
   finalRejected?: boolean;
   /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
   compareHref?: string | null;
+  /**
+   * Libellé posé sur le trait entre les deux entretiens. `null` : rien.
+   *
+   * Volontairement sans cercle et sans numéro. Les préférences de travail ne
+   * sont pas une étape du processus : elles ne bloquent rien, elles peuvent ne
+   * jamais avoir lieu, et un quatrième cercle numéroté se lirait comme une
+   * case à cocher avant de pouvoir continuer.
+   */
+  preferencesMarker?: string | null;
 }) {
   // Un refus ferme le dossier à cette étape : les suivantes n'ont jamais eu
   // lieu, elles ne doivent donc jamais s'afficher "done" (vert) même si
@@ -119,7 +129,14 @@ export function CandidateFrise({
                 }`}>{STEP_LABEL[step.label]}</span>
               </div>
               {i < steps.length - 1 && (
-                <div className={`h-px w-16 mx-1 mb-5 flex-shrink-0 ${done ? "bg-[#75DA9F]" : "bg-gray-200"}`} />
+                i === 0 && preferencesMarker ? (
+                  <div className="flex flex-col items-center mx-1 mb-5 flex-shrink-0">
+                    <div className={`h-px w-16 border-t border-dashed ${done ? "border-[#75DA9F]" : "border-gray-300"}`} />
+                    <span className="text-[9px] text-gray-400 mt-1.5 whitespace-nowrap">{preferencesMarker}</span>
+                  </div>
+                ) : (
+                  <div className={`h-px w-16 mx-1 mb-5 flex-shrink-0 ${done ? "bg-[#75DA9F]" : "bg-gray-200"}`} />
+                )
               )}
             </div>
           );

@@ -34,8 +34,14 @@ describe("workPreferencesInviteIntro", () => {
   it("rend le texte attendu, au mot près", () => {
     expect(workPreferencesInviteIntro("Alex")).toBe(
       "Alex peut renseigner le résultat d'un test DISC, MBTI ou Big Five déjà réalisé. " +
-        "S'il n'en a pas, il peut répondre au questionnaire Noa de 24 questions.",
+        "Sinon, un court questionnaire Noa de 24 questions est proposé.",
     );
+  });
+
+  it("n'accorde pas en genre", () => {
+    // Le produit ne stocke ni genre ni civilité, et le déduire du prénom se
+    // tromperait sur une partie des gens.
+    expect(workPreferencesInviteIntro("Alex")).not.toMatch(/\b(il|elle|s'il|lui)\b/i);
   });
 
   it("tient avec un prénom composé ou accentué", () => {

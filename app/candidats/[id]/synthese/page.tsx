@@ -5,8 +5,11 @@ import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, BackLink } from "@/components/noa/ui-primitives";
 import { initials, INTERVIEW_LABEL, parseRecruitmentInterviewType } from "@/lib/noa/labels";
 import {
-  requireRecruiter, getCandidate, getSyntheses, getInterview,
+  requireRecruiter, getCandidate, getSyntheses, getInterview, getMissionSkills,
 } from "@/lib/noa/queries";
+import { getWorkPreferencesByCandidate } from "@/lib/noa/preferences/queries";
+import { parsePreferenceBriefing } from "@/lib/noa/preferences/briefing";
+import { PreferencesSignal } from "./preferences-signal";
 
 
 export default async function CandidateSynthesisPage({
@@ -31,6 +34,13 @@ export default async function CandidateSynthesisPage({
   const syntheses = interview
     ? allSyntheses.filter((s) => s.interview_id === interview.id)
     : allSyntheses;
+
+  // Mise en perspective des préférences : seulement sur l'entretien technique,
+  // seul moment où un briefing a pu être produit. Rien ici n'est régénéré : on
+  // relit ce qui avait été formulé avant l'échange.
+  const preferences = stepType === "topgrading" ? await getWorkPreferencesByCandidate(candidate.id) : null;
+  const scorecard = preferences && candidate.mission_id ? await getMissionSkills(candidate.mission_id) : [];
+  const preferenceTopics = preferences ? parsePreferenceBriefing(preferences.interview_briefing, scorecard) : [];
 
   const name = `${candidate.first_name} ${candidate.last_name}`;
   const avatarColor = "bg-[#99BAF8]/20 text-[#3a6fd4]";
@@ -83,6 +93,12 @@ export default async function CandidateSynthesisPage({
             </Link>
           )}
         </Card>
+
+        <PreferencesSignal
+          candidateId={candidate.id}
+          firstName={candidate.first_name}
+          topics={preferenceTopics}
+        />
       </div>
     </AppLayout>
   );

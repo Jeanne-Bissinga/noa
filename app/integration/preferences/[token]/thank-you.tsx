@@ -13,7 +13,7 @@ export function ThankYou() {
         Vos préférences de travail ont bien été enregistrées.
       </p>
       <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-        Elles permettront de personnaliser certains éléments de votre intégration.
+        Elles aideront le recruteur à préparer vos prochains échanges.
       </p>
       <p className="text-xs text-gray-400 mt-4">Vous pouvez maintenant fermer cette page.</p>
     </div>
