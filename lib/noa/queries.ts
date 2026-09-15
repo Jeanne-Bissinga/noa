@@ -13,6 +13,7 @@ import type {
   Mission,
   MissionObjective,
   MissionSkill,
+  Recruiter,
   RecruiterWithCompany,
   Synthesis,
 } from "@/lib/noa/types";
@@ -186,6 +187,14 @@ export async function getCandidateSkills(candidateId: string): Promise<Candidate
   return (data ?? []) as CandidateSkill[];
 }
 
+/** Skills for several candidates at once. See getInterviewsForCandidates. */
+export async function getCandidateSkillsForCandidates(candidateIds: string[]): Promise<CandidateSkill[]> {
+  if (candidateIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("candidate_skills").select("*").in("candidate_id", candidateIds);
+  return (data ?? []) as CandidateSkill[];
+}
+
 export async function getInterview(
   candidateId: string,
   type: InterviewType,
@@ -253,6 +262,18 @@ export async function getSyntheses(candidateId: string): Promise<Synthesis[]> {
   return (data ?? []) as Synthesis[];
 }
 
+/** Syntheses for several candidates at once. See getInterviewsForCandidates. */
+export async function getSynthesesForCandidates(candidateIds: string[]): Promise<Synthesis[]> {
+  if (candidateIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("syntheses")
+    .select("*")
+    .in("candidate_id", candidateIds)
+    .order("created_at", { ascending: true });
+  return (data ?? []) as Synthesis[];
+}
+
 export async function getDecisions(candidateId: string): Promise<Decision[]> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -261,4 +282,16 @@ export async function getDecisions(candidateId: string): Promise<Decision[]> {
     .eq("candidate_id", candidateId)
     .order("decided_at", { ascending: true });
   return (data ?? []) as Decision[];
+}
+
+/**
+ * Recruiters by id, to display who took a decision (Decision.decided_by) in
+ * a centralized history view without an N+1 per decision row.
+ */
+export async function getRecruitersByIds(recruiterIds: string[]): Promise<Recruiter[]> {
+  const ids = [...new Set(recruiterIds)];
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("recruiters").select("*").in("id", ids);
+  return (data ?? []) as Recruiter[];
 }

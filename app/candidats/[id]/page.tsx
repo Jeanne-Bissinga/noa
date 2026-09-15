@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import {
   requireRecruiter, getCandidate, getCandidateExperiences, getCandidateSkills,
-  getInterview, getDecisions,
+  getInterview, getDecisions, getEvaluationGrid, getCandidates,
 } from "@/lib/noa/queries";
+import { computeScoreBreakdown } from "@/lib/noa/score";
 import { getOnboardingByCandidate } from "@/lib/noa/onboarding/queries";
 import { coarseStepOf } from "@/lib/noa/onboarding/overview";
 import { createClient } from "@/lib/supabase/server";
@@ -17,14 +18,17 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
     notFound();
   }
 
-  const [experiences, skills, screeningInterview, topgradingInterview, decisions, onboarding] = await Promise.all([
+  const [experiences, skills, screeningInterview, topgradingInterview, decisions, onboarding, missionCandidates] = await Promise.all([
     getCandidateExperiences(candidate.id),
     getCandidateSkills(candidate.id),
     getInterview(candidate.id, "screening"),
     getInterview(candidate.id, "topgrading"),
     getDecisions(candidate.id),
     getOnboardingByCandidate(candidate.id),
+    getCandidates(recruiter.company_id, { missionId: candidate.mission_id }),
   ]);
+  // Comparer n'a de sens qu'à partir de deux candidats sur la même mission.
+  const compareHref = missionCandidates.length >= 2 ? `/missions/${candidate.mission_id}/comparaison` : null;
 
   let cvSignedUrl: string | null = null;
   if (candidate.cv_url) {
@@ -33,12 +37,23 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
     cvSignedUrl = data?.signedUrl ?? null;
   }
 
+  const [screeningGrid, topgradingGrid] = await Promise.all([
+    screeningInterview ? getEvaluationGrid(screeningInterview.id) : null,
+    topgradingInterview ? getEvaluationGrid(topgradingInterview.id) : null,
+  ]);
+  const scoreBreakdown = computeScoreBreakdown(
+    screeningGrid ? { criteria: screeningGrid.criteria, answers: screeningGrid.answers } : null,
+    topgradingGrid ? { criteria: topgradingGrid.criteria, answers: topgradingGrid.answers } : null,
+  );
+
   return (
     <CandidateDetail
       candidate={candidate}
       experiences={experiences}
       skills={skills}
       cvSignedUrl={cvSignedUrl}
+      scoreBreakdown={scoreBreakdown}
+      compareHref={compareHref}
       screeningStarted={Boolean(screeningInterview)}
       screeningInterviewDone={screeningInterview?.status === "termine"}
       topgradingStarted={Boolean(topgradingInterview)}

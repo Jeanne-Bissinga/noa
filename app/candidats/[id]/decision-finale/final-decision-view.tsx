@@ -3,14 +3,33 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, X, TrendingUp, PartyPopper, Sparkles, ChevronRight } from "lucide-react";
+import { Check, X, TrendingUp, PartyPopper, Sparkles, ChevronRight, GitCompare } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
-import { Card, Avatar, Badge, Btn, BackLink } from "@/components/noa/ui-primitives";
+import { Card, Avatar, Badge, Btn, BackLink, LinkBtn } from "@/components/noa/ui-primitives";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { initials as initialsOf } from "@/lib/noa/labels";
 import { decideFinal, ensureFinalRecommendationTest } from "../actions";
 import { markMissionFilled } from "@/app/missions/actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Synthesis } from "@/lib/noa/types";
+import type { ScoreBreakdown } from "@/lib/noa/score";
+
+/**
+ * Explique ce que représente le chiffre affiché : un pourcentage de critères
+ * validés/documentés, pas une évaluation qualitative des réponses. Sans
+ * cette phrase, "96/100" laisse croire à une mesure plus fine et objective
+ * que ce que la grille calcule réellement (cf. échange conformité IA Act).
+ */
+function scoreExplanation(breakdown: ScoreBreakdown): string | null {
+  const parts: string[] = [];
+  if (breakdown.screeningPercent !== null) {
+    parts.push(`${Math.round(breakdown.screeningPercent)}% des critères validés au premier entretien`);
+  }
+  if (breakdown.topgradingPercent !== null) {
+    parts.push(`${Math.round(breakdown.topgradingPercent)}% des questions documentées à l'entretien technique`);
+  }
+  if (parts.length === 0) return null;
+  return `Calculée à partir de ${parts.join(" et ")}.`;
+}
 
 // Libellés formulés comme des suggestions, jamais comme un ordre : la
 // décision finale revient toujours au recruteur (cf. disclaimer ci-dessous).
@@ -54,15 +73,18 @@ function StageRecap({ candidateId, step, label, synthesis }: {
 }
 
 export function FinalDecisionView({
-  candidate, score, experiences, skills, screeningSynthesis, topgradingSynthesis, globalRecommendation,
+  candidate, score, scoreBreakdown, experiences, skills, screeningSynthesis, topgradingSynthesis, globalRecommendation, compareHref,
 }: {
   candidate: Candidate;
   score: number | null;
+  scoreBreakdown: ScoreBreakdown;
   experiences: CandidateExperience[];
   skills: CandidateSkill[];
   screeningSynthesis: Synthesis | null;
   topgradingSynthesis: Synthesis | null;
   globalRecommendation: Synthesis | null;
+  /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
+  compareHref: string | null;
 }) {
   const [pendingAction, setPendingAction] = useState<"non_retenu" | "retenu" | null>(null);
   // Un écran de suite s'affiche toujours après un recrutement, même sans
@@ -212,6 +234,11 @@ export function FinalDecisionView({
               </div>
             </div>
           </div>
+          {compareHref && (
+            <LinkBtn href={compareHref} variant="secondary" size="sm">
+              <GitCompare size={13} />Comparer avec les autres candidats
+            </LinkBtn>
+          )}
         </div>
 
         {/* Suggestion de noa */}
@@ -246,6 +273,13 @@ export function FinalDecisionView({
               {recommendation.label}
             </span>
           </div>
+          {/* Rattaché à la note elle-même (pas à la carte "Suggestion de noa"
+              ci-dessus, absente tant que globalRecommendation n'existe pas) :
+              le score seul ne doit jamais s'afficher sans ce rappel. */}
+          <p className="text-[10px] text-gray-400 italic mt-3">
+            {scoreExplanation(scoreBreakdown) ?? "Calculée à partir des grilles d'entretien."}
+            {" "}Proposition d&apos;analyse, la décision vous appartient.
+          </p>
         </Card>
 
         {/* Récap Screening / Topgrading */}

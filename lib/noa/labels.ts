@@ -1,7 +1,7 @@
 // Shared display labels/colors for mission & candidate statuses, kept in one
 // place so dashboard / missions / mission-detail stay visually consistent.
 import type { BadgeColor } from "@/components/noa/ui-primitives";
-import type { MissionStatus, CandidateStatus, StageStatus, Interview, InterviewType, IntegrationInterviewType, RecruitmentInterviewType } from "@/lib/noa/types";
+import type { MissionStatus, CandidateStatus, StageStatus, Interview, InterviewType, IntegrationInterviewType, RecruitmentInterviewType, DecisionStage, DecisionStatus } from "@/lib/noa/types";
 
 export const MISSION_STATUS_LABEL: Record<MissionStatus, string> = {
   brouillon: "En attente de candidat",
@@ -220,3 +220,26 @@ export function isIntegrationInterview(type: string): type is IntegrationIntervi
 export function parseRecruitmentInterviewType(value: string | undefined): RecruitmentInterviewType | null {
   return value && isRecruitmentInterview(value) ? value : null;
 }
+
+// ─── Décisions ──────────────────────────────────────────────────────────────
+// Une seule table de libellés pour l'historique des décisions (page de
+// comparaison des candidats), plutôt que de faire parler les valeurs
+// internes de la table `decisions` directement à l'écran.
+
+export const DECISION_STAGE_LABEL: Record<DecisionStage, string> = {
+  screening: "Premier entretien",
+  topgrading: "Entretien technique",
+  final: "Décision finale",
+};
+
+export const DECISION_STATUS_LABEL: Record<DecisionStatus, string> = {
+  retenu: "Retenu",
+  non_retenu: "Non retenu",
+  reporte: "Reporté",
+};
+
+export const DECISION_STATUS_COLOR: Record<DecisionStatus, BadgeColor> = {
+  retenu: "green",
+  non_retenu: "red",
+  reporte: "yellow",
+};

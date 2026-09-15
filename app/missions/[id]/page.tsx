@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users, Plus, FileText, Check, Target, Award } from "lucide-react";
+import { Users, Plus, FileText, Check, Target, Award, GitCompare } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Badge, LinkBtn, BackLink, Avatar } from "@/components/noa/ui-primitives";
 import {
@@ -231,7 +231,14 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
               Candidats
               <span className="ml-2 text-sm font-normal text-gray-400">{allCandidates.length}</span>
             </h2>
-            <LinkBtn href={`/candidats/nouveau?mission=${mission.id}`} variant="primary" size="sm"><Plus size={13} />Ajouter un candidat</LinkBtn>
+            <div className="flex items-center gap-2">
+              {allCandidates.length >= 2 && (
+                <LinkBtn href={`/missions/${mission.id}/comparaison`} variant="secondary" size="sm">
+                  <GitCompare size={13} />Comparer les candidats
+                </LinkBtn>
+              )}
+              <LinkBtn href={`/candidats/nouveau?mission=${mission.id}`} variant="primary" size="sm"><Plus size={13} />Ajouter un candidat</LinkBtn>
+            </div>
           </div>
 
           {allCandidates.length === 0 ? (
