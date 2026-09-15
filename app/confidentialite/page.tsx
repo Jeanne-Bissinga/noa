@@ -171,7 +171,7 @@ const ARTICLES: LegalArticle[] = [
       { p: "Ces fonctionnalités relèvent des systèmes d'IA utilisés dans le cadre du recrutement au sens du règlement européen sur l'intelligence artificielle, dit règlement IA." },
       { p: "À ce titre :" },
       { ul: [
-        "toute personne évaluée via Noa doit être informée, par le client recruteur, du recours à un système d'intelligence artificielle dans le cadre du processus de recrutement ;",
+        "toute personne évaluée via Noa doit être informée, par le client recruteur, du recours à un système d'intelligence artificielle dans le cadre du processus de recrutement ou de suivi d'intégration ;",
         "lorsqu'un entretien est enregistré, transcrit et analysé par Noa, le recruteur ou le manager qui conduit l'échange en informe la personne concernée avant l'enregistrement ;",
         "aucune décision de recrutement, de refus ou d'évaluation n'est prise de façon automatisée par Noa : les analyses produites constituent une aide à la décision, la décision finale relevant exclusivement du client recruteur, comme rappelé aux articles 3 et 7 ;",
         "un contrôle humain est exercé par le client recruteur sur les résultats produits par l'intelligence artificielle avant toute décision ;",

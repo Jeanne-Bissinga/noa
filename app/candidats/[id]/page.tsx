@@ -61,10 +61,7 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
       topgradingStarted={Boolean(topgradingInterview)}
       topgradingInterviewDone={topgradingInterview?.status === "termine"}
       decisions={decisions}
-      preferencesStatus={stepStatusOf(preferences)}
-      preferencesGuidance={buildCommunicationGuidance(buildPreferenceContext(preferences))}
-      preferencesInvitedAt={preferences?.invited_at ?? null}
-      preferencesExpiresAt={preferences?.token_expires_at ?? null}
+      integrationStep={coarseStepOf(onboarding)}
     />
   );
 }

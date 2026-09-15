@@ -1,13 +1,13 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resolveWorkPreferencesToken } from "@/lib/noa/preferences/tokens";
+import { resolveWorkPreferencesToken } from "@/lib/noa/onboarding/tokens";
 import {
   findWorkPreferenceQuestion,
   isAnswerValue,
-} from "@/lib/noa/preferences/questions";
-import { scoreWorkPreferences } from "@/lib/noa/preferences/scoring";
-import { parseBigFiveResult, parseDiscResult, parseMbtiResult } from "@/lib/noa/preferences/declared-tests";
+} from "@/lib/noa/onboarding/work-preferences-questions";
+import { scoreWorkPreferences } from "@/lib/noa/onboarding/work-preferences";
+import { parseBigFiveResult, parseDiscResult, parseMbtiResult } from "@/lib/noa/onboarding/declared-tests";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import type { AssessmentType } from "@/lib/noa/types";
 

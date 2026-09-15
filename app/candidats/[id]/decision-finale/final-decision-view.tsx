@@ -92,7 +92,7 @@ export function FinalDecisionView({
   // conditionnait tout cet écran à l'existence d'une mission, si bien qu'un
   // candidat créé hors campagne laissait le recruteur sur une page aux boutons
   // désactivés, alors que la décision était bien enregistrée.
-  const [hired, setHired] = useState<{ missionId: string | null } | null>(null);
+  const [hired, setHired] = useState<{ missionId: string | null; href: string } | null>(null);
   const [fillMission, setFillMission] = useState(false);
   const [missionPending, setMissionPending] = useState(false);
   const [, startTransition] = useTransition();
@@ -140,7 +140,10 @@ export function FinalDecisionView({
       const result = await decideFinal(candidate.id, action, score);
       // action "non_retenu" : decideFinal redirige lui-même côté serveur.
       if (action !== "retenu") return;
-      setHired({ missionId: result?.missionId ?? null });
+      setHired({
+        missionId: result?.missionId ?? null,
+        href: result?.integrationHref ?? `/integrations/${candidate.id}`,
+      });
       setPendingAction(null);
     });
   };
@@ -176,8 +179,8 @@ export function FinalDecisionView({
               Recrutement de {name} confirmé
             </h1>
             <p className="text-sm text-gray-500 mt-2.5 leading-relaxed">
-              La décision est enregistrée. Les éléments du recrutement restent consultables depuis
-              la fiche.
+              Son plan d&apos;onboarding a été préparé à partir des éléments de la campagne. Il
+              reste à le relire et à le valider.
             </p>
 
             {hired.missionId && (
@@ -201,8 +204,8 @@ export function FinalDecisionView({
             )}
 
             <div className="flex flex-col gap-2 mt-6">
-              <Btn variant="primary" size="lg" onClick={() => leave(`/candidats/${candidate.id}`)} disabled={missionPending}>
-                Revenir à la fiche de {candidate.first_name}
+              <Btn variant="primary" size="lg" onClick={() => leave(hired.href)} disabled={missionPending}>
+                Relire le plan d&apos;onboarding
                 <ChevronRight size={15} />
               </Btn>
               <Btn variant="secondary" onClick={() => leave("/candidats")} disabled={missionPending}>

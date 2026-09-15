@@ -8,17 +8,12 @@ const PUBLIC_PATHS = ['/', '/inscription', '/connexion', '/demo', '/cgu', '/conf
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true
   if (pathname.startsWith('/auth/')) return true
-  // Préférences de travail du candidat (/integration/preferences/[token]) : il
-  // n'a pas de compte Noa et ne doit pas en créer un. L'accès est contrôlé par
-  // le token présent dans l'URL, vérifié côté serveur
-  // (lib/noa/preferences/tokens.ts), pas par une session — exiger une
-  // connexion ici rendrait le lien inutilisable.
-  //
-  // Le singulier compte. Ce préfixe n'ouvre que `/integration/...` ; il a déjà
-  // cohabité avec une section authentifiée `/integrations` (pluriel), et un
-  // « s » perdu l'aurait ouverte en entier. Cette section n'existe plus, mais
-  // la garde reste juste — et le restera pour toute route qui commencerait par
-  // ces mêmes lettres.
+  // Préférences de travail du collaborateur recruté
+  // (/integration/preferences/[token]) : il n'a pas de
+  // compte Noa et ne doit pas en créer un. L'accès est contrôlé par le token
+  // présent dans l'URL, vérifié côté serveur (lib/noa/onboarding/tokens.ts),
+  // pas par une session — exiger une connexion ici rendrait le lien
+  // inutilisable. `/integrations` (pluriel, vue manager) n'est pas concerné.
   if (pathname.startsWith('/integration/')) return true
   return false
 }

@@ -155,12 +155,9 @@ export const ELIMINATOIRE_CRIT = "Prérequis non négociable";
 
 
 // ─── Entretiens ─────────────────────────────────────────────────────────────
-// Une seule table de libellés. Elle était recopiée dans quatre écrans, qui
-// divergeaient dès qu'on en modifiait un.
+// Une seule table de libellés pour les six types. Elle était recopiée dans
+// quatre écrans, qui divergeaient dès qu'on en modifiait un.
 
-// Les quatre libellés d'entretien d'intégration restent : des lignes
-// interviews.type = 'integration_*' existent toujours en base, et une table
-// indexée par InterviewType doit pouvoir les nommer si l'une remonte.
 export const INTERVIEW_LABEL: Record<InterviewType, string> = {
   screening: "Premier entretien",
   topgrading: "Entretien technique",
@@ -170,11 +167,24 @@ export const INTERVIEW_LABEL: Record<InterviewType, string> = {
   integration_j90: "Entretien J90",
 };
 
+/** Sous-titre affiché sous le titre de chaque entretien d'intégration. */
+export const INTEGRATION_INTERVIEW_SUBTITLE: Record<IntegrationInterviewType, string> = {
+  integration_j1: "Aligner les attentes et préparer les premières semaines.",
+  integration_j30: "Vérifier que les conditions sont réunies pour réussir la prise de poste.",
+  integration_j60: "Confronter la prise de poste aux premiers résultats attendus.",
+  integration_j90: "Faire le bilan des 90 premiers jours et définir la suite.",
+};
+
+/** Jalon court, pour la frise et les tableaux où la place manque. */
+export const INTEGRATION_INTERVIEW_SHORT: Record<IntegrationInterviewType, string> = {
+  integration_j1: "J1",
+  integration_j30: "J30",
+  integration_j60: "J60",
+  integration_j90: "J90",
+};
+
 /**
- * Ce que le recruteur lit avant d'inviter quelqu'un à décrire ses préférences.
- *
- * Tournure neutre : le produit ne stocke ni genre ni civilité, et le déduire
- * du prénom se tromperait sur une partie des gens.
+ * Ce que le manager lit avant d'inviter quelqu'un à décrire ses préférences.
  *
  * Une chaîne construite ici, et non du texte JSX. Écrite dans la modale sur
  * deux lignes de source, « {firstName} peut renseigner… » perdait l'espace
@@ -186,7 +196,7 @@ export const INTERVIEW_LABEL: Record<InterviewType, string> = {
 export function workPreferencesInviteIntro(firstName: string): string {
   return (
     `${firstName} peut renseigner le résultat d'un test DISC, MBTI ou Big Five déjà réalisé. ` +
-    `Sinon, un court questionnaire Noa de 24 questions est proposé.`
+    `S'il n'en a pas, il peut répondre au questionnaire Noa de 24 questions.`
   );
 }
 
@@ -194,6 +204,10 @@ const RECRUITMENT_TYPES: RecruitmentInterviewType[] = ["screening", "topgrading"
 
 export function isRecruitmentInterview(type: string): type is RecruitmentInterviewType {
   return (RECRUITMENT_TYPES as string[]).includes(type);
+}
+
+export function isIntegrationInterview(type: string): type is IntegrationInterviewType {
+  return type.startsWith("integration_");
 }
 
 /**

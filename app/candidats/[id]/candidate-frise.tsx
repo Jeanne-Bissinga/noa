@@ -129,14 +129,7 @@ export function CandidateFrise({
                 }`}>{STEP_LABEL[step.label]}</span>
               </div>
               {i < steps.length - 1 && (
-                i === 0 && preferencesMarker ? (
-                  <div className="flex flex-col items-center mx-1 mb-5 flex-shrink-0">
-                    <div className={`h-px w-16 border-t border-dashed ${done ? "border-[#75DA9F]" : "border-gray-300"}`} />
-                    <span className="text-[9px] text-gray-400 mt-1.5 whitespace-nowrap">{preferencesMarker}</span>
-                  </div>
-                ) : (
-                  <div className={`h-px w-16 mx-1 mb-5 flex-shrink-0 ${done ? "bg-[#75DA9F]" : "bg-gray-200"}`} />
-                )
+                <div className={`h-px w-16 mx-1 mb-5 flex-shrink-0 ${done ? "bg-[#75DA9F]" : "bg-gray-200"}`} />
               )}
             </div>
           );

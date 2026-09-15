@@ -5,11 +5,11 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Btn } from "@/components/noa/ui-primitives";
 import {
   ANSWER_SCALE,
+  WORK_PREFERENCE_QUESTIONS,
   firstUnansweredIndex,
   isAnswerValue,
   type AnswerValue,
-  type WorkPreferenceQuestion,
-} from "@/lib/noa/preferences/questions";
+} from "@/lib/noa/onboarding/work-preferences-questions";
 import {
   BIG_FIVE_LEVELS,
   BIG_FIVE_LEVEL_LABEL,
@@ -17,30 +17,26 @@ import {
   BIG_FIVE_TRAIT_LABEL,
   MBTI_TYPES,
   type MbtiType,
-} from "@/lib/noa/preferences/declared-tests";
-import { DISC_PROFILES } from "@/lib/noa/preferences/disc";
-import { NOTICE_PARAGRAPHS, NOTICE_TITLE, PRIVACY_PATH } from "@/lib/noa/preferences/information-notice";
+} from "@/lib/noa/onboarding/declared-tests";
+import { DISC_PROFILES } from "@/lib/noa/onboarding/disc";
 import { completeQuestionnaire, saveQuestionnaireAnswer, submitDeclaredTest } from "./actions";
 import { ThankYou } from "./thank-you";
 import type { BigFiveLevel, BigFiveTrait, DiscProfile } from "@/lib/noa/types";
 
-// Parcours du candidat : information, départ, puis test déclaré OU
-// questionnaire Noa.
+// Parcours du collaborateur : départ, puis test déclaré OU questionnaire Noa.
 //
 // Aucun choix présélectionné au départ. Chaque réponse du questionnaire est
 // enregistrée immédiatement côté serveur : fermer l'onglet et revenir reprend
 // à la première question sans réponse — rien ne vit seulement dans le
 // navigateur.
 //
-// La liste des questions arrive en prop plutôt que d'être importée ici : c'est
-// ce qui permettra, plus tard, de ne poser que les questions des dimensions
-// pertinentes pour le poste. Aujourd'hui, ce sont toujours les 24.
-//
 // Vocabulaire : « préférences de travail », « questionnaire Noa ». Jamais
 // « test », « score », « profil » à l'écran.
 
 type Branch = null | "declared" | "questionnaire";
 type DeclaredKind = null | "disc" | "mbti" | "big_five";
+
+const TOTAL = WORK_PREFERENCE_QUESTIONS.length;
 
 const choiceClass = (selected: boolean) =>
   `w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${
@@ -73,27 +69,10 @@ function Start({ onChoose }: { onChoose: (b: Exclude<Branch, null>) => void }) {
       <p className="text-sm text-gray-500 mt-3 leading-relaxed">
         Chacun a une manière différente de travailler, de collaborer et de recevoir des retours.
       </p>
+      <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+        Ces informations permettront de personnaliser certains éléments de votre intégration.
+      </p>
       <p className="text-sm text-gray-500 mt-2 leading-relaxed">Il n&apos;y a pas de bonne ou de mauvaise réponse.</p>
-
-      {/* Avant toute question : pourquoi on demande, et ce qui ne sera pas
-          fait de ces réponses. Pas de case à cocher — cf. le commentaire de
-          lib/noa/preferences/information-notice.ts. */}
-      <div className="mt-6 rounded-xl bg-gray-50 border border-gray-100 p-4">
-        <p className="text-sm font-semibold text-[#010101] mb-2">{NOTICE_TITLE}</p>
-        {NOTICE_PARAGRAPHS.map((paragraph) => (
-          <p key={paragraph} className="text-[13px] text-gray-500 leading-relaxed mt-2 first:mt-0">
-            {paragraph}
-          </p>
-        ))}
-        <a
-          href={PRIVACY_PATH}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block text-[12px] text-[#3a6fd4] underline mt-3 hover:opacity-80"
-        >
-          Politique de confidentialité
-        </a>
-      </div>
 
       <p className="text-sm font-semibold text-[#010101] mt-7 mb-3">
         Avez-vous déjà réalisé l&apos;un des tests suivants ? DISC, MBTI ou Big Five.
@@ -263,26 +242,23 @@ function DeclaredTest({ token, onDone, onBack }: { token: string; onDone: () => 
 
 function Questionnaire({
   token,
-  questions,
   initialAnswers,
   onDone,
   onBack,
 }: {
   token: string;
-  questions: WorkPreferenceQuestion[];
   initialAnswers: Record<string, number>;
   onDone: () => void;
   onBack: () => void;
 }) {
-  const TOTAL = questions.length;
   const [answers, setAnswers] = useState<Record<string, number>>(initialAnswers);
   // Reprise : première question sans réponse. Tout répondu = dernière question,
   // pour pouvoir terminer.
-  const [index, setIndex] = useState(() => firstUnansweredIndex(initialAnswers, questions) ?? TOTAL - 1);
+  const [index, setIndex] = useState(() => firstUnansweredIndex(initialAnswers) ?? TOTAL - 1);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const question = questions[index];
+  const question = WORK_PREFERENCE_QUESTIONS[index];
   const current = answers[question.id];
   const answered = isAnswerValue(current);
   const isLast = index === TOTAL - 1;
@@ -321,7 +297,7 @@ function Questionnaire({
         </button>
       ) : null}
       <Title>Questionnaire de préférences de travail</Title>
-      <p className="text-xs text-gray-400 mt-1">{TOTAL} questions · environ 5 minutes</p>
+      <p className="text-xs text-gray-400 mt-1">24 questions · environ 5 minutes</p>
 
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
@@ -369,13 +345,10 @@ function Questionnaire({
 export function PreferencesFlow({
   token,
   firstName,
-  questions,
   initialAnswers,
 }: {
   token: string;
   firstName: string;
-  /** Les questions réellement posées. Aujourd'hui toujours les 24. */
-  questions: WorkPreferenceQuestion[];
   initialAnswers: Record<string, number>;
 }) {
   // Reprise : des réponses déjà enregistrées ramènent directement au
@@ -392,7 +365,6 @@ export function PreferencesFlow({
     return (
       <Questionnaire
         token={token}
-        questions={questions}
         initialAnswers={initialAnswers}
         onDone={() => setDone(true)}
         onBack={() => setBranch(null)}
