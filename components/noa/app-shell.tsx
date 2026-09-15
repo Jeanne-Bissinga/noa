@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  Settings, LogOut, Briefcase, Users, BarChart2, UserCheck,
+  Settings, LogOut, Briefcase, Users, BarChart2,
 } from "lucide-react";
 import { NoaLogo } from "@/components/noa/ui-primitives";
 import { signOut } from "@/app/(app)/actions";
@@ -17,15 +17,6 @@ const NAV = [
   { label: "Dashboard", icon: BarChart2, href: "/dashboard" },
   { label: "Campagnes de recrutement", icon: Briefcase, href: "/missions" },
   { label: "Candidats", icon: Users, href: "/candidats" },
-  // Suite du parcours après l'embauche : les 90 premiers jours des recrutés.
-  // Toutes les pages d'un plan d'onboarding vivent sous ce préfixe
-  // (/integrations, /integrations/[id], /integrations/[id]/plan, /j30, /j60,
-  // /j90), donc le calcul d'entrée active ci-dessous les couvre sans exception
-  // à écrire. La route garde « integrations » alors que l'interface dit « Plans
-  // d'onboarding » : la renommer casserait les liens déjà partagés, et surtout
-  // la garde qui tient /integration/... — les pages publiques du recruté — hors
-  // de la section authentifiée.
-  { label: "Plans d'onboarding", icon: UserCheck, href: "/integrations" },
 ];
 
 const Sidebar = () => {
