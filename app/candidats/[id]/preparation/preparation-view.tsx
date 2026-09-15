@@ -16,7 +16,7 @@ import type { Candidate, InterviewGuide, RecruitmentInterviewType } from "@/lib/
 
 
 export function PreparationView({
-  candidate, step, meta, existingGuide,
+  candidate, step, meta, existingGuide, preferences = null,
 }: {
   candidate: Candidate;
   step: RecruitmentInterviewType;
@@ -28,6 +28,14 @@ export function PreparationView({
     guideSections: PrepGuideSection[];
   };
   existingGuide: InterviewGuide | null;
+  /**
+   * Conseils de conduite et sujets à approfondir tirés des préférences de
+   * travail. Rendu tel quel, jamais dérivé ici : cette vue est un client
+   * component, et rien de ce qui touche aux préférences ne doit dépendre
+   * d'elle. `null` quand il n'y a rien à montrer — l'écran est alors celui
+   * d'avant, à l'identique.
+   */
+  preferences?: React.ReactNode;
 }) {
   const [, startTransition] = useTransition();
   const [pending, setPending] = useState(false);
@@ -170,6 +178,10 @@ export function PreparationView({
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Objectif de l'entretien</p>
           <p className="text-sm text-gray-600 leading-relaxed">{meta.goal}</p>
         </Card>
+
+        {/* Préférences de travail : avant la grille, parce que cela change la
+            manière de mener l'entretien, pas ce qui est évalué. */}
+        {preferences}
 
         {/* Grille d'évaluation */}
         <Card className="p-5 mb-4">

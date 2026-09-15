@@ -52,7 +52,7 @@ describe("userError", () => {
 
   it("journalise la pile d'une vraie Error", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    userError("createDraftOnboarding", new Error("boom"));
+    userError("issueWorkPreferencesLink", new Error("boom"));
     expect(String(logged.mock.calls[0][0])).toContain("boom");
   });
 
@@ -69,9 +69,7 @@ describe("userError", () => {
     expect(userError("x", ERREURS_TECHNIQUES[0], ERROR_MESSAGE.invitation)).toBe(
       "Impossible de générer l'invitation pour le moment. Veuillez réessayer.",
     );
-    expect(userError("x", ERREURS_TECHNIQUES[0], ERROR_MESSAGE.preparation)).toBe(
-      "Impossible de préparer le plan d'onboarding pour le moment. Veuillez réessayer.",
-    );
+    expect(userError("x", ERREURS_TECHNIQUES[0], ERROR_MESSAGE.guide)).toBe(ERROR_MESSAGE.guide);
   });
 
   it("formule tous les messages en français, sans jargon technique", () => {
@@ -169,13 +167,21 @@ describe("toute l'application", () => {
   });
 });
 
-describe("module d'intégration", () => {
+describe("préférences de travail", () => {
   it("passe par le helper partout où une écriture peut échouer", () => {
-    const actions = readFileSync(path.join(ROOT, "app/integrations/[id]/actions.ts"), "utf8");
-    const branches = actions.match(/if \(\w*[Ee]rror\) return \{ error: [^}]+\}/g) ?? [];
-    expect(branches.length).toBeGreaterThan(0);
-    for (const branch of branches) {
-      expect(branch).toContain("userError(");
+    // L'invariant suit la fonctionnalité : il visait les actions du module
+    // d'intégration, il vise maintenant celles du recrutement qui écrivent
+    // dans onboarding_work_preferences.
+    for (const file of [
+      "app/candidats/[id]/preferences/actions.ts",
+      "app/integration/preferences/[token]/actions.ts",
+    ]) {
+      const actions = readFileSync(path.join(ROOT, file), "utf8");
+      const branches = actions.match(/if \(\w*[Ee]rror\) return \{ error: [^}]+\}/g) ?? [];
+      expect(branches.length, file).toBeGreaterThan(0);
+      for (const branch of branches) {
+        expect(branch, file).toContain("userError(");
+      }
     }
   });
 });

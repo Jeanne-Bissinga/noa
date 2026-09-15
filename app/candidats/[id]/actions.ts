@@ -8,7 +8,6 @@ import {
   getMission, getMissionObjectives, getMissionSkills, getCandidateExperiences, getCandidateSkills,
 } from "@/lib/noa/queries";
 import { STATUS_FIELDS } from "@/lib/noa/labels";
-import { createDraftOnboarding } from "@/lib/noa/onboarding/create";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { generateNoaSynthesis } from "@/lib/noa/synthesis";
 import { SCREENING_CRITERIA, TOPGRADING_EPISODES, PREP_META, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
@@ -137,7 +136,8 @@ export async function ensureInterviewAndGrid(candidateId: string, type: Recruitm
 }
 
 // ─── Contexte poste + candidat pour la préparation du screening ────────────
-async function buildScreeningContext(candidate: Candidate, recruiter: RecruiterWithCompany) {
+/** Contexte poste + candidat partagé par toutes les générations IA du recrutement. */
+export async function buildScreeningContext(candidate: Candidate, recruiter: RecruiterWithCompany) {
   const mission = candidate.mission_id ? await getMission(candidate.mission_id) : null;
   const [objectives, skills, experiences, candSkills] = await Promise.all([
     mission ? getMissionObjectives(mission.id) : Promise.resolve([]),
@@ -702,7 +702,7 @@ export async function ensureFinalRecommendationTest(candidateId: string): Promis
 // L'intégration naît avec le recrutement : il n'y a plus d'écran « Préparer
 // l'intégration » à traverser plus tard, et un plan en brouillon n'engage rien
 // — c'est une proposition que le manager relit.
-export type DecideFinalResult = { missionId: string | null; integrationHref: string } | void;
+export type DecideFinalResult = { missionId: string | null } | void;
 
 export async function decideFinal(candidateId: string, action: "non_retenu" | "retenu", score: number | null): Promise<DecideFinalResult> {
   const { recruiter, candidate } = await assertOwnedCandidate(candidateId);
@@ -737,17 +737,10 @@ export async function decideFinal(candidateId: string, action: "non_retenu" | "r
   // Un candidat recruté ne clôt jamais la mission tout seul (elle peut viser
   // plusieurs postes) : on laisse la vue cliente demander au recruteur s'il
   // marque la campagne comme pourvue avant de rediriger.
+  // Noa s'arrête à la décision : rien n'est préparé au-delà. L'écran de
+  // confirmation propose seulement de marquer la campagne comme pourvue.
   if (action === "retenu") {
-    // Le recrutement est enregistré : rater la création du brouillon ne doit
-    // pas le faire échouer. La fiche sait afficher « Plan à créer » et propose
-    // le geste.
-    try {
-      await createDraftOnboarding({ ...candidate, status: newStatus }, recruiter.id);
-    } catch (e) {
-      userError("decideFinal.createDraftOnboarding", e, ERROR_MESSAGE.preparation);
-    }
-    revalidatePath("/integrations");
-    return { missionId: candidate.mission_id, integrationHref: `/integrations/${candidateId}` };
+    return { missionId: candidate.mission_id };
   }
 
   redirect("/candidats");
