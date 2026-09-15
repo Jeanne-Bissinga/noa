@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter, getMission, getMissionObjectives, getMissionSkills } from "@/lib/noa/queries";
+import { getSkillsSignals } from "@/lib/noa/skills-signals";
 import type { Company, Mission, MissionSkill, MissionSkillCategory } from "@/lib/noa/types";
 import {
   generateObjectiveSuggestions,
@@ -77,7 +78,7 @@ export async function saveMissionText(
   // Une modification lancée depuis le récapitulatif y ramène, au lieu de
   // relancer l'utilisateur dans les étapes suivantes qu'il a déjà validées.
   const fromRecap = formData.get("from") === "recap";
-  redirect(`/missions/nouvelle/${mission.id}/${fromRecap ? "coherence" : "resultats"}`);
+  redirect(`/missions/nouvelle/${mission.id}/${fromRecap ? "coherence" : "competences"}`);
 }
 
 /**
@@ -229,6 +230,7 @@ export async function toggleSkill(
   name: string,
   currentlyPresent: boolean,
   position: number,
+  reason?: string,
 ) {
   const { mission } = await assertOwnedMission(missionId);
   const supabase = await createClient();
@@ -244,7 +246,7 @@ export async function toggleSkill(
   } else {
     const { data } = await supabase
       .from("mission_skills")
-      .insert({ mission_id: mission.id, category, name, position })
+      .insert({ mission_id: mission.id, category, name, position, justification: reason ?? null })
       .select("*")
       .single();
     created = data;
@@ -274,28 +276,34 @@ export async function addCustomSkill(missionId: string, category: MissionSkillCa
 // des outils métier") : un faux générique marqué indispensable est pire que
 // pas de suggestion, et on ne peut pas deviner les bons outils sans connaître
 // le métier réel du poste.
+const STATIC_FALLBACK_REASON = "Suggestion par défaut : l'analyse noa n'a pas pu s'exécuter, cette compétence générique sert de repli en attendant une régénération.";
+
 const NOA_SKILL_SUGGESTIONS: SkillSuggestions = {
   technique: [],
   relationnelle: [
-    { name: "Communication claire avec les parties prenantes", essential: true },
-    { name: "Autonomie sur des sujets complexes", essential: true },
-    { name: "Capacité à donner et recevoir du feedback", essential: false },
+    { name: "Communication claire avec les parties prenantes", essential: true, reason: STATIC_FALLBACK_REASON },
+    { name: "Autonomie sur des sujets complexes", essential: true, reason: STATIC_FALLBACK_REASON },
+    { name: "Capacité à donner et recevoir du feedback", essential: false, reason: STATIC_FALLBACK_REASON },
   ],
   comportementale: [
-    { name: "Orienté livraison et résultats", essential: true },
-    { name: "Curiosité et envie d'apprendre", essential: true },
-    { name: "Fiabilité dans les engagements", essential: false },
+    { name: "Orienté livraison et résultats", essential: true, reason: STATIC_FALLBACK_REASON },
+    { name: "Curiosité et envie d'apprendre", essential: true, reason: STATIC_FALLBACK_REASON },
+    { name: "Fiabilité dans les engagements", essential: false, reason: STATIC_FALLBACK_REASON },
   ],
 };
 
 // noa propose des compétences (indispensables + complémentaires) à partir du
-// contexte + mission + objectifs + profil entreprise. Repli sur des
-// suggestions statiques si l'IA échoue. Partagé par fillSkillSuggestions
-// (écrit en base) et getSkillSuggestions (lecture seule).
+// contexte + mission + objectifs déjà définis + profil entreprise + signaux
+// marché (flux RSS ingérés dans skills_signals, cf. lib/noa/skills-signals.ts) :
+// c'est la même intelligence marché que la Scorecard intelligente (chat),
+// appliquée directement à la génération des compétences de la campagne.
+// Repli sur des suggestions statiques si l'IA échoue. Partagé par
+// fillSkillSuggestions (écrit en base) et getSkillSuggestions (lecture seule).
 async function suggestSkills(mission: Mission, recruiter: { company: Company | null }): Promise<SkillSuggestions> {
   try {
     const objectives = await getMissionObjectives(mission.id);
-    const generated = await generateSkillSuggestions(missionCtx(mission, recruiter.company), objectives);
+    const signals = await getSkillsSignals({ query: `${mission.title} ${mission.mission_text ?? ""}`, limit: 10 });
+    const generated = await generateSkillSuggestions(missionCtx(mission, recruiter.company), objectives, signals);
     if (generated.technique.length || generated.relationnelle.length || generated.comportementale.length) {
       return generated;
     }
@@ -324,13 +332,13 @@ export async function fillSkillSuggestions(missionId: string): Promise<{ inserte
   const suggestions = await suggestSkills(mission, recruiter);
   const existing = await getMissionSkills(mission.id);
 
-  const rows: { mission_id: string; category: MissionSkillCategory; name: string; position: number }[] = [];
+  const rows: { mission_id: string; category: MissionSkillCategory; name: string; position: number; justification: string }[] = [];
   (Object.keys(suggestions) as MissionSkillCategory[]).forEach((category) => {
     const existingInCategory = existing.filter((s) => s.category === category);
     const existingNames = new Set(existingInCategory.map((s) => s.name));
     const essentials = suggestions[category].filter((s) => s.essential && !existingNames.has(s.name));
     essentials.forEach((s, i) => {
-      rows.push({ mission_id: mission.id, category, name: s.name, position: existingInCategory.length + i });
+      rows.push({ mission_id: mission.id, category, name: s.name, position: existingInCategory.length + i, justification: s.reason });
     });
   });
 

@@ -222,18 +222,23 @@ export async function generateObjectiveSuggestions(
   return result.objectives ?? [];
 }
 
-// ─── Compétences (étape 4 « Compétences ») ─────────────────────────────────
+// ─── Compétences (étape « Compétences ») ────────────────────────────────────
 // essential=true : compétence indispensable, noa la pré-sélectionne d'emblée.
 // essential=false : suggestion complémentaire, affichée mais laissée au choix
 // du recruteur (case non cochée).
-export type SkillItem = { name: string; essential: boolean };
+// reason : justification courte affichée au recruteur/manager, pour qu'il
+// comprenne pourquoi noa propose cette compétence (signal marché cité, ou
+// lien avec la stack/le secteur/la mission de l'entreprise) plutôt que de la
+// recevoir comme une boîte noire.
+export type SkillItem = { name: string; essential: boolean; reason: string };
 export type SkillSuggestions = {
   technique: SkillItem[];
   relationnelle: SkillItem[];
   comportementale: SkillItem[];
 };
 
-const SKILLS_SYSTEM = `Tu es noa, un assistant de recrutement expert. À partir du contexte, de la mission, des objectifs et du profil de l'entreprise, tu proposes les compétences clés du poste.
+function skillsSystem(signalsBlock: string): string {
+  return `Tu es noa, un assistant de recrutement expert. À partir du contexte, de la mission, des objectifs et du profil de l'entreprise, tu proposes les compétences clés du poste, à jour des tendances marché.
 
 Règles :
 - Réparties en 3 catégories : techniques, relationnelles, comportementales.
@@ -244,6 +249,7 @@ Règles :
 - Une compétence TECHNIQUE doit TOUJOURS nommer un outil, logiciel, langage, framework, méthode ou certification concret et vérifiable (nom propre ou terme précis du métier) — jamais une catégorie abstraite. Si tu hésites entre une formulation vague et un nom d'outil précis, choisis toujours l'outil précis, quitte à en proposer plusieurs pour couvrir le poste.
 - Les compétences relationnelles et comportementales doivent refléter la mission, la culture et la taille de l'entreprise (ex : autonomie forte en petite structure, coordination transverse en grande équipe).
 - Formulations concises (2 à 6 mots).
+- reason : 1 phrase courte expliquant CE choix précis. Quand un signal marché ci-dessous l'appuie, cite-le explicitement (nom du média entre parenthèses) et reprends son constat concret. Sinon, justifie par le lien avec le poste, la mission ou le profil de l'entreprise (stack, secteur, culture). N'invente jamais un signal ou un chiffre absent de la liste fournie.
 
 Calibrage (compétences TECHNIQUES) :
 - Bon (poste développeur, stack Django/PostgreSQL) : « Django & Django REST », « Optimisation PostgreSQL ».
@@ -252,16 +258,23 @@ Calibrage (compétences TECHNIQUES) :
 - Mauvais : « React & Next.js » ou toute techno de développement pour un poste non-dev.
 - Mauvais (trop vague, à bannir même quand tu ne connais pas le détail du poste) : « Maîtrise des outils du métier », « Bonnes compétences techniques », « Connaissance des logiciels du secteur », « Compétences digitales ». Remplace-les toujours par les outils/logiciels réels de ce métier (déduis-les du contexte si besoin, mais nomme-les).
 
-Rejette les compétences génériques applicables à n'importe quel poste. Français.`;
+Rejette les compétences génériques applicables à n'importe quel poste. Français.
+
+Signaux marché disponibles (les plus récents, filtrés sur ce poste) :
+${signalsBlock}`;
+}
 
 /**
- * Propose des compétences par catégorie à partir du contexte + mission + objectifs
- * (étapes 1-3), avec une distinction indispensable/complémentaire (essential).
- * Lève en cas d'échec ; l'appelant retombe sur des suggestions statiques.
+ * Propose des compétences par catégorie à partir du contexte + mission +
+ * objectifs déjà définis (s'il y en a) + signaux marché (flux RSS ingérés
+ * dans skills_signals), avec une distinction indispensable/complémentaire
+ * (essential) et une justification par compétence (reason). Lève en cas
+ * d'échec ; l'appelant retombe sur des suggestions statiques.
  */
 export async function generateSkillSuggestions(
   ctx: MissionContext,
   objectives: { label: string }[],
+  signals: ScorecardSignalContext[] = [],
 ): Promise<SkillSuggestions> {
   const objectivesText = objectives
     .map((o) => o.label)
@@ -271,28 +284,37 @@ export async function generateSkillSuggestions(
 
   const user = `${contextLines(ctx)}
 Objectifs / résultats attendus :
-${objectivesText || "(aucun objectif défini)"}`;
+${objectivesText || "(aucun objectif défini pour le moment)"}`;
 
+  const signalsBlock = signals.length
+    ? signals
+        .map((s) => `- [${s.sourceName}]${s.publishedAt ? ` (${new Date(s.publishedAt).toLocaleDateString("fr-FR")})` : ""} ${s.title} — ${s.summary}`)
+        .join("\n")
+    : "(aucun signal marché disponible pour le moment)";
+
+  // Pas de `maxItems` ici : le schéma d'outil "strict" d'Anthropic rejette
+  // cette propriété sur un type "array" (400 invalid_request_error). La
+  // limite de 8 par catégorie reste portée par le prompt (skillsSystem).
   const skillItemSchema = {
     type: "array",
-    maxItems: 8,
     items: {
       type: "object",
       properties: {
         name: { type: "string" },
         essential: { type: "boolean" },
+        reason: { type: "string" },
       },
-      required: ["name", "essential"],
+      required: ["name", "essential", "reason"],
       additionalProperties: false,
     },
   } as const;
 
   return generateStructured<SkillSuggestions>({
-    system: SKILLS_SYSTEM,
+    system: skillsSystem(signalsBlock),
     user,
     toolName: "proposer_competences",
-    toolDescription: "Enregistre les compétences clés proposées, réparties par catégorie, avec leur caractère indispensable ou non.",
-    maxTokens: 2048,
+    toolDescription: "Enregistre les compétences clés proposées, réparties par catégorie, avec leur caractère indispensable ou non et leur justification.",
+    maxTokens: 2560,
     schema: {
       type: "object",
       properties: {
@@ -1145,3 +1167,13 @@ ${input.question.trim()}`;
 
   return stripFieldTags(result.answer ?? "");
 }
+
+// Signal marché (article d'un flux RSS ingéré dans skills_signals) utilisé
+// pour contextualiser generateSkillSuggestions ci-dessus.
+export type ScorecardSignalContext = {
+  sourceName: string;
+  title: string;
+  summary: string;
+  link: string;
+  publishedAt: string | null;
+};

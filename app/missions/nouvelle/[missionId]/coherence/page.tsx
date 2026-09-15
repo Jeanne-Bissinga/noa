@@ -34,8 +34,8 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
   return (
     <AppLayout headerTitle={mission.title}>
       <div className="max-w-2xl mx-auto">
-        <BackLink href={`/missions/nouvelle/${mission.id}/competences`} />
-        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={4} /></div>
+        <BackLink href={`/missions/nouvelle/${mission.id}/resultats`} />
+        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Compétences", "Résultats", "Récapitulatif"]} current={4} /></div>
 
         <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Récapitulatif</h1>
         <p className="text-gray-400 text-sm mb-7">Vérifiez que votre fiche de poste est complète avant de la valider.</p>
@@ -71,51 +71,6 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
             </p>
           </Card>
 
-          {/* Résultats */}
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#75DA9F]/12 flex items-center justify-center">
-                  <Target size={12} className="text-[#1e8f52]" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Résultats attendus</span>
-              </div>
-              <Link href={`/missions/nouvelle/${mission.id}/resultats?from=recap`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
-                <Edit3 size={10} />Modifier
-              </Link>
-            </div>
-            {objectives.length === 0 ? (
-              <p className="text-sm text-gray-400">Aucun objectif défini.</p>
-            ) : (
-              <div className="overflow-x-auto -mx-1">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      <th className="text-left pb-2 pl-1 pr-2 w-6">#</th>
-                      <th className="text-left pb-2 pr-3">KPI</th>
-                      <th className="text-left pb-2 pr-3">Métrique</th>
-                      <th className="text-left pb-2 pr-3">Seuil de réussite</th>
-                      <th className="text-left pb-2 pr-1">Délai</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {objectives.map((o, i) => (
-                      <tr key={o.id} className="align-top">
-                        <td className="py-2.5 pl-1 pr-2 text-gray-300 text-xs font-bold">{i + 1}</td>
-                        <td className="py-2.5 pr-3 text-sm text-[#010101] font-medium leading-snug">{o.label}</td>
-                        <td className="py-2.5 pr-3 text-xs text-gray-500 leading-snug">{o.metric || "-"}</td>
-                        <td className="py-2.5 pr-3 text-xs text-gray-600 font-medium leading-snug">{o.threshold || "-"}</td>
-                        <td className="py-2.5 pr-1 whitespace-nowrap">
-                          {o.deadline ? <Badge color="green">{o.deadline}</Badge> : <span className="text-xs text-gray-300">-</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-
           {/* Compétences */}
           <Card className="p-5">
             <div className="flex items-center justify-between mb-3">
@@ -140,7 +95,7 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
                   ) : (
                     <ul className="flex flex-col gap-1">
                       {cat.items.map((item) => (
-                        <li key={item.id} className="text-xs text-gray-500 flex items-start gap-1.5">
+                        <li key={item.id} title={item.justification ?? undefined} className="text-xs text-gray-500 flex items-start gap-1.5">
                           <span className="text-gray-300 mt-0.5">·</span>{item.name}
                         </li>
                       ))}
@@ -149,6 +104,56 @@ export default async function JobCoherencePage({ params }: { params: Promise<{ m
                 </div>
               ))}
             </div>
+          </Card>
+
+          {/* Résultats */}
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#75DA9F]/12 flex items-center justify-center">
+                  <Target size={12} className="text-[#1e8f52]" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Résultats attendus</span>
+              </div>
+              <Link href={`/missions/nouvelle/${mission.id}/resultats?from=recap`} className="text-[10px] font-semibold text-gray-300 hover:text-[#3a6fd4] flex items-center gap-1 transition-colors">
+                <Edit3 size={10} />Modifier
+              </Link>
+            </div>
+            {objectives.length === 0 ? (
+              <p className="text-sm text-gray-400">Aucun objectif défini.</p>
+            ) : (
+              // table-fixed : sans ça, un tableau HTML élargit ses colonnes pour
+              // garder chaque cellule sur une ligne plutôt que de retourner à la
+              // ligne, et le overflow-x-auto du conteneur le laisse faire (texte
+              // lisible seulement en scrollant à l'horizontale). En contraignant
+              // les colonnes à la largeur réelle, le texte wrap.
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full border-collapse table-fixed">
+                  <thead>
+                    <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      <th className="text-left pb-2 pl-1 pr-2 w-6">#</th>
+                      <th className="text-left pb-2 pr-3">KPI</th>
+                      <th className="text-left pb-2 pr-3">Métrique</th>
+                      <th className="text-left pb-2 pr-3">Seuil de réussite</th>
+                      <th className="text-left pb-2 pr-1 w-20">Délai</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {objectives.map((o, i) => (
+                      <tr key={o.id} className="align-top">
+                        <td className="py-2.5 pl-1 pr-2 text-gray-300 text-xs font-bold">{i + 1}</td>
+                        <td className="py-2.5 pr-3 text-sm text-[#010101] font-medium leading-snug break-words">{o.label}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-500 leading-snug break-words">{o.metric || "-"}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-600 font-medium leading-snug break-words">{o.threshold || "-"}</td>
+                        <td className="py-2.5 pr-1">
+                          {o.deadline ? <Badge color="green">{o.deadline}</Badge> : <span className="text-xs text-gray-300">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </div>
 

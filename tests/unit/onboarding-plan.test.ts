@@ -109,8 +109,8 @@ describe("buildPlan", () => {
 
   it("intègre les compétences techniques attendues aux priorités", () => {
     const skills: MissionSkill[] = [
-      { id: "s1", mission_id: "m", category: "technique", name: "HubSpot", position: 0 },
-      { id: "s2", mission_id: "m", category: "relationnelle", name: "Écoute active", position: 1 },
+      { id: "s1", mission_id: "m", category: "technique", name: "HubSpot", position: 0, justification: null },
+      { id: "s2", mission_id: "m", category: "relationnelle", name: "Écoute active", position: 1, justification: null },
     ];
     const labels = buildPlan(objectives, skills).priorities.map((p) => p.label);
     expect(labels).toContain("Être opérationnel sur HubSpot");
@@ -126,6 +126,7 @@ describe("buildPlan", () => {
       category: "technique" as const,
       name: `Outil ${i}`,
       position: i,
+      justification: null,
     }));
     expect(buildPlan(objectives, skills).priorities.length).toBeLessThanOrEqual(6);
   });
@@ -148,6 +149,7 @@ describe("buildPlan", () => {
       category: "technique" as const,
       name: `Outil ${i}`,
       position: i,
+      justification: null,
     }));
     const priorities = buildPlan(objectives, skills).priorities;
     expect(priorities.filter((p) => p.missionObjectiveId !== null)).toHaveLength(2);
