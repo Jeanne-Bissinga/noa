@@ -52,7 +52,6 @@ const RESOURCES = [
     articles: [
       { title: "Comment structurer une décision de recrutement en équipe", duration: "5 min", type: "Article" },
       { title: "L'offre qui convainc un A-Player de vous rejoindre", duration: "6 min", type: "Guide" },
-      { title: "Onboarding : les 30 premiers jours qui font tout", duration: "8 min", type: "Article" },
     ],
   },
 ];
