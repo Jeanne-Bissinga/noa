@@ -19,6 +19,7 @@ export const GENERIC_ERROR = "Une erreur est survenue. Veuillez réessayer.";
 
 /** Messages métier, écrits une seule fois et partagés par leurs appelants. */
 export const ERROR_MESSAGE = {
+  preparation: "Impossible de préparer le plan d'onboarding pour le moment. Veuillez réessayer.",
   invitation: "Impossible de générer l'invitation pour le moment. Veuillez réessayer.",
   lienSuivi: "Impossible de générer le lien pour le moment. Veuillez réessayer.",
   plan: "Impossible d'enregistrer le plan pour le moment. Veuillez réessayer.",
