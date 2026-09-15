@@ -121,7 +121,7 @@ export default function CampaignWhyPage() {
     <AppLayout headerTitle="Nouvelle campagne">
       <div className="max-w-2xl mx-auto">
         <BackLink href="/missions" />
-        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={0} /></div>
+        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Compétences", "Résultats", "Récapitulatif"]} current={0} /></div>
         <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Pourquoi ce recrutement ?</h1>
         <p className="text-gray-400 text-sm mb-7">Identifier le motif permet à noa de calibrer les objectifs et compétences attendus.</p>
 

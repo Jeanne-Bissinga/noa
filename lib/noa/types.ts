@@ -102,6 +102,7 @@ export interface MissionSkill {
   category: MissionSkillCategory;
   name: string;
   position: number;
+  justification: string | null;
 }
 
 export interface Candidate {

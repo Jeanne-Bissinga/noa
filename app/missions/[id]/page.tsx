@@ -144,50 +144,6 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#75DA9F]/12">
-                  <Target size={12} className="text-[#1e8f52]" />
-                </div>
-                <h3 className="font-semibold text-[#010101] text-sm">Résultats attendus</h3>
-              </div>
-              <Link href={`/missions/nouvelle/${mission.id}/resultats`} className="text-xs font-semibold text-[#3a6fd4] hover:text-[#2a5cb8] transition-colors">
-                Modifier
-              </Link>
-            </div>
-            {objectives.length === 0 ? (
-              <p className="text-sm text-gray-400">Aucun objectif défini.</p>
-            ) : (
-              <div className="overflow-x-auto -mx-1">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      <th className="text-left pb-2 pl-1 pr-2 w-6">#</th>
-                      <th className="text-left pb-2 pr-3">KPI</th>
-                      <th className="text-left pb-2 pr-3">Métrique</th>
-                      <th className="text-left pb-2 pr-3">Seuil de réussite</th>
-                      <th className="text-left pb-2 pr-1">Délai</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {objectives.map((o, i) => (
-                      <tr key={o.id} className="align-top">
-                        <td className="py-2.5 pl-1 pr-2 text-gray-300 text-xs font-bold">{i + 1}</td>
-                        <td className="py-2.5 pr-3 text-sm text-[#010101] font-medium leading-snug">{o.label}</td>
-                        <td className="py-2.5 pr-3 text-xs text-gray-500 leading-snug">{o.metric || "-"}</td>
-                        <td className="py-2.5 pr-3 text-xs text-gray-600 font-medium leading-snug">{o.threshold || "-"}</td>
-                        <td className="py-2.5 pr-1 whitespace-nowrap">
-                          {o.deadline ? <Badge color="green">{o.deadline}</Badge> : <span className="text-xs text-gray-300">-</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#CCB8FF]/12">
                   <Award size={12} className="text-[#6b4ec4]" />
                 </div>
@@ -206,7 +162,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                   ) : (
                     <ul className="flex flex-col gap-1">
                       {block.items.map((s) => (
-                        <li key={s.id} className="text-xs text-gray-500 flex items-start gap-1.5">
+                        <li key={s.id} title={s.justification ?? undefined} className="text-xs text-gray-500 flex items-start gap-1.5">
                           <span className="text-gray-300 mt-1 leading-none">·</span>
                           {s.name}
                         </li>
@@ -216,6 +172,55 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                 </div>
               ))}
             </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#75DA9F]/12">
+                  <Target size={12} className="text-[#1e8f52]" />
+                </div>
+                <h3 className="font-semibold text-[#010101] text-sm">Résultats attendus</h3>
+              </div>
+              <Link href={`/missions/nouvelle/${mission.id}/resultats`} className="text-xs font-semibold text-[#3a6fd4] hover:text-[#2a5cb8] transition-colors">
+                Modifier
+              </Link>
+            </div>
+            {objectives.length === 0 ? (
+              <p className="text-sm text-gray-400">Aucun objectif défini.</p>
+            ) : (
+              // table-fixed : sans ça, un tableau HTML élargit ses colonnes pour
+              // garder chaque cellule sur une ligne plutôt que de retourner à la
+              // ligne, et le overflow-x-auto du conteneur le laisse faire (texte
+              // lisible seulement en scrollant à l'horizontale). En contraignant
+              // les colonnes à la largeur réelle, le texte wrap.
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full border-collapse table-fixed">
+                  <thead>
+                    <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      <th className="text-left pb-2 pl-1 pr-2 w-6">#</th>
+                      <th className="text-left pb-2 pr-3">KPI</th>
+                      <th className="text-left pb-2 pr-3">Métrique</th>
+                      <th className="text-left pb-2 pr-3">Seuil de réussite</th>
+                      <th className="text-left pb-2 pr-1 w-20">Délai</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {objectives.map((o, i) => (
+                      <tr key={o.id} className="align-top">
+                        <td className="py-2.5 pl-1 pr-2 text-gray-300 text-xs font-bold">{i + 1}</td>
+                        <td className="py-2.5 pr-3 text-sm text-[#010101] font-medium leading-snug break-words">{o.label}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-500 leading-snug break-words">{o.metric || "-"}</td>
+                        <td className="py-2.5 pr-3 text-xs text-gray-600 font-medium leading-snug break-words">{o.threshold || "-"}</td>
+                        <td className="py-2.5 pr-1">
+                          {o.deadline ? <Badge color="green">{o.deadline}</Badge> : <span className="text-xs text-gray-300">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </div>
 

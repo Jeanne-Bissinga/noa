@@ -26,6 +26,37 @@ const isVague = (o: MissionObjective) =>
 const isBlank = (o: MissionObjective) =>
   !o.label.trim() && !o.metric?.trim() && !o.deadline?.trim() && !o.threshold?.trim();
 
+// Métrique et seuil sont souvent des phrases complètes (surtout générées par
+// noa) : un <input> une ligne les tronque sans recours, l'utilisateur ne peut
+// même pas les lire en entier. Un <textarea> qui retourne à la ligne règle ça
+// pour de vrai, là où élargir la colonne ne fait que reculer le problème.
+function KpiTextarea({
+  label, value, placeholder, warn, onChange, onBlur,
+}: {
+  label: string; value: string; placeholder: string; warn: string | null;
+  onChange: (v: string) => void; onBlur: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[9px] font-bold uppercase tracking-wide text-gray-300 px-1">{label}</span>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={(e) => onBlur(e.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        className="w-full text-xs bg-gray-50 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/30 text-gray-600 placeholder-gray-300 resize-none leading-relaxed"
+      />
+      {warn && (
+        <span className="flex items-center gap-1 text-orange-400 text-[10px] px-1">
+          <AlertTriangle size={9} />
+          {warn}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ObjCard({
   obj, index, missionId, onLocalUpdate, onRemove, suggestions, loadingSuggestions, onRequestSuggestions,
 }: {
@@ -121,28 +152,41 @@ function ObjCard({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
-        {([
-          ["metric", obj.metric ?? ""],
-          ["deadline", obj.deadline ?? ""],
-          ["threshold", obj.threshold ?? ""],
-        ] as const).map(([k, val], ki) => (
-          <div key={k} className="flex flex-col gap-1">
-            <input
-              value={val}
-              onChange={(e) => onLocalUpdate(obj.id, { [k]: e.target.value } as Partial<MissionObjective>)}
-              onBlur={(e) => commit({ [k]: e.target.value })}
-              placeholder={["Métrique", "Délai", "Seuil de réussite"][ki]}
-              className="text-xs bg-gray-50 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/30 text-gray-600 placeholder-gray-300"
-            />
-            {obj.label.length > 3 && !val.trim() && (
-              <span className="flex items-center gap-1 text-orange-400 text-[10px] px-1">
-                <AlertTriangle size={9} />
-                {["Ajouter une métrique", "Préciser un délai", "Définir un seuil"][ki]}
-              </span>
-            )}
-          </div>
-        ))}
+      <div className="flex flex-col gap-2.5">
+        <KpiTextarea
+          label="Métrique"
+          value={obj.metric ?? ""}
+          placeholder="Métrique"
+          warn={obj.label.length > 3 && !(obj.metric ?? "").trim() ? "Ajouter une métrique" : null}
+          onChange={(v) => onLocalUpdate(obj.id, { metric: v })}
+          onBlur={(v) => commit({ metric: v })}
+        />
+        <KpiTextarea
+          label="Seuil de réussite"
+          value={obj.threshold ?? ""}
+          placeholder="Seuil de réussite"
+          warn={obj.label.length > 3 && !(obj.threshold ?? "").trim() ? "Définir un seuil" : null}
+          onChange={(v) => onLocalUpdate(obj.id, { threshold: v })}
+          onBlur={(v) => commit({ threshold: v })}
+        />
+        {/* Délai reste court ("30 jours", "3 mois") : un input compact sur une
+            ligne suffit, pas besoin du textarea utilisé pour métrique/seuil. */}
+        <div className="flex flex-col gap-1 max-w-[180px]">
+          <span className="text-[9px] font-bold uppercase tracking-wide text-gray-300 px-1">Délai</span>
+          <input
+            value={obj.deadline ?? ""}
+            onChange={(e) => onLocalUpdate(obj.id, { deadline: e.target.value })}
+            onBlur={(e) => commit({ deadline: e.target.value })}
+            placeholder="Délai"
+            className="w-full text-xs bg-gray-50 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#99BAF8]/30 text-gray-600 placeholder-gray-300"
+          />
+          {obj.label.length > 3 && !(obj.deadline ?? "").trim() && (
+            <span className="flex items-center gap-1 text-orange-400 text-[10px] px-1">
+              <AlertTriangle size={9} />
+              Préciser un délai
+            </span>
+          )}
+        </div>
       </div>
     </Card>
   );
@@ -292,8 +336,8 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
   return (
     <AppLayout headerTitle={mission.title}>
       <div className="max-w-2xl mx-auto">
-        <BackLink href={`/missions/nouvelle/${mission.id}/resume`} />
-        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={2} /></div>
+        <BackLink href={`/missions/nouvelle/${mission.id}/competences`} />
+        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Compétences", "Résultats", "Récapitulatif"]} current={3} /></div>
         <div className="flex items-start justify-between gap-4 mb-7">
           <div>
             <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Résultats attendus</h1>
@@ -376,8 +420,8 @@ export function ResultsBoard({ mission, objectives: initialObjectives }: { missi
               Continuer<ChevronRight size={17} />
             </Btn>
           ) : (
-            <LinkBtn href={`/missions/nouvelle/${mission.id}/${fromRecap ? "coherence" : "competences"}`} variant="primary" size="lg">
-              {fromRecap ? "Revenir au récapitulatif" : "Continuer"}<ChevronRight size={17} />
+            <LinkBtn href={`/missions/nouvelle/${mission.id}/coherence`} variant="primary" size="lg">
+              {fromRecap ? "Revenir au récapitulatif" : "Voir le récapitulatif"}<ChevronRight size={17} />
             </LinkBtn>
           )}
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronRight, Plus, Check, Zap, Award } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ChevronRight, Plus, Check, Award, Info, TrendingUp } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, LinkBtn, BackLink, StepBar } from "@/components/noa/ui-primitives";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
@@ -27,6 +28,10 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
     technique: "", relationnelle: "", comportementale: "",
   });
   const [, startTransition] = useTransition();
+  // Modification lancée depuis le récapitulatif : on y renvoie après "Continuer",
+  // au lieu de relancer l'étape Résultats déjà validée (même logique que
+  // resultats/results-board.tsx).
+  const fromRecap = useSearchParams().get("from") === "recap";
 
   // Mêmes appels que le clic "+" sur une compétence personnalisée : pas d'IA,
   // valeurs fixes.
@@ -52,7 +57,7 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
   // grille par catégorie.
   const isEmpty = skills.length === 0 && !pool;
 
-  const handleToggle = (category: MissionSkillCategory, name: string) => {
+  const handleToggle = (category: MissionSkillCategory, name: string, reason?: string) => {
     const existing = skills.find((s) => s.category === category && s.name === name);
     const position = skills.filter((s) => s.category === category).length;
 
@@ -62,12 +67,12 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
       // optimistic placeholder; replaced with the real row once the action resolves.
       // id dérivé de (category, name) : unique (un skill déjà présent part par la
       // branche `existing`) et déterministe, donc pas d'appel impur au rendu.
-      const optimistic: MissionSkill = { id: `optimistic-${category}-${name}`, mission_id: mission.id, category, name, position };
+      const optimistic: MissionSkill = { id: `optimistic-${category}-${name}`, mission_id: mission.id, category, name, position, justification: reason ?? null };
       setSkills((prev) => [...prev, optimistic]);
     }
 
     startTransition(async () => {
-      const created = await toggleSkill(mission.id, category, name, Boolean(existing), position);
+      const created = await toggleSkill(mission.id, category, name, Boolean(existing), position, reason);
       if (created) {
         setSkills((prev) => prev.map((s) => (s.name === name && s.category === category && s.id.startsWith("optimistic-") ? created : s)));
       }
@@ -104,8 +109,8 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
   return (
     <AppLayout headerTitle={mission.title}>
       <div className="max-w-2xl mx-auto">
-        <BackLink href={`/missions/nouvelle/${mission.id}/resultats`} />
-        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={3} /></div>
+        <BackLink href={`/missions/nouvelle/${mission.id}/resume`} />
+        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Compétences", "Résultats", "Récapitulatif"]} current={2} /></div>
         <h1 className="text-2xl font-bold text-[#010101] mb-1.5" style={{ fontFamily: "Poppins, sans-serif" }}>Compétences requises</h1>
         <p className="text-gray-400 text-sm mb-7">Définissez les compétences clés attendues pour ce poste.</p>
 
@@ -116,16 +121,17 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
             </div>
             <div className="text-center max-w-xs">
               <p className="font-semibold text-[#010101] text-sm mb-1">Aucune compétence définie</p>
-              <p className="text-xs text-gray-400 leading-relaxed">noa peut vous proposer les compétences clés adaptées au poste et à la mission que vous avez définie.</p>
+              <p className="text-xs text-gray-400 leading-relaxed">noa croise les tendances marché (études et actualités compétences, mises à jour en continu) avec le profil et la stack de votre entreprise pour proposer les compétences clés de ce poste.</p>
             </div>
             <div className="flex gap-2.5">
               <button
                 onClick={handleFillSuggestions}
                 disabled={filling}
+                title="Recherche dans les signaux marché (flux RSS compétences) et le profil de votre entreprise"
                 className="flex items-center gap-2 bg-[#010101] text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-all disabled:opacity-60"
               >
-                <Zap size={14} />
-                {filling ? "noa analyse…" : "Laisser noa suggérer"}
+                <TrendingUp size={14} />
+                {filling ? "noa analyse le marché…" : "Analyser le marché avec noa"}
               </button>
             </div>
           </div>
@@ -136,11 +142,11 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
                 <button
                   onClick={handleFillSuggestions}
                   disabled={filling}
-                  title="Affiche jusqu'à 8 compétences suggérées par catégorie, dont celles jugées indispensables déjà cochées"
+                  title="Recherche dans les signaux marché (flux RSS compétences) et le profil de votre entreprise, jusqu'à 8 compétences suggérées par catégorie, dont celles jugées indispensables déjà cochées"
                   className="flex items-center gap-1.5 text-xs font-semibold text-[#3a6fd4] bg-[#99BAF8]/10 hover:bg-[#99BAF8]/20 px-3 py-2 rounded-xl transition-all disabled:opacity-60"
                 >
-                  <Zap size={12} />
-                  {filling ? "noa suggère…" : "Voir les suggestions noa"}
+                  <TrendingUp size={12} />
+                  {filling ? "noa analyse le marché…" : "Analyser le marché avec noa"}
                 </button>
               </div>
             )}
@@ -173,7 +179,7 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
                         <button
                           key={s.id}
                           onClick={() => handleToggle(cat.category, s.name)}
-                          title="Retirer"
+                          title={s.justification ?? "Retirer"}
                           className="text-xs font-medium px-3 py-1.5 rounded-full border transition-all bg-[#010101] text-white border-[#010101] hover:bg-gray-800"
                         >
                           <Check size={9} className="inline mr-1 mb-0.5" />
@@ -185,8 +191,8 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
                         return (
                           <button
                             key={p.name}
-                            onClick={() => handleToggle(cat.category, p.name)}
-                            title={active ? "Retirer" : "Ajouter (suggestion noa)"}
+                            onClick={() => handleToggle(cat.category, p.name, p.reason)}
+                            title={p.reason}
                             className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
                               active
                                 ? "bg-[#010101] text-white border-[#010101] hover:bg-gray-800"
@@ -199,6 +205,23 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
                         );
                       })}
                     </div>
+
+                    {poolItems.length > 0 && (
+                      <details className="group rounded-xl bg-[#99BAF8]/6 border border-[#99BAF8]/15 px-3 py-2">
+                        <summary className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3a6fd4] cursor-pointer select-none list-none">
+                          <Info size={11} />
+                          Pourquoi ces suggestions ?
+                        </summary>
+                        <ul className="flex flex-col gap-1.5 mt-2">
+                          {poolItems.map((p) => (
+                            <li key={p.name} className="text-[11px] text-gray-500 leading-relaxed">
+                              <span className="font-semibold text-[#010101]">{p.name}</span> — {p.reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+
                     <div className="flex gap-2 pt-1 border-t border-gray-100">
                       <input
                         value={customInputs[cat.category]}
@@ -228,7 +251,9 @@ export function SkillsBoard({ mission, skills: initialSkills }: { mission: Missi
 
         {!isEmpty && (
           <div className="flex justify-end">
-            <LinkBtn href={`/missions/nouvelle/${mission.id}/coherence`} variant="primary" size="lg">Voir le récapitulatif<ChevronRight size={17} /></LinkBtn>
+            <LinkBtn href={`/missions/nouvelle/${mission.id}/${fromRecap ? "coherence" : "resultats"}`} variant="primary" size="lg">
+              {fromRecap ? "Revenir au récapitulatif" : "Continuer"}<ChevronRight size={17} />
+            </LinkBtn>
           </div>
         )}
       </div>

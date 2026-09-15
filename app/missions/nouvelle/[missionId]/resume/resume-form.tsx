@@ -31,7 +31,7 @@ export function ResumeForm({ mission, noaFallback = false }: { mission: Mission;
     <AppLayout headerTitle={mission.title}>
       <div className="max-w-2xl mx-auto">
         <BackLink href="/missions/nouvelle" />
-        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Résultats", "Compétences", "Récapitulatif"]} current={1} /></div>
+        <div className="mb-8"><StepBar steps={["Contexte", "Mission", "Compétences", "Résultats", "Récapitulatif"]} current={1} /></div>
 
         <div className="flex items-center gap-2.5 mb-1.5">
           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${noaFallback ? "bg-amber-100" : "bg-[#99BAF8]/15"}`}>
