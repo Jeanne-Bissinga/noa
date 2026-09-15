@@ -12,6 +12,7 @@ import { CandidateDelete } from "./candidate-delete";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { updateCandidateProfile } from "./actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
+import type { ScoreBreakdown } from "@/lib/noa/score";
 import { STEP_LABEL, type IntegrationStep } from "@/lib/noa/onboarding/overview";
 
 // Dernière décision actée (hors "reporté", qui ne clôt rien) pour une étape
@@ -22,8 +23,26 @@ function lastDecision(decisions: Decision[], stage: Decision["stage"]): Decision
   return decisions.filter((d) => d.stage === stage && d.status !== "reporte").pop() ?? null;
 }
 
+/**
+ * Explique ce que représente le chiffre affiché : un pourcentage de critères
+ * validés/documentés, pas une évaluation qualitative des réponses. Sans
+ * cette phrase, "96/100" laisse croire à une mesure plus fine et objective
+ * que ce que la grille calcule réellement (cf. échange conformité IA Act).
+ */
+function scoreExplanation(breakdown: ScoreBreakdown): string | null {
+  const parts: string[] = [];
+  if (breakdown.screeningPercent !== null) {
+    parts.push(`${Math.round(breakdown.screeningPercent)}% des critères validés au premier entretien`);
+  }
+  if (breakdown.topgradingPercent !== null) {
+    parts.push(`${Math.round(breakdown.topgradingPercent)}% des questions documentées à l'entretien technique`);
+  }
+  if (parts.length === 0) return null;
+  return `Calculée à partir de ${parts.join(" et ")}.`;
+}
+
 export function CandidateDetail({
-  candidate, experiences, skills, cvSignedUrl, decisions, integrationStep,
+  candidate, experiences, skills, cvSignedUrl, decisions, integrationStep, scoreBreakdown, compareHref,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidate: Candidate;
@@ -31,6 +50,9 @@ export function CandidateDetail({
   skills: CandidateSkill[];
   cvSignedUrl: string | null;
   decisions: Decision[];
+  scoreBreakdown: ScoreBreakdown;
+  /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
+  compareHref: string | null;
   /** Étape de l'intégration, dans le vocabulaire partagé avec /integrations. */
   integrationStep: IntegrationStep;
   screeningStarted: boolean;
@@ -223,6 +245,7 @@ export function CandidateDetail({
             screeningRejected={screeningDecision?.status === "non_retenu"}
             topgradingRejected={topgradingDecision?.status === "non_retenu"}
             finalRejected={finalDecision?.status === "non_retenu"}
+            compareHref={compareHref}
           />
         </Card>
 
@@ -309,10 +332,14 @@ export function CandidateDetail({
                   <div className={`h-full rounded-full ${candidate.score >= 75 ? "bg-[#75DA9F]" : candidate.score >= 50 ? "bg-[#99BAF8]" : "bg-red-400"}`} style={{ width: `${candidate.score}%` }} />
                 </div>
                 <p className="text-xs text-gray-400">
-                  {candidate.score >= 75 ? "Profil très solide, recommandé à l'embauche" : candidate.score >= 50 ? "Profil correct, à discuter en équipe" : "Profil insuffisant, non retenu"}
+                  {candidate.score >= 75 ? "Profil solide, suggéré pour l'embauche" : candidate.score >= 50 ? "Profil correct, à discuter en équipe" : "Profil fragile, prudence recommandée"}
                 </p>
               </div>
             </div>
+            <p className="text-[10px] text-gray-400 italic mt-3">
+              {scoreExplanation(scoreBreakdown) ?? "Calculée à partir des grilles d'entretien."}
+              {" "}Proposition d&apos;analyse, la décision vous appartient.
+            </p>
           </Card>
         )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ChevronRight, FileText, X } from "lucide-react";
+import { Check, ChevronRight, FileText, GitCompare, X } from "lucide-react";
 import { LinkBtn } from "@/components/noa/ui-primitives";
 import type { StageStatus } from "@/lib/noa/types";
 
@@ -67,7 +67,7 @@ const SUB_STEPS_HEADING: Record<"Screening" | "Topgrading", string> = {
 export function CandidateFrise({
   candidateId, screening, topgrading, decision,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
-  screeningRejected = false, topgradingRejected = false, finalRejected = false,
+  screeningRejected = false, topgradingRejected = false, finalRejected = false, compareHref = null,
 }: {
   candidateId: string;
   screening: StageStatus;
@@ -80,6 +80,8 @@ export function CandidateFrise({
   screeningRejected?: boolean;
   topgradingRejected?: boolean;
   finalRejected?: boolean;
+  /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
+  compareHref?: string | null;
 }) {
   // Un refus ferme le dossier à cette étape : les suivantes n'ont jamais eu
   // lieu, elles ne doivent donc jamais s'afficher "done" (vert) même si
@@ -213,9 +215,16 @@ export function CandidateFrise({
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
           <p className="text-xs font-bold text-[#010101] mb-1">Prendre la décision finale</p>
           <p className="text-xs text-gray-500 leading-relaxed mb-3">{STEP_META["Décision"].desc}</p>
-          <LinkBtn href={`/candidats/${candidateId}/decision-finale`} variant="primary" size="sm">
-            Prendre une décision <ChevronRight size={14} />
-          </LinkBtn>
+          <div className="flex gap-2 flex-wrap">
+            <LinkBtn href={`/candidats/${candidateId}/decision-finale`} variant="primary" size="sm">
+              Prendre une décision <ChevronRight size={14} />
+            </LinkBtn>
+            {compareHref && (
+              <LinkBtn href={compareHref} variant="secondary" size="sm">
+                <GitCompare size={13} />Comparer avec les autres candidats
+              </LinkBtn>
+            )}
+          </div>
         </div>
       )}
     </div>

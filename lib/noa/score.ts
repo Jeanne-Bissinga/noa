@@ -58,31 +58,51 @@ function scoreTopgradingGrid(episodes: TopgradingEpisode[], answers: Record<stri
   return (answered / allQuestions.length) * 100;
 }
 
-export function computeAggregateScore(
+export type ScoreBreakdown = {
+  /** % de critères "Oui"/"Partiel" du screening, null si pas de grille notée. */
+  screeningPercent: number | null;
+  /** % de questions documentées (note non vide) du topgrading, null si pas de grille notée. */
+  topgradingPercent: number | null;
+  finalScore: number | null;
+};
+
+/**
+ * Calcule la note finale ET le détail par étape qui l'explique : afficher
+ * "96/100" sans dire qu'il s'agit de 96% de critères validés au screening
+ * (et non d'une évaluation qualitative des réponses) donnerait une précision
+ * trompeuse à un simple ratio. Cf. échange avec Léa sur la conformité IA Act
+ * (transparence de la logique de notation, art. 13).
+ */
+export function computeScoreBreakdown(
   screening: { criteria: unknown; answers: Record<string, unknown> } | null,
   topgrading: { criteria: unknown; answers: Record<string, unknown> } | null,
-): number | null {
-  const scores: number[] = [];
-
+): ScoreBreakdown {
   // Un entretien d'intégration ne pèse jamais sur la note d'un recrutement.
   // La garde vit ici plutôt que chez les appelants : cette fonction écrit
   // indirectement `candidates.score`, on ne s'en remet pas à leur prudence.
   if (isIntegrationCriteria(screening?.criteria) || isIntegrationCriteria(topgrading?.criteria)) {
-    return null;
+    return { screeningPercent: null, topgradingPercent: null, finalScore: null };
   }
 
-  if (screening && isScreeningCriteria(screening.criteria)) {
-    const s = scoreScreeningGrid(screening.criteria, screening.answers as Record<string, ScreeningAnswer>);
-    if (s !== null) scores.push(s);
-  }
+  const screeningPercent = screening && isScreeningCriteria(screening.criteria)
+    ? scoreScreeningGrid(screening.criteria, screening.answers as Record<string, ScreeningAnswer>)
+    : null;
 
-  if (topgrading && isTopgradingCriteria(topgrading.criteria)) {
-    const s = scoreTopgradingGrid(topgrading.criteria, topgrading.answers as Record<string, string>);
-    if (s !== null) scores.push(s);
-  }
+  const topgradingPercent = topgrading && isTopgradingCriteria(topgrading.criteria)
+    ? scoreTopgradingGrid(topgrading.criteria, topgrading.answers as Record<string, string>)
+    : null;
 
-  if (scores.length === 0) return null;
+  const scores = [screeningPercent, topgradingPercent].filter((s): s is number => s !== null);
+  const finalScore = scores.length === 0
+    ? null
+    : Math.max(0, Math.min(100, Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)));
 
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-  return Math.max(0, Math.min(100, Math.round(avg)));
+  return { screeningPercent, topgradingPercent, finalScore };
+}
+
+export function computeAggregateScore(
+  screening: { criteria: unknown; answers: Record<string, unknown> } | null,
+  topgrading: { criteria: unknown; answers: Record<string, unknown> } | null,
+): number | null {
+  return computeScoreBreakdown(screening, topgrading).finalScore;
 }

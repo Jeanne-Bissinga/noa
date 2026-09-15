@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   requireRecruiter, getCandidate, getInterview, getEvaluationGrid,
-  getCandidateExperiences, getCandidateSkills, getSyntheses,
+  getCandidateExperiences, getCandidateSkills, getSyntheses, getCandidates,
 } from "@/lib/noa/queries";
-import { computeAggregateScore } from "@/lib/noa/score";
+import { computeScoreBreakdown } from "@/lib/noa/score";
 import { TEST_USER_ID } from "@/lib/noa/test-account";
 import { ensureFinalRecommendation } from "../actions";
 import { FinalDecisionView } from "./final-decision-view";
@@ -18,23 +18,27 @@ export default async function DecisionFinalePage({ params }: { params: Promise<{
     notFound();
   }
 
-  const [screeningInterview, topgradingInterview, experiences, skills, syntheses] = await Promise.all([
+  const [screeningInterview, topgradingInterview, experiences, skills, syntheses, missionCandidates] = await Promise.all([
     getInterview(candidate.id, "screening"),
     getInterview(candidate.id, "topgrading"),
     getCandidateExperiences(candidate.id),
     getCandidateSkills(candidate.id),
     getSyntheses(candidate.id),
+    getCandidates(recruiter.company_id, { missionId: candidate.mission_id }),
   ]);
+  // Comparer n'a de sens qu'à partir de deux candidats sur la même mission.
+  const compareHref = missionCandidates.length >= 2 ? `/missions/${candidate.mission_id}/comparaison` : null;
 
   const [screeningGrid, topgradingGrid] = await Promise.all([
     screeningInterview ? getEvaluationGrid(screeningInterview.id) : null,
     topgradingInterview ? getEvaluationGrid(topgradingInterview.id) : null,
   ]);
 
-  const score = computeAggregateScore(
+  const scoreBreakdown = computeScoreBreakdown(
     screeningGrid ? { criteria: screeningGrid.criteria, answers: screeningGrid.answers } : null,
     topgradingGrid ? { criteria: topgradingGrid.criteria, answers: topgradingGrid.answers } : null,
   );
+  const score = scoreBreakdown.finalScore;
 
   // Persist the computed score onto the candidate as soon as it's computed
   // (idempotent, recomputed every time this page loads until a decision is made).
@@ -70,6 +74,8 @@ export default async function DecisionFinalePage({ params }: { params: Promise<{
     <FinalDecisionView
       candidate={candidate}
       score={score}
+      scoreBreakdown={scoreBreakdown}
+      compareHref={compareHref}
       experiences={experiences}
       skills={skills}
       screeningSynthesis={screeningSynthesis}
