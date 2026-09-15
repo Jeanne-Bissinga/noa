@@ -5,9 +5,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
-import { getCurrentRecruiter, getCandidate, getMission } from "@/lib/noa/queries";
+import { getCurrentRecruiter, getCandidate, getMission, getMissionSkills } from "@/lib/noa/queries";
 import { STATUS_FIELDS, canMoveCandidate } from "@/lib/noa/labels";
-import { extractCandidateProfile, CV_SUPPORTED_MIME, CV_DOCX_MIME, type CandidateProfileExtract } from "@/lib/noa/ai";
+import {
+  extractCandidateProfile, generateCvFitSuggestion, CV_SUPPORTED_MIME, CV_DOCX_MIME,
+  type CandidateProfileExtract, type CvFitSuggestion,
+} from "@/lib/noa/ai";
 import type { CandidateStatus, DecisionStage } from "@/lib/noa/types";
 
 // Un retour en arrière annule les étapes à partir de celle visée : leurs
@@ -172,8 +175,32 @@ function parseProfileField(raw: FormDataEntryValue | null): CandidateProfileExtr
 // - sinon: le CV est valide mais l'extraction a échoué (fichier abîmé, API
 //   indisponible). La fiche reste créable, à la main.
 export type ExtractCvState =
-  | { profile: CandidateProfileExtract }
+  | { profile: CandidateProfileExtract; fitSuggestion: CvFitSuggestion | null }
   | { error: string; rejected?: boolean };
+
+/**
+ * Repère de correspondance CV/mission, purement informatif : jamais un motif
+ * pour bloquer l'import. Retombe sur null si la mission n'a pas encore de
+ * compétences renseignées (rien à comparer) ou si l'appel échoue — l'échec
+ * de ce repère ne doit jamais faire échouer l'extraction du profil.
+ */
+async function computeFitSuggestion(missionId: string, profile: CandidateProfileExtract): Promise<CvFitSuggestion | null> {
+  if (!missionId) return null;
+  try {
+    const [mission, missionSkills] = await Promise.all([getMission(missionId), getMissionSkills(missionId)]);
+    if (!mission || missionSkills.length === 0) return null;
+    return await generateCvFitSuggestion({
+      missionTitle: mission.title,
+      missionText: mission.mission_text ?? "",
+      missionSkills: missionSkills.map((s) => s.name),
+      profile,
+    });
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Repère CV/mission échoué à l'import : ${err?.message ?? String(e)}`);
+    return null;
+  }
+}
 
 export async function extractCvProfile(formData: FormData): Promise<ExtractCvState> {
   const recruiter = await getCurrentRecruiter();
@@ -204,7 +231,9 @@ export async function extractCvProfile(formData: FormData): Promise<ExtractCvSta
       base64: buffer.toString("base64"),
       mediaType,
     });
-    return { profile };
+    const missionId = String(formData.get("missionId") ?? "").trim();
+    const fitSuggestion = await computeFitSuggestion(missionId, profile);
+    return { profile, fitSuggestion };
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Extraction du CV échouée à l'import : ${err?.message ?? String(e)}`);

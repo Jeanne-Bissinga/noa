@@ -2,15 +2,23 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import { Briefcase, ChevronRight, Check, Upload, Plus, Zap, FileText } from "lucide-react";
+import { Briefcase, ChevronRight, Check, Upload, Plus, Zap, FileText, Sparkles } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Btn, BackLink } from "@/components/noa/ui-primitives";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { createCandidate, extractCvProfile, type CreateCandidateState } from "../actions";
-import type { CandidateProfileExtract } from "@/lib/noa/ai";
+import type { CandidateProfileExtract, CvFitSuggestion, CvFitVerdict } from "@/lib/noa/ai";
 import type { Mission } from "@/lib/noa/types";
 
 const initialState: CreateCandidateState = {};
+
+// Jamais rouge : un écart n'est pas un refus, "chaque candidat garde sa
+// chance d'être reçu en entretien" reste vrai quel que soit le repère.
+const FIT_VERDICT_STYLE: Record<CvFitVerdict, { tone: string }> = {
+  "Bon socle pour un premier entretien": { tone: "bg-[#75DA9F]/15 text-[#1e8f52]" },
+  "Des points à creuser en entretien": { tone: "bg-[#99BAF8]/15 text-[#3a6fd4]" },
+  "Écart important avec le poste": { tone: "bg-[#FEE831]/25 text-[#8a6a00]" },
+};
 
 export function AddCandidateForm({ mission }: { mission: Mission | null }) {
   const boundAction = createCandidate.bind(null, mission?.id);
@@ -27,6 +35,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
   // champs ci-dessus n'en montrent qu'une partie, le reste est resoumis tel quel
   // à la création pour ne pas relancer une extraction.
   const [profile, setProfile] = useState<CandidateProfileExtract | null>(null);
+  const [fitSuggestion, setFitSuggestion] = useState<CvFitSuggestion | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +67,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
     setCvDone(true);
     setExtractError(null);
     setProfile(fixedProfile);
+    setFitSuggestion({ verdict: "Des points à creuser en entretien", reasoning: "Repère de test (donnée factice)." });
     setFirstName(fixedProfile.firstName);
     setLastName(fixedProfile.lastName);
     setTitle(fixedProfile.title);
@@ -70,10 +80,12 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
     setParsing(true);
     setCvDone(false);
     setProfile(null);
+    setFitSuggestion(null);
     setExtractError(null);
 
     const payload = new FormData();
     payload.append("cvFile", selected);
+    if (mission?.id) payload.append("missionId", mission.id);
 
     try {
       const result = await extractCvProfile(payload);
@@ -90,6 +102,7 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
         }
       } else {
         setProfile(result.profile);
+        setFitSuggestion(result.fitSuggestion);
         // Préremplissage : le recruteur relit et corrige, il n'a plus à saisir.
         setFirstName(result.profile.firstName);
         setLastName(result.profile.lastName);
@@ -227,6 +240,18 @@ export function AddCandidateForm({ mission }: { mission: Mission | null }) {
                 qui n'est pas rendu quand aucun CV n'a été retenu. */}
             {extractError && !cvDone && (
               <p className="mt-3 text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">{extractError}</p>
+            )}
+
+            {cvDone && fitSuggestion && (
+              <div className={`mt-5 rounded-xl px-4 py-3 ${FIT_VERDICT_STYLE[fitSuggestion.verdict].tone}`}>
+                <div className="flex items-center gap-1.5 text-xs font-bold">
+                  <Sparkles size={12} />{fitSuggestion.verdict}
+                </div>
+                <p className="text-xs mt-1 leading-relaxed opacity-90">{fitSuggestion.reasoning}</p>
+                <p className="text-[10px] mt-2 italic opacity-70">
+                  Repère indicatif, pas un filtre : chaque candidat garde sa chance d&apos;être reçu en entretien.
+                </p>
+              </div>
             )}
 
             {(cvDone || parsing) && (
