@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
-import { resolveWorkPreferencesToken } from "@/lib/noa/onboarding/tokens";
+import { recordNoticeShown, resolveWorkPreferencesToken } from "@/lib/noa/preferences/tokens";
+import { questionsForDimensions } from "@/lib/noa/preferences/questions";
+import { NOTICE_VERSION } from "@/lib/noa/preferences/information-notice";
 import { PublicShell } from "@/app/integration/public-shell";
 import { PreferencesFlow } from "./preferences-flow";
 import { ThankYou } from "./thank-you";
 
-// Page publique des préférences de travail : la seconde page de Noa accessible
-// sans compte. C'est la seule page de Noa accessible sans authentification.
+// Page publique des préférences de travail : la seule page de Noa accessible
+// sans compte.
 //
 // Rien du reste du produit n'est joignable d'ici — pas de sidebar, pas de lien
 // vers Noa. La page ne connaît que le prénom, l'état du questionnaire et les
-// réponses déjà données : ni scorecard, ni notes, ni décision, ni les autres
-// candidats.
+// réponses déjà données : ni scorecard, ni notes, ni score, ni décision, ni
+// les autres candidats.
+//
+// Le questionnaire posé est calculé ici, côté serveur. Aujourd'hui, toujours
+// les 24 questions : `questionsForDimensions()` sans argument. Le jour où une
+// sélection sera écrite en base, c'est le seul endroit à changer.
 
 export const metadata: Metadata = {
   title: "Vos préférences de travail",
@@ -60,9 +66,21 @@ export default async function WorkPreferencesPage({ params }: { params: Promise<
     );
   }
 
+  // Horodatage de la présentation du texte d'information, au rendu : c'est le
+  // moment réel où il s'affiche, et cela évite un aller-retour depuis le
+  // navigateur. Écrit une seule fois ; un échec n'empêche jamais de répondre.
+  if (!preferences.noticeAlreadyRecorded) {
+    await recordNoticeShown(preferences.preferencesId, NOTICE_VERSION);
+  }
+
   return (
-    <PublicShell footer="Ces informations servent uniquement à personnaliser certains éléments de votre intégration.">
-      <PreferencesFlow token={token} firstName={preferences.firstName} initialAnswers={preferences.answers} />
+    <PublicShell footer="Ces informations servent à préparer vos prochains échanges. Elles ne constituent pas une évaluation.">
+      <PreferencesFlow
+        token={token}
+        firstName={preferences.firstName}
+        questions={questionsForDimensions()}
+        initialAnswers={preferences.answers}
+      />
     </PublicShell>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, Check, X, FileText, Edit3, Sparkles } from "lucide-react";
+import { ChevronRight, Check, X, FileText, Edit3 } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, BackLink, Btn, InputField } from "@/components/noa/ui-primitives";
 import { CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR, initials as initialsOf } from "@/lib/noa/labels";
@@ -12,8 +12,10 @@ import { CandidateDelete } from "./candidate-delete";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
 import { updateCandidateProfile } from "./actions";
 import type { Candidate, CandidateExperience, CandidateSkill, Decision } from "@/lib/noa/types";
+import { PreferencesStepCard } from "./preferences/preferences-step-card";
+import type { WorkPreferencesStepStatus } from "@/lib/noa/preferences/status";
+import type { ConductAdviceItem } from "@/lib/noa/preferences/communication";
 import type { ScoreBreakdown } from "@/lib/noa/score";
-import { STEP_LABEL, type IntegrationStep } from "@/lib/noa/onboarding/overview";
 
 // Dernière décision actée (hors "reporté", qui ne clôt rien) pour une étape
 // donnée. STATUS_FIELDS marque les 3 étapes "done" dès que le candidat est
@@ -40,9 +42,17 @@ function scoreExplanation(breakdown: ScoreBreakdown): string | null {
   if (parts.length === 0) return null;
   return `Calculée à partir de ${parts.join(" et ")}.`;
 }
+// Libellé posé sur le trait de la frise, entre les deux entretiens. Court : il
+// n'a que la largeur d'un connecteur, et la carte dessous dit le reste.
+const PREFERENCES_MARKER: Record<WorkPreferencesStepStatus, string> = {
+  non_invite: "Préférences",
+  invite: "Préférences · envoyées",
+  complete: "Préférences · reçues",
+};
 
 export function CandidateDetail({
-  candidate, experiences, skills, cvSignedUrl, decisions, integrationStep, scoreBreakdown, compareHref,
+  candidate, experiences, skills, cvSignedUrl, decisions, scoreBreakdown, compareHref,
+  preferencesStatus, preferencesGuidance, preferencesInvitedAt, preferencesExpiresAt,
   screeningStarted, screeningInterviewDone, topgradingStarted, topgradingInterviewDone,
 }: {
   candidate: Candidate;
@@ -53,8 +63,10 @@ export function CandidateDetail({
   scoreBreakdown: ScoreBreakdown;
   /** Lien vers la comparaison des candidats de la mission, null s'il n'y en a pas d'autre à comparer. */
   compareHref: string | null;
-  /** Étape de l'intégration, dans le vocabulaire partagé avec /integrations. */
-  integrationStep: IntegrationStep;
+  preferencesStatus: WorkPreferencesStepStatus;
+  preferencesGuidance: ConductAdviceItem[];
+  preferencesInvitedAt: string | null;
+  preferencesExpiresAt: string | null;
   screeningStarted: boolean;
   screeningInterviewDone: boolean;
   topgradingStarted: boolean;
@@ -117,6 +129,20 @@ export function CandidateDetail({
   const screeningDecision = lastDecision(decisions, "screening");
   const topgradingDecision = lastDecision(decisions, "topgrading");
   const finalDecision = lastDecision(decisions, "final");
+
+  // L'étape Préférences s'ouvre quand le premier entretien est tranché
+  // « retenu », et se referme dès que l'entretien technique est mené : passé
+  // ce point, les préférences n'ont plus de question à orienter — elles ne
+  // servent plus qu'à relire le signal initial depuis la synthèse.
+  //
+  // On s'appuie sur la DÉCISION et non sur candidate.status : STATUS_FIELDS
+  // force les trois étapes à « done » dès qu'un candidat est « Non retenu »,
+  // quelle que soit l'étape du refus (cf. lib/noa/labels.ts), et le statut
+  // seul ferait réapparaître la carte sur un dossier clos.
+  const showPreferences =
+    screeningDecision?.status === "retenu" &&
+    !topgradingInterviewDone &&
+    candidate.status !== "Non retenu";
 
   const allDone = candidate.screening_status === "done" && candidate.topgrading_status === "done";
   const scoreColor = candidate.score !== null
@@ -246,34 +272,24 @@ export function CandidateDetail({
             topgradingRejected={topgradingDecision?.status === "non_retenu"}
             finalRejected={finalDecision?.status === "non_retenu"}
             compareHref={compareHref}
+            preferencesMarker={showPreferences ? PREFERENCES_MARKER[preferencesStatus] : null}
           />
-        </Card>
 
-        {/* ── Intégration ──
-            Une fois la personne recrutée, la suite du parcours a sa propre
-            section : cette carte n'est qu'un point de passage vers elle, et
-            emploie le même vocabulaire d'étape que /integrations pour ne pas
-            raconter deux histoires du même état. */}
-        {candidate.status === "Recrute" && (
-          <Card className="p-5 mb-4">
-            <Link href={`/integrations/${candidate.id}`} className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#CCB8FF]/20 flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={16} className="text-[#6b4ec4]" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#010101]">
-                    Plan d'onboarding · {STEP_LABEL[integrationStep]}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Plan 30-60-90 et entretiens J1 / J30 / J60 / J90.
-                  </p>
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
-            </Link>
-          </Card>
-        )}
+          {showPreferences && (
+            <>
+              <div className="h-px bg-gray-100 my-5" />
+              <PreferencesStepCard
+                candidateId={candidate.id}
+                firstName={candidate.first_name}
+                candidateEmail={candidate.email}
+                status={preferencesStatus}
+                guidance={preferencesGuidance}
+                invitedAt={preferencesInvitedAt}
+                expiresAt={preferencesExpiresAt}
+              />
+            </>
+          )}
+        </Card>
 
         {/* ── Étapes réalisées ── */}
         {completedSteps.length > 0 && (
