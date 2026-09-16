@@ -116,6 +116,34 @@ describe("ce qu'un sujet ne peut jamais dire", () => {
     }
   });
 
+  it("rejette ces mots même seuls, accentués et sans chiffre", () => {
+    // Le trou que ces cas épinglent : `\w` de JavaScript est limité à l'ASCII,
+    // donc « é » n'est pas une lettre pour `\b`, et un `\b` final rendait
+    // `personnalité`, `compatibilité` et `probabilité` inatteignables. Les
+    // formes accentuées ne passaient que grâce à un motif voisin — « test de
+    // personnalité » ou la présence d'un chiffre. Sans cet appui, elles
+    // traversaient le filtre.
+    for (const mot of [
+      "Sa personnalité le porte vers les sujets exploratoires.",
+      "Compatibilité forte avec le poste.",
+      "Probabilité de réussite élevée.",
+    ]) {
+      expect(containsForbiddenPreferenceWording(mot), mot).toBe(true);
+      expect(keepGroundedTopics([topic({ hypothesis: mot })], SCORECARD, ALL_DIMENSIONS)).toEqual([]);
+    }
+  });
+
+  it("laisse passer une formulation légitime voisine", () => {
+    // Le filtre doit rester un filtre, pas une censure : ces phrases décrivent
+    // une préférence sans porter de jugement ni de mesure.
+    for (const mot of [
+      "Apprécie que le cadre de travail soit posé tôt.",
+      "Cherche des retours réguliers pendant la mission.",
+    ]) {
+      expect(containsForbiddenPreferenceWording(mot), mot).toBe(false);
+    }
+  });
+
   it("rejette la formulation en manque", () => {
     // « Apprécie disposer de repères » est acceptable ; « manque d'autonomie »
     // ne l'est pas — c'est la différence entre une préférence et un jugement.
