@@ -53,17 +53,24 @@ export const MAX_TOPICS = 3;
 // celui-ci couvre les verdicts d'APRÈS l'embauche (période d'essai,
 // licenciement, « erreur de casting »), écrit pour un autre contexte. Ici, la
 // décision qu'il ne faut pas prendre est celle de recruter ou d'écarter.
+// Aucun `\b` FINAL sur un motif qui peut se terminer par une lettre accentuée :
+// `\w` de JavaScript est limité à l'ASCII, donc « é » n'est pas un caractère de
+// mot, et `personnalité\b` ne correspondait JAMAIS. Le trou était masqué par les
+// motifs voisins — « test de personnalité » et « analyse de personnalité »
+// étaient bien attrapés, « sa personnalité le porte vers… » passait. Idem pour
+// « compatibilité » et « probabilité », que seule la présence d'un chiffre
+// rattrapait.
 const FORBIDDEN_WORDING = [
   // Personnalité et traits — ce que le questionnaire ne mesure pas.
   /\btests? (de personnalit|psychom)/i,
   /\bprofil (comportemental|psychologique)\b/i,
   /\banalyse de personnalit/i,
   /\btraits? de caract[èe]re\b/i,
-  /\bpersonnalit[ée]\b/i,
+  /\bpersonnalit[ée]/i,
   // Valeur chiffrée sur la personne. Pas de \b final : « 70 %. » n'a pas de
   // frontière de mot après le signe, et se serait glissé au travers.
   /\b\d+\s*(%|\/\s*\d+|points?\b)/,
-  /\b(scor(e|é)|notation|probabilit[ée]|compatibilit[ée]|ad[ée]quation)\b/i,
+  /\b(scor(e|é)|notation|probabilit[ée]|compatibilit[ée]|ad[ée]quation)/i,
   // Verdict de recrutement.
   //
   // Pas de `\b` en tête : `\w` de JavaScript est limité à l'ASCII, donc une
