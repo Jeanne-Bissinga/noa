@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check, CheckCheck, ChevronRight, Circle, Clock, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Circle, Clock, Sparkles } from "lucide-react";
 import { Card, Badge, Avatar, LinkBtn } from "@/components/noa/ui-primitives";
 import {
   CANDIDATE_STATUS_LABEL, CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR,
@@ -121,7 +121,8 @@ const StageBlock = ({ label, text, empty, icon }: {
 function coverageSummary(covered: number, validated: number, total: number): string {
   if (total === 0) return "Aucune compétence définie";
   if (validated === 0) return `${covered} sur ${total} dans le CV`;
-  return `${covered} sur ${total} repérées, dont ${validated} confirmées en entretien`;
+  const confirmees = validated === 1 ? "1 confirmée" : `${validated} confirmées`;
+  return `${covered} sur ${total} repérées, dont ${confirmees} en entretien`;
 }
 
 function interviewsSummary(c: ComparisonCandidate): string {
@@ -218,9 +219,13 @@ function CandidateCard({
                     const title = [provenance, skill.justification].filter(Boolean).join("\n\n") || undefined;
                     return (
                       <li key={skill.id} className="flex items-start gap-2">
-                        {isValidated ? (
-                          <CheckCheck size={13} className="text-[#1e8f52] mt-0.5 shrink-0" />
-                        ) : isCovered ? (
+                        {/* Une seule coche, d'une seule couleur : la marque dit
+                            « cette compétence est couverte », un point c'est
+                            tout. D'où vient cette couverture — un exemple donné
+                            en entretien, ou une mention de CV — se lit dans la
+                            phrase au survol et dans le résumé de la section,
+                            pas dans une nuance de vert ou de bleu. */}
+                        {isValidated || isCovered ? (
                           <Check size={13} className="text-[#3a6fd4] mt-0.5 shrink-0" />
                         ) : (
                           <Circle size={13} className="text-gray-200 mt-0.5 shrink-0" />
