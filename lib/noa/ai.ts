@@ -912,6 +912,103 @@ export async function generateTopgradingGuideSections(
   return result.sections ?? [];
 }
 
+// ─── Critères de compétence de l'entretien technique ───────────────────────
+//
+// Le parcours Topgrading fait raconter des situations vécues, mais ses réponses
+// sont des notes libres : rien n'y confirme jamais une compétence attendue. Ce
+// bloc ajoute des critères à réponse fermée, rattachés à la Scorecard, pour que
+// les compétences relationnelles et de savoir-être puissent enfin être
+// documentées par ce que le candidat raconte.
+//
+// Ce que ces critères peuvent produire : une question et un fait à chercher.
+// Rien d'autre. `scorecard_skill_id` est contraint par énumération aux
+// identifiants réels : le modèle ne PEUT pas en inventer un.
+const TOPGRADING_SKILL_CHECKS_SYSTEM = `Tu es noa, un expert en recrutement spécialiste du Topgrading. En plus du parcours chronologique, tu prépares une courte série de CRITÈRES à réponse fermée portant sur les compétences relationnelles et de savoir-être attendues pour le poste.
+
+Pour chaque critère tu produis :
+- scorecard_skill_id : l'identifiant de la compétence attendue que ce critère vérifie, pris dans la liste fournie. Tu ne peux utiliser QUE ces identifiants, tels quels.
+- question : UNE question à poser en entretien. Ouverte, au passé, sur une SITUATION RÉELLEMENT VÉCUE par le candidat, et qui demande comment il a procédé. Jamais une question d'opinion, jamais une mise en situation hypothétique (« que feriez-vous si… »), jamais une question à laquelle on répond par oui ou par non.
+- fait_attendu : en une phrase, ce que la réponse doit CONTENIR pour que le critère soit validé — un exemple situé dans le temps, le rôle exact du candidat, ce qu'il a fait lui-même, et l'issue. C'est ce fait qui sera cherché dans la transcription, pas une impression générale.
+
+Règles :
+- UN seul critère par compétence, CINQ critères au maximum. Mieux vaut trois critères vérifiables que cinq artificiels.
+- Ne retiens que les compétences qu'un récit d'expérience peut réellement vérifier. Si une compétence ne s'y prête pas, ne produis pas de critère pour elle : en renvoyer moins est une réponse normale.
+- Ancre la question dans le parcours réel du candidat (entreprise, rôle, contexte fournis) quand c'est possible.
+- Une déclaration d'intention (« je suis quelqu'un de très collaboratif ») ne vaut pas exemple : la question doit aller chercher un fait.
+- N'évalue rien et ne préjuge de rien : tu écris ce qu'il faudra demander, pas ce que le candidat vaut.
+- Français, une seule phrase par question, ton professionnel.`;
+
+export type SkillCheckSuggestion = {
+  q: string;
+  /** mission_skills.id — jamais null : un critère de ce bloc n'existe que pour vérifier une compétence. */
+  skillId: string;
+  evidence: string;
+};
+
+/**
+ * Prépare les critères de compétence de l'entretien technique, rattachés à la
+ * Scorecard. Lève en cas d'échec ; l'appelant se passe du bloc et l'entretien se
+ * déroule comme avant.
+ */
+export async function generateTopgradingSkillChecks(input: {
+  job: JobSpecContext;
+  candidate: CandidateContext;
+  scorecard: ScorecardCriterionContext[];
+}): Promise<SkillCheckSuggestion[]> {
+  // Sans compétence à vérifier, rien à préparer — et `enum: []` est un schéma
+  // invalide, refusé par l'API avant même d'être évalué.
+  if (input.scorecard.length === 0) return [];
+
+  const skillsText = input.scorecard
+    .map((s) => `- [id: ${s.id}] (${s.category}) ${s.name}${s.justification ? ` — ${s.justification}` : ""}`)
+    .join("\n");
+  const user = `${jobSpecLines(input.job)}\n\n${candidateLines(input.candidate)}\n\nCompétences attendues à vérifier :\n${skillsText}`;
+
+  const result = await generateStructured<{
+    criteria: { scorecard_skill_id: string; question: string; fait_attendu: string }[];
+  }>({
+    system: TOPGRADING_SKILL_CHECKS_SYSTEM,
+    user,
+    toolName: "proposer_criteres_competences",
+    toolDescription: "Enregistre les critères de compétence à vérifier par un exemple vécu.",
+    maxTokens: 2048,
+    schema: {
+      type: "object",
+      properties: {
+        criteria: {
+          // Pas de `maxItems` : refusé par le schéma d'outil strict d'Anthropic
+          // sur un tableau (400). Le plafond de cinq vit dans le prompt, et
+          // devient certain côté serveur (mergeSkillChecks).
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              scorecard_skill_id: { type: "string", enum: input.scorecard.map((s) => s.id) },
+              question: { type: "string" },
+              fait_attendu: { type: "string" },
+            },
+            required: ["scorecard_skill_id", "question", "fait_attendu"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["criteria"],
+      additionalProperties: false,
+    },
+  });
+
+  const known = new Set(input.scorecard.map((s) => s.id));
+  const taken = new Set<string>();
+  const kept: SkillCheckSuggestion[] = [];
+  for (const c of result.criteria ?? []) {
+    const skillId = c.scorecard_skill_id ?? "";
+    if (!known.has(skillId) || taken.has(skillId)) continue;
+    taken.add(skillId);
+    kept.push({ skillId, q: stripFieldTags(c.question ?? ""), evidence: stripFieldTags(c.fait_attendu ?? "") });
+  }
+  return kept;
+}
+
 // ─── Évaluation automatique de la grille à partir de la transcription ──────
 // Le recruteur n'a plus rien à remplir pendant l'entretien : il consulte le
 // guide, enregistre via un outil externe, colle la transcription, et noa
@@ -1022,6 +1119,77 @@ export async function evaluateTopgradingGrid(
   const notes: Record<string, string> = {};
   for (const n of result.notes ?? []) notes[n.id] = n.note;
   return notes;
+}
+
+const SKILL_CHECK_EVAL_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la transcription d'un entretien et d'une liste de critères, tu détermines pour CHAQUE critère si ce que le candidat a RACONTÉ le valide.
+
+Ce qui vaut validation, et rien d'autre : un exemple vécu, situé (quand, où, avec qui), dans lequel le candidat dit ce qu'IL a fait, et ce que cela a produit.
+
+Règles :
+- "Oui" : le candidat raconte une situation précise qu'il a vécue, avec son rôle et l'issue, et cette situation correspond au fait attendu.
+- "Partiel" : il aborde le sujet mais reste général, parle au nom de l'équipe sans dire ce qu'il a fait lui-même, ne situe pas l'exemple, ou l'exemple ne correspond qu'en partie au fait attendu.
+- "Non" : le sujet n'est pas abordé, ou le candidat se contente d'affirmer une qualité (« je suis quelqu'un de très collaboratif ») sans exemple, ou ce qu'il raconte contredit le fait attendu.
+- Une intention, une opinion, une réponse à une mise en situation hypothétique ne valent JAMAIS "Oui" : ce ne sont pas des faits vécus.
+- Base-toi UNIQUEMENT sur la transcription. N'invente rien, ne complète rien par ce que le profil laisse supposer.
+- Réponds pour TOUS les critères fournis, sans exception.`;
+
+/**
+ * Rend un verdict fermé sur chaque critère de compétence, à partir du seul récit
+ * du candidat.
+ *
+ * La signature ne prend NI identifiant de compétence, NI hypothèse formulée
+ * avant l'entretien : le verdict porte sur ce qui a été raconté, et il n'existe
+ * aucun canal par lequel une déclaration antérieure pourrait l'influencer. C'est
+ * une garantie de structure, pas une consigne de prompt.
+ *
+ * Lève en cas d'échec ; l'appelant décide du repli.
+ */
+export async function evaluateTopgradingSkillChecks(
+  criteria: { id: string; q: string; evidence?: string }[],
+  transcript: string,
+  job: JobSpecContext,
+  candidate: CandidateContext,
+): Promise<Record<string, "Oui" | "Partiel" | "Non">> {
+  if (criteria.length === 0) return {};
+
+  const criteriaText = criteria
+    .map((c) => `- [${c.id}] ${c.q}${c.evidence ? `\n  Fait attendu : ${c.evidence}` : ""}`)
+    .join("\n");
+  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCritères à évaluer (tous, sans exception) :\n${criteriaText}\n\nTranscription de l'entretien :\n${transcript}`;
+
+  const result = await generateStructured<{ evaluations: { id: string; answer: "Oui" | "Partiel" | "Non" }[] }>({
+    system: SKILL_CHECK_EVAL_SYSTEM,
+    user,
+    toolName: "evaluer_criteres_competences",
+    toolDescription: "Enregistre le verdict de chaque critère de compétence.",
+    maxTokens: 2048,
+    schema: {
+      type: "object",
+      properties: {
+        evaluations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              answer: { type: "string", enum: ["Oui", "Partiel", "Non"] },
+            },
+            required: ["id", "answer"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["evaluations"],
+      additionalProperties: false,
+    },
+  });
+
+  const known = new Set(criteria.map((c) => c.id));
+  const verdicts: Record<string, "Oui" | "Partiel" | "Non"> = {};
+  for (const ev of result.evaluations ?? []) {
+    if (known.has(ev.id)) verdicts[ev.id] = ev.answer;
+  }
+  return verdicts;
 }
 
 // ─── Synthèse post-entretien (D, partagée screening + topgrading) ───────────

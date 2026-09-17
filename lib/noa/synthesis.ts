@@ -11,8 +11,53 @@
 //                 answers  = { [id]: string } (free-text notes per question)
 
 export type ScreeningCriterion = { id: string; q: string; crit?: string; probes?: string[] };
-export type TopgradingQuestion = { id: string; q: string; probes?: string[] };
-export type TopgradingEpisode = { co: string; period?: string; role?: string; qs: TopgradingQuestion[] };
+export type TopgradingQuestion = {
+  id: string;
+  q: string;
+  probes?: string[];
+  /** mission_skills.id de la compétence attendue que ce critère vérifie. Bloc de critères uniquement. */
+  skillId?: string;
+  /** Ce que la réponse doit contenir pour valoir « Oui ». Bloc de critères uniquement. */
+  evidence?: string;
+};
+export type TopgradingEpisode = {
+  co: string;
+  period?: string;
+  role?: string;
+  qs: TopgradingQuestion[];
+  /** Présent uniquement sur le bloc de critères rattachés à la Scorecard. */
+  kind?: typeof SKILL_CHECK_KIND;
+};
+
+/**
+ * Discriminant du bloc de critères à réponse fermée rattachés à la Scorecard,
+ * rangé EN DERNIER dans `criteria` pour que `criteria[0]` reste un épisode et
+ * que les prédicats de forme ci-dessous continuent de trancher correctement.
+ *
+ * Il garde la forme d'un épisode (`qs`) plutôt qu'une forme propre : les
+ * lecteurs de grille sont canardés sur la présence de `qs`, et une forme
+ * étrangère les ferait lever au lieu de les faire ignorer le bloc.
+ */
+export const SKILL_CHECK_KIND = "skill_checks";
+
+/**
+ * Sépare le parcours chronologique du bloc de critères. Tolère une grille
+ * absente, malformée, ou antérieure au bloc — auquel cas `checks` vaut null et
+ * tout se comporte comme avant.
+ */
+export function splitTopgradingCriteria(criteria: unknown): {
+  episodes: TopgradingEpisode[];
+  checks: TopgradingEpisode | null;
+} {
+  if (!Array.isArray(criteria)) return { episodes: [], checks: null };
+  const blocks = criteria.filter(
+    (raw): raw is TopgradingEpisode => !!raw && typeof raw === "object" && Array.isArray((raw as TopgradingEpisode).qs),
+  );
+  return {
+    episodes: blocks.filter((b) => b.kind !== SKILL_CHECK_KIND),
+    checks: blocks.find((b) => b.kind === SKILL_CHECK_KIND) ?? null,
+  };
+}
 
 export type ScreeningAnswer = "Oui" | "Partiel" | "Non";
 
@@ -113,9 +158,14 @@ function generateScreeningSynthesis(
 }
 
 function generateTopgradingSynthesis(
-  episodes: TopgradingEpisode[],
+  allBlocks: TopgradingEpisode[],
   answers: Record<string, string>,
 ): { content: string; advice: string } {
+  // Le bloc de critères se raconte à part : ses réponses sont des verdicts, pas
+  // des notes prises au fil du parcours. Les mélanger ferait passer un « Non »
+  // pour une question documentée, et ferait apparaître le titre du bloc dans la
+  // liste des entreprises.
+  const { episodes, checks } = splitTopgradingCriteria(allBlocks);
   const allQuestions = episodes.flatMap((ep) => ep.qs.map((q) => ({ ep, q })));
   const total = allQuestions.length;
   const answered = allQuestions.filter(({ q }) => (answers[q.id] ?? "").trim().length > 0);
@@ -137,8 +187,19 @@ function generateTopgradingSynthesis(
     );
   }
 
+  const verdicts = (checks?.qs ?? []).map((q) => String(answers[q.id] ?? ""));
+  if (verdicts.length > 0) {
+    const count = (value: string) => verdicts.filter((v) => v === value).length;
+    parts.push(
+      `Sur ${verdicts.length} compétence${verdicts.length > 1 ? "s" : ""} vérifiée${verdicts.length > 1 ? "s" : ""} par un exemple vécu, ${count("Oui")} validée${count("Oui") > 1 ? "s" : ""}, ${count("Partiel")} partielle${count("Partiel") > 1 ? "s" : ""}, ${count("Non")} non validée${count("Non") > 1 ? "s" : ""}.`,
+    );
+  }
+
   const content = parts.join(" ");
 
+  // `advice` reste calculé sur le seul parcours : son barème a été écrit pour un
+  // taux de documentation, et une grille sans bloc doit produire exactement le
+  // même texte qu'avant.
   const ratio = total > 0 ? answered.length / total : 0;
   let advice: string;
   if (ratio === 1) {

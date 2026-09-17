@@ -70,9 +70,28 @@ export type GridLike = { criteria: unknown; answers: Record<string, unknown> };
  *     retombe sur le rapprochement de textes pour ne pas faire disparaître ce
  *     qu'elle montrait déjà.
  *
- * Le topgrading est hors sujet ici : ses réponses sont des notes en texte libre,
- * pas un statut fermé.
+ * Les deux grilles sont lues. Le parcours topgrading reste inerte — ses réponses
+ * sont des notes en texte libre, jamais un statut fermé — mais le bloc de
+ * critères rattachés à la Scorecard, lui, porte des verdicts.
  */
+/**
+ * Aplatit une grille quelle que soit sa forme : critères plats (screening) ou
+ * questions portées par des épisodes (topgrading).
+ */
+function flattenCriteria(criteria: unknown): GridCriterion[] {
+  if (!Array.isArray(criteria)) return [];
+  return criteria
+    .flatMap((raw) => {
+      if (!raw || typeof raw !== "object") return [];
+      const block = raw as { qs?: unknown };
+      return Array.isArray(block.qs) ? (block.qs as unknown[]) : [raw];
+    })
+    // Une grille est du JSON libre : une entrée nulle ou scalaire n'a rien
+    // d'impossible, et la lecture d'une compétence ne doit pas faire tomber la
+    // page de comparaison pour autant.
+    .filter((c): c is GridCriterion => !!c && typeof c === "object");
+}
+
 export function validatedSkillIds(
   grid: GridLike | null | undefined,
   missionSkills: Pick<MissionSkill, "id" | "name">[],
@@ -80,15 +99,21 @@ export function validatedSkillIds(
   const validated = new Set<string>();
   if (!grid || !Array.isArray(grid.criteria)) return validated;
 
-  const criteria = grid.criteria as GridCriterion[];
+  const criteria = flattenCriteria(grid.criteria);
   const known = new Set(missionSkills.map((s) => s.id));
   const attached = criteria.some((c) => typeof c.skillId === "string" && known.has(c.skillId));
+  // Le repli par rapprochement de textes n'a de sens que sur une grille plate :
+  // une grille par épisodes n'a jamais précédé cette mécanique, et y rapprocher
+  // un libellé de question du nom d'une compétence inventerait une confirmation.
+  const episodeShaped = (grid.criteria as unknown[]).some(
+    (raw) => !!raw && typeof raw === "object" && Array.isArray((raw as { qs?: unknown }).qs),
+  );
 
   for (const criterion of criteria) {
     const answer = grid.answers?.[String(criterion.id)];
     if (typeof answer !== "string" || !VALIDATING_ANSWERS.has(answer)) continue;
 
-    if (attached) {
+    if (attached || episodeShaped) {
       if (typeof criterion.skillId === "string" && known.has(criterion.skillId)) {
         validated.add(criterion.skillId);
       }

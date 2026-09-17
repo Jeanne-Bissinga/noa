@@ -97,3 +97,53 @@ describe("compétences confirmées par la grille", () => {
     }
   });
 });
+
+describe("grille par épisodes (entretien technique)", () => {
+  const EPISODE = { co: "Scaleway", qs: [{ id: "0-0", q: "Vos missions ?" }] };
+
+  it("lit les verdicts du bloc de critères", () => {
+    const g = grid(
+      [EPISODE, { co: "Compétences attendues", kind: "skill_checks", qs: [
+        { id: "1-0", q: "Racontez un désaccord traité.", skillId: "skill-collab" },
+        { id: "1-1", q: "Une décision prise seul ?", skillId: "skill-autonomie" },
+      ] }],
+      { "0-0": "Note libre sur le parcours.", "1-0": "Oui", "1-1": "Partiel" },
+    );
+    expect([...validatedSkillIds(g, SCORECARD)].sort()).toEqual(["skill-autonomie", "skill-collab"]);
+  });
+
+  it("ne confirme rien sur « Non »", () => {
+    const g = grid(
+      [EPISODE, { co: "Compétences attendues", kind: "skill_checks", qs: [{ id: "1-0", q: "…", skillId: "skill-collab" }] }],
+      { "1-0": "Non" },
+    );
+    expect([...validatedSkillIds(g, SCORECARD)]).toEqual([]);
+  });
+
+  it("ignore un critère ajouté à la main, sans rattachement", () => {
+    const g = grid(
+      [EPISODE, { co: "Compétences attendues", kind: "skill_checks", qs: [
+        { id: "1-0", q: "Python avancé ?", skillId: "skill-python" },
+        { id: "1-1", q: "Question ajoutée à la main." },
+      ] }],
+      { "1-0": "Oui", "1-1": "Oui" },
+    );
+    expect([...validatedSkillIds(g, SCORECARD)]).toEqual(["skill-python"]);
+  });
+
+  it("ne rapproche JAMAIS par le texte sur une grille par épisodes", () => {
+    // Le repli flou a été écrit pour les grilles plates d'avant le rattachement.
+    // Sur un parcours, il confondrait une note libre avec une confirmation.
+    const g = grid(
+      [{ co: "Scaleway", qs: [{ id: "0-0", q: "Python avancé au quotidien ?" }] }],
+      { "0-0": "Oui" },
+    );
+    expect([...validatedSkillIds(g, SCORECARD)]).toEqual([]);
+  });
+
+  it("ne lève pas sur un épisode malformé", () => {
+    for (const criteria of [[{ qs: "x" }], [{ qs: [null] }], [null], [{ co: "Sans qs" }]]) {
+      expect(() => validatedSkillIds(grid(criteria, { "0-0": "Oui" }), SCORECARD)).not.toThrow();
+    }
+  });
+});

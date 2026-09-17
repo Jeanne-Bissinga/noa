@@ -41,8 +41,10 @@ export default async function MissionComparisonPage({ params }: { params: Promis
     getCandidateSkillsForCandidates(candidateIds),
     getDecisionsForCandidates(candidateIds),
   ]);
-  const screeningInterviews = interviews.filter((i) => i.type === "screening");
-  const evaluationGrids = await getEvaluationGridsForInterviews(screeningInterviews.map((i) => i.id));
+  // Les deux grilles notées, jamais celle d'un entretien d'intégration : elle
+  // n'entre pas dans l'évaluation d'un recrutement.
+  const gradedInterviews = interviews.filter((i) => i.type === "screening" || i.type === "topgrading");
+  const evaluationGrids = await getEvaluationGridsForInterviews(gradedInterviews.map((i) => i.id));
 
   const recruiters = await getRecruitersByIds(decisions.map((d) => d.decided_by).filter((v): v is string => !!v));
   // null quand la décision n'a pas d'auteur connu : la phrase affichée s'arrête
@@ -71,6 +73,7 @@ export default async function MissionComparisonPage({ params }: { params: Promis
     const topgradingInterview = interviews.find((i) => i.candidate_id === c.id && i.type === "topgrading");
     const skills = candidateSkills.filter((s) => s.candidate_id === c.id);
     const screeningGrid = evaluationGrids.find((g) => g.interview_id === screeningInterview?.id);
+    const topgradingGrid = evaluationGrids.find((g) => g.interview_id === topgradingInterview?.id);
     return {
       id: c.id,
       firstName: c.first_name,
@@ -79,7 +82,8 @@ export default async function MissionComparisonPage({ params }: { params: Promis
       status: c.status,
       score: c.score,
       coveredSkillIds: missionSkills.filter((s) => candidateCoversSkill(skills, s.name)).map((s) => s.id),
-      validatedSkillIds: [...validatedSkillIds(screeningGrid, missionSkills)],
+      screeningValidatedSkillIds: [...validatedSkillIds(screeningGrid, missionSkills)],
+      topgradingValidatedSkillIds: [...validatedSkillIds(topgradingGrid, missionSkills)],
       screeningAdvice: noaSynthesis(c.id, screeningInterview?.id)?.advice ?? null,
       topgradingAdvice: noaSynthesis(c.id, topgradingInterview?.id)?.advice ?? null,
       noaOverview: noaSynthesis(c.id, null)?.content ?? null,

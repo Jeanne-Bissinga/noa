@@ -35,11 +35,10 @@ export type ComparisonCandidate = {
   score: number | null;
   /** Compétences de la mission retrouvées dans le CV, par identifiant. */
   coveredSkillIds: string[];
-  /**
-   * Compétences de la mission confirmées à l'entretien de screening (critère
-   * de la grille d'évaluation répondu "Oui"/"Partiel"), par identifiant.
-   */
-  validatedSkillIds: string[];
+  /** Compétences confirmées au premier entretien (critère répondu « Oui »/« Partiel »). */
+  screeningValidatedSkillIds: string[];
+  /** Compétences confirmées à l'entretien technique, par un exemple vécu. */
+  topgradingValidatedSkillIds: string[];
   screeningAdvice: string | null;
   topgradingAdvice: string | null;
   noaOverview: string | null;
@@ -148,8 +147,9 @@ function CandidateCard({
 }) {
   const decided = c.status === "Recrute" || c.status === "Non retenu";
   const covered = new Set(c.coveredSkillIds);
-  const validated = new Set(c.validatedSkillIds);
-  const coveredOrValidated = new Set([...c.coveredSkillIds, ...c.validatedSkillIds]);
+  const confirmedAt = { screening: new Set(c.screeningValidatedSkillIds), topgrading: new Set(c.topgradingValidatedSkillIds) };
+  const validated = new Set([...c.screeningValidatedSkillIds, ...c.topgradingValidatedSkillIds]);
+  const coveredOrValidated = new Set([...c.coveredSkillIds, ...validated]);
 
   return (
     <Card className="p-5 flex flex-col">
@@ -211,8 +211,15 @@ function CandidateCard({
                     // Le pourquoi de la compétence reste lisible au survol : il
                     // disparaissait dès qu'il y avait quelque chose à dire sur
                     // le candidat, c'est-à-dire quand il servait le plus.
-                    const provenance = isValidated
-                      ? `Confirmée au ${INTERVIEW_LABEL.screening.toLowerCase()}`
+                    // Dire À QUEL entretien la compétence a été confirmée : « au
+                    // premier entretien » et « à l'entretien technique » ne valent
+                    // pas la même chose, la seconde reposant sur un exemple vécu.
+                    const stages = [
+                      confirmedAt.screening.has(skill.id) ? INTERVIEW_LABEL.screening.toLowerCase() : null,
+                      confirmedAt.topgrading.has(skill.id) ? INTERVIEW_LABEL.topgrading.toLowerCase() : null,
+                    ].filter(Boolean);
+                    const provenance = stages.length > 0
+                      ? `Confirmée au ${stages.join(" et au ")}`
                       : isCovered
                         ? "Repérée dans le CV, pas encore confirmée en entretien"
                         : null;

@@ -180,8 +180,17 @@ export type PrepGridQuestion = {
    * sur les grilles créées avant que ce rattachement existe.
    */
   skillId?: string;
+  /** Ce que la réponse doit contenir pour valoir « Oui ». Bloc de critères de l'entretien technique. */
+  evidence?: string;
 };
-export type PrepGridSection = { title: string; subtitle?: string; period?: string; questions: PrepGridQuestion[] };
+export type PrepGridSection = {
+  title: string;
+  subtitle?: string;
+  period?: string;
+  /** Marque le bloc de critères rattachés à la Scorecard (cf. lib/noa/skill-checks.ts). */
+  kind?: string;
+  questions: PrepGridQuestion[];
+};
 export type PrepGuideQuestion = { q: string; probes: string[] };
 export type PrepGuideSection = { title: string; subtitle?: string; questions: PrepGuideQuestion[] };
 
