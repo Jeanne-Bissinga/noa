@@ -171,7 +171,16 @@ export const TOPGRADING_EPISODES: TopgradingEpisode[] = [
 ];
 
 // ─── Preparation screen meta (grid + guide), mirrors PREP_META in the prototype
-export type PrepGridQuestion = { text: string; crit?: string };
+export type PrepGridQuestion = {
+  text: string;
+  crit?: string;
+  /**
+   * mission_skills.id de la compétence attendue que ce critère vérifie, posé à
+   * la génération (lib/noa/ai.ts). Absent sur un critère ajouté à la main, et
+   * sur les grilles créées avant que ce rattachement existe.
+   */
+  skillId?: string;
+};
 export type PrepGridSection = { title: string; subtitle?: string; period?: string; questions: PrepGridQuestion[] };
 export type PrepGuideQuestion = { q: string; probes: string[] };
 export type PrepGuideSection = { title: string; subtitle?: string; questions: PrepGuideQuestion[] };

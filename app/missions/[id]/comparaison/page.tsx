@@ -7,8 +7,9 @@ import {
   getInterviewsForCandidates, getSynthesesForCandidates, getCandidateSkillsForCandidates,
   getDecisionsForCandidates, getRecruitersByIds, getEvaluationGridsForInterviews,
 } from "@/lib/noa/queries";
+import { candidateCoversSkill, validatedSkillIds } from "@/lib/noa/skill-match";
 import { formatDate, initials } from "@/lib/noa/labels";
-import type { CandidateSkill, EvaluationGrid, MissionSkillCategory, Synthesis } from "@/lib/noa/types";
+import type { MissionSkillCategory, Synthesis } from "@/lib/noa/types";
 import { ComparisonBoard } from "./comparison-board";
 import type { ComparisonCandidate, ComparisonSkillBlock } from "./comparison-board";
 
@@ -17,44 +18,6 @@ const SKILL_CATEGORY_LABEL: Record<MissionSkillCategory, string> = {
   relationnelle: "Relationnelles (soft skills)",
   comportementale: "Savoir-être & valeurs",
 };
-
-/**
- * Rapprochement texte libre entre le nom d'une compétence attendue (fiche de
- * mission) et les compétences déclarées d'un candidat (CV). Pas de
- * référentiel commun entre les deux tables : une correspondance approchée
- * (sous-chaîne, insensible à la casse/accents) reste plus utile qu'une
- * absence de rapprochement, tant qu'elle est présentée comme indicative.
- */
-function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-}
-
-function candidateCoversSkill(candidateSkills: CandidateSkill[], skillName: string): boolean {
-  const target = normalize(skillName);
-  return candidateSkills.some((s) => {
-    const cand = normalize(s.name);
-    return cand.length > 0 && (target.includes(cand) || cand.includes(target));
-  });
-}
-
-/**
- * Une compétence est considérée comme validée à l'entretien de screening quand
- * un critère de sa grille d'évaluation, dont le libellé se rapproche du nom de
- * la compétence, a reçu la réponse "Oui" ou "Partiel". Le topgrading est
- * exclu : ses réponses sont des notes en texte libre, pas un statut fermé
- * exploitable de la même façon.
- */
-function candidateValidatedSkill(grid: EvaluationGrid | undefined, skillName: string): boolean {
-  if (!grid) return false;
-  const target = normalize(skillName);
-  const criteria = grid.criteria as { id: string; q: string }[];
-  return criteria.some((c) => {
-    const q = normalize(c.q ?? "");
-    if (q.length === 0 || !(target.includes(q) || q.includes(target))) return false;
-    const answer = grid.answers[c.id];
-    return answer === "Oui" || answer === "Partiel";
-  });
-}
 
 export default async function MissionComparisonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -116,9 +79,7 @@ export default async function MissionComparisonPage({ params }: { params: Promis
       status: c.status,
       score: c.score,
       coveredSkillIds: missionSkills.filter((s) => candidateCoversSkill(skills, s.name)).map((s) => s.id),
-      validatedSkillIds: missionSkills
-        .filter((s) => candidateValidatedSkill(screeningGrid, s.name))
-        .map((s) => s.id),
+      validatedSkillIds: [...validatedSkillIds(screeningGrid, missionSkills)],
       screeningAdvice: noaSynthesis(c.id, screeningInterview?.id)?.advice ?? null,
       topgradingAdvice: noaSynthesis(c.id, topgradingInterview?.id)?.advice ?? null,
       noaOverview: noaSynthesis(c.id, null)?.content ?? null,

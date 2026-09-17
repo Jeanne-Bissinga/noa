@@ -6,7 +6,7 @@ import { Check, CheckCheck, ChevronRight, Circle, Clock, Sparkles } from "lucide
 import { Card, Badge, Avatar, LinkBtn } from "@/components/noa/ui-primitives";
 import {
   CANDIDATE_STATUS_LABEL, CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR,
-  DECISION_STATUS_LABEL, DECISION_STATUS_COLOR,
+  DECISION_STATUS_LABEL, DECISION_STATUS_COLOR, INTERVIEW_LABEL,
 } from "@/lib/noa/labels";
 import type { CandidateStatus, DecisionStage, DecisionStatus } from "@/lib/noa/types";
 
@@ -115,10 +115,13 @@ const StageBlock = ({ label, text, empty, icon }: {
   </div>
 );
 
+// `repérées` couvre les deux sources. Dire « dans le CV » d'un total qui compte
+// aussi les compétences confirmées en entretien serait faux : une compétence
+// confirmée peut très bien ne figurer nulle part dans le CV.
 function coverageSummary(covered: number, validated: number, total: number): string {
   if (total === 0) return "Aucune compétence définie";
   if (validated === 0) return `${covered} sur ${total} dans le CV`;
-  return `${covered} sur ${total} dans le CV, dont ${validated} confirmées à l'entretien`;
+  return `${covered} sur ${total} repérées, dont ${validated} confirmées en entretien`;
 }
 
 function interviewsSummary(c: ComparisonCandidate): string {
@@ -204,11 +207,15 @@ function CandidateCard({
                   {block.items.map((skill) => {
                     const isValidated = validated.has(skill.id);
                     const isCovered = covered.has(skill.id);
-                    const title = isValidated
-                      ? "Confirmée à l'entretien de screening"
+                    // Le pourquoi de la compétence reste lisible au survol : il
+                    // disparaissait dès qu'il y avait quelque chose à dire sur
+                    // le candidat, c'est-à-dire quand il servait le plus.
+                    const provenance = isValidated
+                      ? `Confirmée au ${INTERVIEW_LABEL.screening.toLowerCase()}`
                       : isCovered
-                        ? "Repérée dans le CV, pas encore confirmée à l'entretien"
-                        : (skill.justification ?? undefined);
+                        ? "Repérée dans le CV, pas encore confirmée en entretien"
+                        : null;
+                    const title = [provenance, skill.justification].filter(Boolean).join("\n\n") || undefined;
                     return (
                       <li key={skill.id} className="flex items-start gap-2">
                         {isValidated ? (

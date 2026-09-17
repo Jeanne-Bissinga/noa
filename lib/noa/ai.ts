@@ -544,7 +544,23 @@ export type CandidateContext = {
   skills: string[];
 };
 
-export type ScreeningCriterionSuggestion = { text: string; crit: string };
+export type ScreeningCriterionSuggestion = {
+  text: string;
+  crit: string;
+  /**
+   * mission_skills.id de la compétence attendue que ce critère vérifie, ou null
+   * quand il n'en vérifie aucune (disponibilité, budget, motivation).
+   *
+   * C'est ce rattachement qui permet de dire plus tard qu'une compétence a été
+   * confirmée en entretien. Sans lui, il faudrait rapprocher deux textes écrits
+   * indépendamment — ce que faisait la page de comparaison, et qui ne
+   * retrouvait presque jamais une compétence relationnelle ou de savoir-être.
+   */
+  skillId: string | null;
+};
+
+/** Valeur que le modèle renvoie quand un critère ne vérifie aucune compétence de la Scorecard. */
+export const NO_SCORECARD_SKILL = "aucune";
 export type GuideSectionSuggestion = { title: string; questions: { q: string; probes: string[] }[] };
 
 function jobSpecLines(job: JobSpecContext): string {
@@ -603,6 +619,22 @@ Règles :
 - crit : la catégorie du critère (parmi les valeurs autorisées). Inclus TOUJOURS 1 à 2 critères "Prérequis non négociable" : des critères d'ÉLIMINATION objectifs et vérifiables (diplôme/certification requis, autorisation de travail, zone géographique, disponibilité, budget plafond) — pas des critères d'appréciation subjective.
 - Rejette les critères génériques applicables à n'importe quel poste. Français, formulations concises.`;
 
+// Complément ajouté au prompt quand la campagne a une Scorecard.
+//
+// Deux choses s'y jouent. D'abord le rattachement : un critère dit QUELLE
+// compétence attendue il vérifie, au lieu qu'on tente de le deviner plus tard en
+// rapprochant son libellé du nom d'une compétence. Ensuite la couverture : sans
+// cette consigne, le modèle ne produit que des prérequis techniques et
+// logistiques, et les compétences relationnelles ou de savoir-être de la
+// Scorecard ne sont jamais vérifiées nulle part.
+const SCORECARD_ATTACHMENT_RULES = `
+Rattachement à la Scorecard :
+- scorecard_skill_id : l'identifiant de la compétence attendue que ce critère vérifie, pris dans la liste fournie. Tu ne peux utiliser QUE ces identifiants, tels quels.
+- Quand un critère ne vérifie aucune compétence de la liste (disponibilité, prétentions salariales, motivation, contrainte géographique), réponds exactement "${NO_SCORECARD_SKILL}". C'est une réponse normale, pas un échec.
+- Une compétence ne peut être rattachée qu'à UN seul critère. Ne découpe pas la même compétence en plusieurs critères.
+- Couvre en priorité les compétences non négociables du poste. Mais inclus AUSSI 1 à 2 critères portant sur des compétences relationnelles ou de savoir-être de la Scorecard, à condition qu'un premier entretien puisse réellement les vérifier en demandant un exemple vécu (une collaboration difficile, une priorité renégociée, une décision prise seul).
+- Ne rattache jamais un critère à une compétence qu'il ne vérifie pas vraiment, seulement parce que les mots se ressemblent : mieux vaut "${NO_SCORECARD_SKILL}".`;
+
 /**
  * Génère les critères de la grille d'évaluation de screening à partir du
  * cadrage (poste) et du profil candidat. Ce référentiel ne dépend pas de la
@@ -611,10 +643,49 @@ Règles :
 export async function generateScreeningCriteria(
   job: JobSpecContext,
   candidate: CandidateContext,
+  scorecard: ScorecardCriterionContext[] = [],
 ): Promise<ScreeningCriterionSuggestion[]> {
-  const result = await generateStructured<{ criteria: ScreeningCriterionSuggestion[] }>({
-    system: SCREENING_GRID_SYSTEM,
-    user: `${jobSpecLines(job)}\n\n${candidateLines(candidate)}`,
+  // Sans Scorecard, le rattachement n'a pas d'objet — et `enum: []` est un
+  // schéma invalide, refusé par l'API avant même d'être évalué.
+  const withScorecard = scorecard.length > 0;
+
+  const criterionProperties: Record<string, unknown> = {
+    text: { type: "string", maxLength: 45 },
+    crit: {
+      type: "string",
+      enum: [
+        "Prérequis non négociable",
+        "Critère important",
+        "Contrainte logistique",
+        "Contrainte budgétaire",
+        "Motivation & posture",
+      ],
+    },
+  };
+  const required = ["text", "crit"];
+
+  if (withScorecard) {
+    // Énumération contrainte aux identifiants réels : le modèle ne PEUT pas en
+    // inventer un. La valeur sentinelle fait partie de l'énumération pour que le
+    // champ reste requis en mode strict, où un champ optionnel n'existe pas.
+    criterionProperties.scorecard_skill_id = {
+      type: "string",
+      enum: [...scorecard.map((s) => s.id), NO_SCORECARD_SKILL],
+    };
+    required.push("scorecard_skill_id");
+  }
+
+  const scorecardLines = scorecard
+    .map((s) => `- [id: ${s.id}] (${s.category}) ${s.name}${s.justification ? ` — ${s.justification}` : ""}`)
+    .join("\n");
+
+  const result = await generateStructured<{
+    criteria: { text: string; crit: string; scorecard_skill_id?: string }[];
+  }>({
+    system: withScorecard ? `${SCREENING_GRID_SYSTEM}\n${SCORECARD_ATTACHMENT_RULES}` : SCREENING_GRID_SYSTEM,
+    user: withScorecard
+      ? `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCompétences attendues pour le poste :\n${scorecardLines}`
+      : `${jobSpecLines(job)}\n\n${candidateLines(candidate)}`,
     toolName: "proposer_grille_screening",
     toolDescription: "Enregistre les critères de la grille de screening.",
     maxTokens: 2048,
@@ -625,20 +696,8 @@ export async function generateScreeningCriteria(
           type: "array",
           items: {
             type: "object",
-            properties: {
-              text: { type: "string", maxLength: 45 },
-              crit: {
-                type: "string",
-                enum: [
-                  "Prérequis non négociable",
-                  "Critère important",
-                  "Contrainte logistique",
-                  "Contrainte budgétaire",
-                  "Motivation & posture",
-                ],
-              },
-            },
-            required: ["text", "crit"],
+            properties: criterionProperties,
+            required,
             additionalProperties: false,
           },
         },
@@ -647,7 +706,18 @@ export async function generateScreeningCriteria(
       additionalProperties: false,
     },
   });
-  return result.criteria ?? [];
+
+  // Une compétence ne peut être rattachée qu'à un seul critère : le prompt le
+  // demande, ce filtre le garantit. Deux critères sur la même compétence la
+  // feraient basculer en « confirmée » sur la foi d'une seule réponse.
+  const known = new Set(scorecard.map((s) => s.id));
+  const taken = new Set<string>();
+  return (result.criteria ?? []).map((c) => {
+    const claimed = c.scorecard_skill_id ?? "";
+    const skillId = known.has(claimed) && !taken.has(claimed) ? claimed : null;
+    if (skillId) taken.add(skillId);
+    return { text: c.text, crit: c.crit, skillId };
+  });
 }
 
 const SCREENING_GUIDE_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la grille de screening, du poste et du profil du candidat, tu rédiges le GUIDE d'entretien : pour chaque critère, les questions à poser et les relances pour creuser.
@@ -666,7 +736,10 @@ Règles :
  * relances). Lève en cas d'échec ; l'appelant retombe sur le guide statique.
  */
 export async function generateScreeningGuideSections(
-  criteria: ScreeningCriterionSuggestion[],
+  // Le guide ne pose que des questions : le rattachement à la Scorecard ne lui
+  // sert à rien, et l'exiger obligerait l'écran de préparation à le transporter
+  // jusqu'ici sans jamais s'en servir.
+  criteria: Pick<ScreeningCriterionSuggestion, "text" | "crit">[],
   job: JobSpecContext,
   candidate: CandidateContext,
   durationMinutes: number,

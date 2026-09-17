@@ -24,8 +24,9 @@ import {
   evaluateTopgradingGrid,
   type JobSpecContext,
   type CandidateContext,
+  type ScorecardCriterionContext,
 } from "@/lib/noa/ai";
-import type { InterviewType, RecruitmentInterviewType, DecisionStage, CandidateStatus, Candidate, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
+import type { InterviewType, RecruitmentInterviewType, DecisionStage, CandidateStatus, Candidate, MissionSkill, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
 
 async function assertOwnedCandidate(candidateId: string) {
   const recruiter = await getCurrentRecruiter();
@@ -57,6 +58,16 @@ async function getOrCreateInterview(candidateId: string, type: RecruitmentInterv
   return data;
 }
 
+/** La Scorecard telle que le modèle la reçoit : l'identifiant réel, et de quoi le choisir. */
+function scorecardContext(missionSkills: MissionSkill[]): ScorecardCriterionContext[] {
+  return missionSkills.map((s) => ({
+    id: s.id,
+    category: s.category,
+    name: s.name,
+    justification: s.justification,
+  }));
+}
+
 // ─── Get-or-initialize the evaluation_grids row, seeded with fixed questions ─
 /**
  * Critères semés à la création de la grille. On les génère depuis la campagne
@@ -68,15 +79,21 @@ async function getOrCreateInterview(candidateId: string, type: RecruitmentInterv
  */
 async function seedGridCriteria(type: RecruitmentInterviewType, candidate: Candidate, recruiter: RecruiterWithCompany) {
   try {
-    const { job, cand } = await buildScreeningContext(candidate, recruiter);
+    const { job, cand, missionSkills } = await buildScreeningContext(candidate, recruiter);
 
     if (type === "screening") {
-      const suggestions = await generateScreeningCriteria(job, cand);
+      const suggestions = await generateScreeningCriteria(job, cand, scorecardContext(missionSkills));
       if (!suggestions.length) throw new Error("aucun critère généré");
       // probes vide : les relances statiques sont indexées sur les critères
       // React et n'auraient aucun rapport avec les critères générés ici. Le
       // guide d'entretien (interview_guides) porte les vraies relances.
-      return suggestions.map((s, i) => ({ id: String(i + 1), q: s.text, crit: s.crit, probes: [] }));
+      return suggestions.map((s, i) => ({
+        id: String(i + 1),
+        q: s.text,
+        crit: s.crit,
+        probes: [],
+        ...(s.skillId ? { skillId: s.skillId } : {}),
+      }));
     }
 
     const episodes = await generateTopgradingEpisodes(job, cand);
@@ -177,7 +194,10 @@ export async function buildScreeningContext(candidate: Candidate, recruiter: Rec
     skills: candSkills.map((s) => s.name),
   };
 
-  return { job, cand };
+  // `missionSkills` s'ajoute sans rien changer pour les appelants existants :
+  // JobSpecContext ne transporte que des noms, alors que rattacher un critère à
+  // une compétence demande son identifiant et sa catégorie.
+  return { job, cand, missionSkills: skills };
 }
 
 // Parse "20 min" -> 20. Retombe sur 30 min si le format est vide/inattendu,
@@ -192,10 +212,17 @@ function parseDurationMinutes(duration: string): number {
 export async function generateScreeningGrid(candidateId: string): Promise<PrepGridSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
-    const { job, cand } = await buildScreeningContext(candidate, recruiter);
-    const criteria = await generateScreeningCriteria(job, cand);
+    const { job, cand, missionSkills } = await buildScreeningContext(candidate, recruiter);
+    const criteria = await generateScreeningCriteria(job, cand, scorecardContext(missionSkills));
     if (criteria.length) {
-      return [{ title: "Grille d'évaluation", questions: criteria.map((c) => ({ text: c.text, crit: c.crit })) }];
+      return [{
+        title: "Grille d'évaluation",
+        questions: criteria.map((c) => ({
+          text: c.text,
+          crit: c.crit,
+          ...(c.skillId ? { skillId: c.skillId } : {}),
+        })),
+      }];
     }
   } catch (e) {
     const err = e as { message?: string };
@@ -323,6 +350,10 @@ export async function savePreparation(
           q: q.text,
           crit: q.crit,
           probes: [],
+          // Sans ce report, enregistrer sa préparation effacerait le
+          // rattachement posé à la génération, et une compétence confirmée en
+          // entretien redeviendrait indétectable.
+          ...(q.skillId ? { skillId: q.skillId } : {}),
         }))
       : gridSections.map((section, si) => ({
           co: section.title,
