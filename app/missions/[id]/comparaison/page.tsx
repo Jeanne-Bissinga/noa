@@ -5,10 +5,10 @@ import { Card, BackLink } from "@/components/noa/ui-primitives";
 import {
   requireRecruiter, getMission, getMissionSkills, getCandidates,
   getInterviewsForCandidates, getSynthesesForCandidates, getCandidateSkillsForCandidates,
-  getDecisionsForCandidates, getRecruitersByIds,
+  getDecisionsForCandidates, getRecruitersByIds, getEvaluationGridsForInterviews,
 } from "@/lib/noa/queries";
 import { formatDate, initials } from "@/lib/noa/labels";
-import type { CandidateSkill, MissionSkillCategory, Synthesis } from "@/lib/noa/types";
+import type { CandidateSkill, EvaluationGrid, MissionSkillCategory, Synthesis } from "@/lib/noa/types";
 import { ComparisonBoard } from "./comparison-board";
 import type { ComparisonCandidate, ComparisonSkillBlock } from "./comparison-board";
 
@@ -37,6 +37,25 @@ function candidateCoversSkill(candidateSkills: CandidateSkill[], skillName: stri
   });
 }
 
+/**
+ * Une compétence est considérée comme validée à l'entretien de screening quand
+ * un critère de sa grille d'évaluation, dont le libellé se rapproche du nom de
+ * la compétence, a reçu la réponse "Oui" ou "Partiel". Le topgrading est
+ * exclu : ses réponses sont des notes en texte libre, pas un statut fermé
+ * exploitable de la même façon.
+ */
+function candidateValidatedSkill(grid: EvaluationGrid | undefined, skillName: string): boolean {
+  if (!grid) return false;
+  const target = normalize(skillName);
+  const criteria = grid.criteria as { id: string; q: string }[];
+  return criteria.some((c) => {
+    const q = normalize(c.q ?? "");
+    if (q.length === 0 || !(target.includes(q) || q.includes(target))) return false;
+    const answer = grid.answers[c.id];
+    return answer === "Oui" || answer === "Partiel";
+  });
+}
+
 export default async function MissionComparisonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const recruiter = await requireRecruiter();
@@ -59,6 +78,8 @@ export default async function MissionComparisonPage({ params }: { params: Promis
     getCandidateSkillsForCandidates(candidateIds),
     getDecisionsForCandidates(candidateIds),
   ]);
+  const screeningInterviews = interviews.filter((i) => i.type === "screening");
+  const evaluationGrids = await getEvaluationGridsForInterviews(screeningInterviews.map((i) => i.id));
 
   const recruiters = await getRecruitersByIds(decisions.map((d) => d.decided_by).filter((v): v is string => !!v));
   // null quand la décision n'a pas d'auteur connu : la phrase affichée s'arrête
@@ -86,6 +107,7 @@ export default async function MissionComparisonPage({ params }: { params: Promis
     const screeningInterview = interviews.find((i) => i.candidate_id === c.id && i.type === "screening");
     const topgradingInterview = interviews.find((i) => i.candidate_id === c.id && i.type === "topgrading");
     const skills = candidateSkills.filter((s) => s.candidate_id === c.id);
+    const screeningGrid = evaluationGrids.find((g) => g.interview_id === screeningInterview?.id);
     return {
       id: c.id,
       firstName: c.first_name,
@@ -94,6 +116,9 @@ export default async function MissionComparisonPage({ params }: { params: Promis
       status: c.status,
       score: c.score,
       coveredSkillIds: missionSkills.filter((s) => candidateCoversSkill(skills, s.name)).map((s) => s.id),
+      validatedSkillIds: missionSkills
+        .filter((s) => candidateValidatedSkill(screeningGrid, s.name))
+        .map((s) => s.id),
       screeningAdvice: noaSynthesis(c.id, screeningInterview?.id)?.advice ?? null,
       topgradingAdvice: noaSynthesis(c.id, topgradingInterview?.id)?.advice ?? null,
       noaOverview: noaSynthesis(c.id, null)?.content ?? null,

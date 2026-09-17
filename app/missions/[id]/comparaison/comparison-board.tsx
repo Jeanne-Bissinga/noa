@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check, ChevronRight, Circle, Clock, Sparkles } from "lucide-react";
+import { Check, CheckCheck, ChevronRight, Circle, Clock, Sparkles } from "lucide-react";
 import { Card, Badge, Avatar, LinkBtn } from "@/components/noa/ui-primitives";
 import {
   CANDIDATE_STATUS_LABEL, CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR,
@@ -35,6 +35,11 @@ export type ComparisonCandidate = {
   score: number | null;
   /** Compétences de la mission retrouvées dans le CV, par identifiant. */
   coveredSkillIds: string[];
+  /**
+   * Compétences de la mission confirmées à l'entretien de screening (critère
+   * de la grille d'évaluation répondu "Oui"/"Partiel"), par identifiant.
+   */
+  validatedSkillIds: string[];
   screeningAdvice: string | null;
   topgradingAdvice: string | null;
   noaOverview: string | null;
@@ -110,9 +115,10 @@ const StageBlock = ({ label, text, empty, icon }: {
   </div>
 );
 
-function coverageSummary(covered: number, total: number): string {
+function coverageSummary(covered: number, validated: number, total: number): string {
   if (total === 0) return "Aucune compétence définie";
-  return `${covered} sur ${total} dans le CV`;
+  if (validated === 0) return `${covered} sur ${total} dans le CV`;
+  return `${covered} sur ${total} dans le CV, dont ${validated} confirmées à l'entretien`;
 }
 
 function interviewsSummary(c: ComparisonCandidate): string {
@@ -138,6 +144,8 @@ function CandidateCard({
 }) {
   const decided = c.status === "Recrute" || c.status === "Non retenu";
   const covered = new Set(c.coveredSkillIds);
+  const validated = new Set(c.validatedSkillIds);
+  const coveredOrValidated = new Set([...c.coveredSkillIds, ...c.validatedSkillIds]);
 
   return (
     <Card className="p-5 flex flex-col">
@@ -182,7 +190,7 @@ function CandidateCard({
         <Section
           id={`${c.id}-skills`}
           label="Compétences attendues"
-          summary={coverageSummary(covered.size, totalSkills)}
+          summary={coverageSummary(coveredOrValidated.size, validated.size, totalSkills)}
           open={open.skills}
           onToggle={() => onToggle("skills")}
         >
@@ -194,17 +202,25 @@ function CandidateCard({
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{block.label}</p>
                 <ul className="flex flex-col gap-1.5">
                   {block.items.map((skill) => {
-                    const ok = covered.has(skill.id);
+                    const isValidated = validated.has(skill.id);
+                    const isCovered = covered.has(skill.id);
+                    const title = isValidated
+                      ? "Confirmée à l'entretien de screening"
+                      : isCovered
+                        ? "Repérée dans le CV, pas encore confirmée à l'entretien"
+                        : (skill.justification ?? undefined);
                     return (
                       <li key={skill.id} className="flex items-start gap-2">
-                        {ok ? (
-                          <Check size={13} className="text-[#1e8f52] mt-0.5 shrink-0" />
+                        {isValidated ? (
+                          <CheckCheck size={13} className="text-[#1e8f52] mt-0.5 shrink-0" />
+                        ) : isCovered ? (
+                          <Check size={13} className="text-[#3a6fd4] mt-0.5 shrink-0" />
                         ) : (
                           <Circle size={13} className="text-gray-200 mt-0.5 shrink-0" />
                         )}
                         <span
-                          className={`text-xs leading-snug ${ok ? "text-[#010101]" : "text-gray-400"}`}
-                          title={skill.justification ?? undefined}
+                          className={`text-xs leading-snug ${isValidated || isCovered ? "text-[#010101]" : "text-gray-400"}`}
+                          title={title}
                         >
                           {skill.name}
                         </span>

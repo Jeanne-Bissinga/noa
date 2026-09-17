@@ -242,6 +242,14 @@ export async function getEvaluationGrid(interviewId: string): Promise<Evaluation
   return data as EvaluationGrid | null;
 }
 
+/** Evaluation grids for several interviews at once. See getInterviewsForCandidates. */
+export async function getEvaluationGridsForInterviews(interviewIds: string[]): Promise<EvaluationGrid[]> {
+  if (interviewIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("evaluation_grids").select("*").in("interview_id", interviewIds);
+  return (data ?? []) as EvaluationGrid[];
+}
+
 export async function getInterviewGuide(interviewId: string): Promise<InterviewGuide | null> {
   const supabase = await createClient();
   const { data } = await supabase
