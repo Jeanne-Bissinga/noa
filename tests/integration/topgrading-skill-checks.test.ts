@@ -12,28 +12,67 @@ import { MAX_SKILL_CHECKS } from "@/lib/noa/skill-checks";
 // créé, et les deux catégories de la page de comparaison restent vides —
 // exactement le bug que cette fonctionnalité prétend corriger.
 
+// Contexte volontairement de TAILLE RÉELLE : profil d'entreprise, objectifs,
+// expériences détaillées, neuf compétences attendues. Une première version de ce
+// test passait en 9 secondes sur un contexte squelettique, pendant que le même
+// appel dépassait le délai sur une vraie campagne — et l'échec est silencieux
+// côté produit (le bloc n'apparaît simplement pas). Un test d'intégration qui ne
+// reproduit pas la charge réelle ne prouve que le schéma, pas le service.
 const JOB: JobSpecContext = {
   title: "Développeur IA",
-  missionText: "Concevoir et déployer des services d'IA générative pour les équipes métier.",
-  objectives: ["Mettre en production un premier assistant interne sous 6 mois"],
-  skills: ["Python avancé", "Collaboration transverse", "Autonomie sur des sujets complexes"],
+  missionText:
+    "Concevoir et déployer des services d'IA générative pour les équipes métier : assistants internes, recherche documentaire augmentée, automatisation de tâches répétitives. Le poste couvre la conception, la mise en production et le suivi des modèles, en lien direct avec les équipes produit et support.",
+  objectives: [
+    "Mettre en production un premier assistant interne sous 6 mois",
+    "Réduire de moitié le temps de traitement des demandes support",
+  ],
+  skills: [
+    "Python avancé", "Frameworks ML (PyTorch/TensorFlow)", "LLM & prompt engineering",
+    "API REST", "MLOps & déploiement en production", "Collaboration transverse",
+    "Communication technique claire", "Autonomie sur des sujets complexes", "Rigueur scientifique",
+  ],
+  company: {
+    sector: "Santé",
+    activityDescription: "Éditeur de logiciels pour les cabinets médicaux, 40 personnes.",
+    techStack: ["Python", "FastAPI", "Postgres", "Vercel"],
+    cultureValues: "Exigence, transparence, autonomie encadrée",
+    teamSize: "20-49",
+    mainObjective: "Industrialiser l'IA au service des praticiens",
+  },
 };
 
 const CANDIDATE: CandidateContext = {
   fullName: "Alex Dupont",
   title: "ML Engineer",
-  summary: "5 ans en ML, deux mises en production de modèles de recommandation.",
+  summary: "5 ans en ML, deux mises en production de modèles de recommandation à fort trafic.",
   experiences: [
-    { role: "ML Engineer", company: "Scaleway", period: "2021-2025", bullets: ["Pipelines de features", "Mise en production"] },
+    { role: "ML Engineer", company: "Scaleway", period: "2021-2025", bullets: ["Pipelines de features temps réel", "Mise en production de modèles de recommandation", "Encadrement de deux alternants"] },
+    { role: "Data Scientist", company: "Skello", period: "2019-2021", bullets: ["Prévision de charge", "Tableaux de bord métier"] },
+    { role: "Développeur", company: "Freelance", period: "2017-2019", bullets: ["Projets web pour des PME"] },
   ],
-  skills: ["Python", "PyTorch"],
+  skills: ["Python", "PyTorch", "FastAPI", "Docker"],
 };
 
-const SCORECARD: ScorecardCriterionContext[] = [
-  { id: "11111111-1111-1111-1111-111111111111", category: "relationnelle", name: "Collaboration transverse", justification: null },
-  { id: "22222222-2222-2222-2222-222222222222", category: "relationnelle", name: "Communication technique claire", justification: null },
-  { id: "33333333-3333-3333-3333-333333333333", category: "comportementale", name: "Autonomie sur des sujets complexes", justification: null },
-];
+// Neuf compétences avec leur justification, comme sur une campagne générée par
+// noa : c'est ce volume qui a fait tomber la première version.
+const SOFT_SKILLS = [
+  ["relationnelle", "Collaboration transverse"],
+  ["relationnelle", "Communication technique claire"],
+  ["relationnelle", "Communication claire avec les parties prenantes"],
+  ["relationnelle", "Autonomie sur des sujets complexes"],
+  ["comportementale", "Autonomie"],
+  ["comportementale", "Rigueur scientifique"],
+  ["comportementale", "Curiosité technologique"],
+  ["comportementale", "Orienté livraison et résultats"],
+  ["comportementale", "Curiosité et envie d'apprendre"],
+] as const;
+
+const SCORECARD: ScorecardCriterionContext[] = SOFT_SKILLS.map(([category, name], i) => ({
+  id: `${i + 1}${"1".repeat(7)}-1111-1111-1111-111111111111`.slice(0, 36),
+  category,
+  name,
+  justification: "Signalée comme déterminante pour ce poste par l'analyse de la fiche de mission.",
+}));
 
 describe("critères de compétence de l'entretien technique", () => {
   it("produit des critères rattachés à des compétences réelles", async () => {

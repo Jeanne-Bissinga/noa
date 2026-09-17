@@ -3,6 +3,7 @@
 // Uses the Anthropic SDK; requires ANTHROPIC_API_KEY in the environment.
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { MAX_SKILL_CHECKS } from "@/lib/noa/skill-checks";
 import { REASON_LABEL } from "@/lib/noa/labels";
 
 // Plafond de temps pour l'appel LLM (ms). Au-delà, l'appel lève et l'appelant
@@ -128,6 +129,15 @@ async function generateStructured<T>(opts: {
   toolDescription: string;
   schema: Record<string, unknown>;
   maxTokens: number;
+  /**
+   * Délai propre à l'appel, quand MISSION_TIMEOUT_MS ne suffit pas.
+   *
+   * Les 30 s par défaut conviennent aux générations courtes. Une génération qui
+   * écrit deux champs libres par élément les dépasse sur un contexte réel : le
+   * SDK réessaie alors deux fois, et l'appelant attend 90 s avant un échec — un
+   * échec que les appelants avalent (repli silencieux), donc invisible.
+   */
+  timeoutMs?: number;
 }): Promise<T> {
   const client = new Anthropic();
   const response = await client.messages.create(
@@ -148,7 +158,7 @@ async function generateStructured<T>(opts: {
       ],
       tool_choice: { type: "tool", name: opts.toolName },
     },
-    { timeout: MISSION_TIMEOUT_MS },
+    { timeout: opts.timeoutMs ?? MISSION_TIMEOUT_MS },
   );
 
   const toolUse = response.content.find((b) => b.type === "tool_use");
@@ -928,7 +938,7 @@ const TOPGRADING_SKILL_CHECKS_SYSTEM = `Tu es noa, un expert en recrutement spé
 Pour chaque critère tu produis :
 - scorecard_skill_id : l'identifiant de la compétence attendue que ce critère vérifie, pris dans la liste fournie. Tu ne peux utiliser QUE ces identifiants, tels quels.
 - question : UNE question à poser en entretien. Ouverte, au passé, sur une SITUATION RÉELLEMENT VÉCUE par le candidat, et qui demande comment il a procédé. Jamais une question d'opinion, jamais une mise en situation hypothétique (« que feriez-vous si… »), jamais une question à laquelle on répond par oui ou par non.
-- fait_attendu : en une phrase, ce que la réponse doit CONTENIR pour que le critère soit validé — un exemple situé dans le temps, le rôle exact du candidat, ce qu'il a fait lui-même, et l'issue. C'est ce fait qui sera cherché dans la transcription, pas une impression générale.
+- fait_attendu : UNE phrase courte, vingt-cinq mots au maximum, disant ce que la réponse doit CONTENIR pour que le critère soit validé — un exemple situé dans le temps, le rôle exact du candidat, ce qu'il a fait lui-même, et l'issue. C'est ce fait qui sera cherché dans la transcription, pas une impression générale.
 
 Règles :
 - UN seul critère par compétence, CINQ critères au maximum. Mieux vaut trois critères vérifiables que cinq artificiels.
@@ -972,6 +982,9 @@ export async function generateTopgradingSkillChecks(input: {
     toolName: "proposer_criteres_competences",
     toolDescription: "Enregistre les critères de compétence à vérifier par un exemple vécu.",
     maxTokens: 2048,
+    // Deux champs rédigés par critère, jusqu'à cinq critères : sur une campagne
+    // réelle, cet appel dépasse les 30 s par défaut de façon reproductible.
+    timeoutMs: 90_000,
     schema: {
       type: "object",
       properties: {
@@ -1006,7 +1019,11 @@ export async function generateTopgradingSkillChecks(input: {
     taken.add(skillId);
     kept.push({ skillId, q: stripFieldTags(c.question ?? ""), evidence: stripFieldTags(c.fait_attendu ?? "") });
   }
-  return kept;
+  // Le plafond est demandé dans le prompt et constaté ici : sur une Scorecard de
+  // neuf compétences, le modèle en a rendu davantage. Une consigne n'est pas une
+  // garantie — `maxItems` étant refusé par les schémas stricts, la coupe se fait
+  // côté serveur.
+  return kept.slice(0, MAX_SKILL_CHECKS);
 }
 
 // ─── Évaluation automatique de la grille à partir de la transcription ──────
