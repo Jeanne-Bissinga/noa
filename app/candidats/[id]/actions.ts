@@ -9,7 +9,11 @@ import {
 } from "@/lib/noa/queries";
 import { STATUS_FIELDS } from "@/lib/noa/labels";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
-import { generateNoaSynthesis } from "@/lib/noa/synthesis";
+import { generateNoaSynthesis, splitTopgradingCriteria, SKILL_CHECK_KIND } from "@/lib/noa/synthesis";
+import {
+  mergeSkillChecks, skillCheckCriteriaBlock, skillCheckGuideSection,
+  SKILL_CHECK_TITLE, SKILL_CHECK_SUBTITLE, type SkillCheckSeed,
+} from "@/lib/noa/skill-checks";
 import { SCREENING_CRITERIA, TOPGRADING_EPISODES, PREP_META, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
 import { TEST_USER_ID } from "@/lib/noa/test-account";
 import {
@@ -22,10 +26,14 @@ import {
   answerInterviewQuestion,
   evaluateScreeningGrid,
   evaluateTopgradingGrid,
+  generateTopgradingSkillChecks,
+  evaluateTopgradingSkillChecks,
+  type SkillCheckSuggestion,
   type JobSpecContext,
   type CandidateContext,
+  type ScorecardCriterionContext,
 } from "@/lib/noa/ai";
-import type { InterviewType, RecruitmentInterviewType, DecisionStage, CandidateStatus, Candidate, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
+import type { InterviewType, RecruitmentInterviewType, DecisionStage, CandidateStatus, Candidate, MissionSkill, RecruiterWithCompany, Synthesis } from "@/lib/noa/types";
 
 async function assertOwnedCandidate(candidateId: string) {
   const recruiter = await getCurrentRecruiter();
@@ -57,6 +65,43 @@ async function getOrCreateInterview(candidateId: string, type: RecruitmentInterv
   return data;
 }
 
+/** La Scorecard telle que le modèle la reçoit : l'identifiant réel, et de quoi le choisir. */
+function scorecardContext(missionSkills: MissionSkill[]): ScorecardCriterionContext[] {
+  return missionSkills.map((s) => ({
+    id: s.id,
+    category: s.category,
+    name: s.name,
+    justification: s.justification,
+  }));
+}
+
+/**
+ * Les critères de compétence de l'entretien technique.
+ *
+ * Jamais bloquant : une génération en échec rend une liste vide, et l'entretien
+ * se prépare exactement comme avant. Un bloc absent vaut mieux qu'une grille
+ * qu'on ne peut pas créer.
+ */
+async function buildSkillCheckSeeds(
+  job: JobSpecContext,
+  cand: CandidateContext,
+  missionSkills: MissionSkill[],
+): Promise<SkillCheckSeed[]> {
+  // Seules les deux catégories que le parcours peut réellement documenter : une
+  // compétence technique se vérifie déjà ailleurs, et diluerait le bloc.
+  const soft = missionSkills.filter((s) => s.category === "relationnelle" || s.category === "comportementale");
+  if (soft.length === 0) return [];
+
+  let generated: SkillCheckSuggestion[] = [];
+  try {
+    generated = await generateTopgradingSkillChecks({ job, candidate: cand, scorecard: scorecardContext(soft) });
+  } catch (e) {
+    const err = e as { message?: string };
+    console.error(`[noa] Critères de compétence non générés, l'entretien continue sans : ${err?.message ?? String(e)}`);
+  }
+  return mergeSkillChecks([], generated);
+}
+
 // ─── Get-or-initialize the evaluation_grids row, seeded with fixed questions ─
 /**
  * Critères semés à la création de la grille. On les génère depuis la campagne
@@ -68,25 +113,35 @@ async function getOrCreateInterview(candidateId: string, type: RecruitmentInterv
  */
 async function seedGridCriteria(type: RecruitmentInterviewType, candidate: Candidate, recruiter: RecruiterWithCompany) {
   try {
-    const { job, cand } = await buildScreeningContext(candidate, recruiter);
+    const { job, cand, missionSkills } = await buildScreeningContext(candidate, recruiter);
 
     if (type === "screening") {
-      const suggestions = await generateScreeningCriteria(job, cand);
+      const suggestions = await generateScreeningCriteria(job, cand, scorecardContext(missionSkills));
       if (!suggestions.length) throw new Error("aucun critère généré");
       // probes vide : les relances statiques sont indexées sur les critères
       // React et n'auraient aucun rapport avec les critères générés ici. Le
       // guide d'entretien (interview_guides) porte les vraies relances.
-      return suggestions.map((s, i) => ({ id: String(i + 1), q: s.text, crit: s.crit, probes: [] }));
+      return suggestions.map((s, i) => ({
+        id: String(i + 1),
+        q: s.text,
+        crit: s.crit,
+        probes: [],
+        ...(s.skillId ? { skillId: s.skillId } : {}),
+      }));
     }
 
     const episodes = await generateTopgradingEpisodes(job, cand);
     if (!episodes.length) throw new Error("aucun épisode généré");
-    return episodes.map((ep, si) => ({
+    const parcours = episodes.map((ep, si) => ({
       co: ep.company,
       period: ep.period,
       role: ep.role,
       qs: ep.questions.map((q, qi) => ({ id: `${si}-${qi}`, q, probes: [] })),
     }));
+    // Le bloc est rangé EN DERNIER : les prédicats de forme lisent criteria[0],
+    // qui doit rester un épisode du parcours.
+    const seeds = await buildSkillCheckSeeds(job, cand, missionSkills);
+    return seeds.length ? [...parcours, skillCheckCriteriaBlock(seeds, parcours.length)] : parcours;
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Génération de la grille ${type} échouée, repli sur la grille statique : ${err?.message ?? String(e)}`);
@@ -177,7 +232,10 @@ export async function buildScreeningContext(candidate: Candidate, recruiter: Rec
     skills: candSkills.map((s) => s.name),
   };
 
-  return { job, cand };
+  // `missionSkills` s'ajoute sans rien changer pour les appelants existants :
+  // JobSpecContext ne transporte que des noms, alors que rattacher un critère à
+  // une compétence demande son identifiant et sa catégorie.
+  return { job, cand, missionSkills: skills };
 }
 
 // Parse "20 min" -> 20. Retombe sur 30 min si le format est vide/inattendu,
@@ -192,10 +250,17 @@ function parseDurationMinutes(duration: string): number {
 export async function generateScreeningGrid(candidateId: string): Promise<PrepGridSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
-    const { job, cand } = await buildScreeningContext(candidate, recruiter);
-    const criteria = await generateScreeningCriteria(job, cand);
+    const { job, cand, missionSkills } = await buildScreeningContext(candidate, recruiter);
+    const criteria = await generateScreeningCriteria(job, cand, scorecardContext(missionSkills));
     if (criteria.length) {
-      return [{ title: "Grille d'évaluation", questions: criteria.map((c) => ({ text: c.text, crit: c.crit })) }];
+      return [{
+        title: "Grille d'évaluation",
+        questions: criteria.map((c) => ({
+          text: c.text,
+          crit: c.crit,
+          ...(c.skillId ? { skillId: c.skillId } : {}),
+        })),
+      }];
     }
   } catch (e) {
     const err = e as { message?: string };
@@ -228,15 +293,25 @@ export async function generateScreeningGuide(
 export async function generateTopgradingGrid(candidateId: string): Promise<PrepGridSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
   try {
-    const { job, cand } = await buildScreeningContext(candidate, recruiter);
+    const { job, cand, missionSkills } = await buildScreeningContext(candidate, recruiter);
     const episodes = await generateTopgradingEpisodes(job, cand);
     if (episodes.length) {
-      return episodes.map((ep) => ({
+      const parcours: PrepGridSection[] = episodes.map((ep) => ({
         title: ep.company,
         subtitle: ep.role,
         period: ep.period,
         questions: ep.questions.map((q) => ({ text: q })),
       }));
+      const seeds = await buildSkillCheckSeeds(job, cand, missionSkills);
+      if (seeds.length) {
+        parcours.push({
+          title: SKILL_CHECK_TITLE,
+          subtitle: SKILL_CHECK_SUBTITLE,
+          kind: SKILL_CHECK_KIND,
+          questions: seeds.map((seed) => ({ text: seed.q, skillId: seed.skillId, evidence: seed.evidence })),
+        });
+      }
+      return parcours;
     }
   } catch (e) {
     const err = e as { message?: string };
@@ -252,21 +327,28 @@ export async function generateTopgradingGuide(
   duration: string,
 ): Promise<PrepGuideSection[]> {
   const { candidate, recruiter } = await assertOwnedCandidate(candidateId);
+  // Le bloc de critères est écarté de l'appel IA puis rajouté tel quel : confié
+  // au modèle, il reformulerait la question, et le recruteur poserait alors une
+  // autre question que celle qui sera évaluée.
+  const parcoursSections = gridSections.filter((s) => s.kind !== SKILL_CHECK_KIND);
+  const checks = gridSections.find((s) => s.kind === SKILL_CHECK_KIND);
+  const built = skillCheckGuideSection(checks?.questions ?? []);
+  const checkSection = built ? [built] : [];
   try {
     const { job, cand } = await buildScreeningContext(candidate, recruiter);
-    const episodes = gridSections.map((s) => ({
+    const episodes = parcoursSections.map((s) => ({
       company: s.title,
       role: s.subtitle ?? "",
       period: s.period ?? "",
       questions: s.questions.map((q) => q.text),
     }));
     const sections = await generateTopgradingGuideSections(episodes, job, cand, parseDurationMinutes(duration));
-    if (sections.length) return sections;
+    if (sections.length) return [...sections, ...checkSection];
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Génération du guide de topgrading échouée, repli statique : ${err?.message ?? String(e)}`);
   }
-  return PREP_META.topgrading.guideSections;
+  return [...PREP_META.topgrading.guideSections, ...checkSection];
 }
 
 // ─── Préparation d'entretien (grid edits + guide format/duration) ──────────
@@ -323,15 +405,25 @@ export async function savePreparation(
           q: q.text,
           crit: q.crit,
           probes: [],
+          // Sans ce report, enregistrer sa préparation effacerait le
+          // rattachement posé à la génération, et une compétence confirmée en
+          // entretien redeviendrait indétectable.
+          ...(q.skillId ? { skillId: q.skillId } : {}),
         }))
       : gridSections.map((section, si) => ({
           co: section.title,
           period: section.period,
           role: section.subtitle,
+          // Sans ce report, « Préparation terminée » effacerait le rattachement
+          // et la nature fermée du bloc : la compétence redeviendrait
+          // indétectable, exactement comme au screening avant sa correction.
+          ...(section.kind ? { kind: section.kind } : {}),
           qs: section.questions.map((q, qi) => ({
             id: `${si}-${qi}`,
             q: q.text,
             probes: [],
+            ...(q.skillId ? { skillId: q.skillId } : {}),
+            ...(q.evidence ? { evidence: q.evidence } : {}),
           })),
         }));
 
@@ -409,7 +501,15 @@ function renderFilledGrid(criteria: unknown, answers: Record<string, string>): s
       for (const rawQ of c.qs) {
         const q = rawQ as Record<string, unknown>;
         const note = (answers[String(q.id)] ?? "").trim();
-        lines.push(`Q: ${String(q.q ?? "")}\nNotes: ${note || "(pas de note)"}`);
+        // Le bloc de critères porte un verdict, pas une note prise en direct :
+        // servir « Notes: Oui » au prompt de synthèse le ferait lire comme un
+        // propos du candidat.
+        if (c.kind === SKILL_CHECK_KIND) {
+          const attendu = q.evidence ? ` (fait attendu : ${String(q.evidence)})` : "";
+          lines.push(`- ${String(q.q ?? "")}${attendu} : ${note || "(non évalué)"}`);
+        } else {
+          lines.push(`Q: ${String(q.q ?? "")}\nNotes: ${note || "(pas de note)"}`);
+        }
       }
     } else {
       const a = answers[String(c.id)];
@@ -447,7 +547,15 @@ export async function finishInterview(candidateId: string, type: RecruitmentInte
     if (type === "screening") {
       answers = await evaluateScreeningGrid(grid.criteria as { id: string; q: string; crit?: string }[], trimmed, job, cand);
     } else {
-      answers = await evaluateTopgradingGrid(grid.criteria as { co: string; qs: { id: string; q: string }[] }[], trimmed, job, cand);
+      // Le parcours et les critères de compétence s'évaluent ensemble et
+      // échouent ensemble : une grille à moitié remplie laisserait les deux
+      // catégories vides sans que personne ne le sache.
+      const { episodes, checks } = splitTopgradingCriteria(grid.criteria);
+      const [notes, verdicts] = await Promise.all([
+        evaluateTopgradingGrid(episodes, trimmed, job, cand),
+        checks?.qs.length ? evaluateTopgradingSkillChecks(checks.qs, trimmed, job, cand) : Promise.resolve({}),
+      ]);
+      answers = { ...notes, ...verdicts };
     }
   } catch (e) {
     const err = e as { message?: string };
@@ -521,8 +629,14 @@ export async function finishInterviewTest(candidateId: string, type: Recruitment
     type === "screening"
       ? Object.fromEntries((grid.criteria as { id: string }[]).map((c, i) => [c.id, i % 5 === 4 ? "Partiel" : "Oui"]))
       : Object.fromEntries(
-          (grid.criteria as { qs: { id: string }[] }[]).flatMap((ep) =>
-            ep.qs.map((q) => [q.id, "Réponse détaillée et cohérente, exemple concret à l'appui (donnée de test)."]),
+          (grid.criteria as { kind?: string; qs: { id: string }[] }[]).flatMap((ep) =>
+            ep.qs.map((q, qi) =>
+              ep.kind === SKILL_CHECK_KIND
+                // Un « Partiel » parmi les « Oui » : sans lui, le compte de test
+                // ne montrerait jamais l'état intermédiaire.
+                ? [q.id, qi === 1 ? "Partiel" : "Oui"]
+                : [q.id, "Réponse détaillée et cohérente, exemple concret à l'appui (donnée de test)."],
+            ),
           ),
         );
 

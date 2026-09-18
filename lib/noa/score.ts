@@ -13,6 +13,7 @@
 //     grid has criteria/answers, the final score is that grid's score alone).
 //   - Result is rounded to the nearest integer, clamped to [0, 100].
 
+import { SKILL_CHECK_KIND } from "@/lib/noa/synthesis";
 import type { ScreeningCriterion, TopgradingEpisode, ScreeningAnswer } from "@/lib/noa/synthesis";
 
 
@@ -52,7 +53,13 @@ function scoreScreeningGrid(criteria: ScreeningCriterion[], answers: Record<stri
 }
 
 function scoreTopgradingGrid(episodes: TopgradingEpisode[], answers: Record<string, string>): number | null {
-  const allQuestions = episodes.flatMap((ep) => ep.qs);
+  // Le bloc de critères rattachés à la Scorecard est écarté : ses réponses sont
+  // des verdicts fermés, pas des notes prises en direct. Les compter ici ferait
+  // passer un « Non » pour une question documentée, et gonflerait le taux à
+  // mesure qu'on ajoute des critères. La note garde donc exactement le sens
+  // annoncé plus haut : le taux de documentation du PARCOURS.
+  const parcours = episodes.filter((ep) => ep.kind !== SKILL_CHECK_KIND);
+  const allQuestions = parcours.flatMap((ep) => ep.qs);
   if (allQuestions.length === 0) return null;
   const answered = allQuestions.filter((q) => (answers[q.id] ?? "").trim().length > 0).length;
   return (answered / allQuestions.length) * 100;

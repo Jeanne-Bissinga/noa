@@ -3,6 +3,7 @@
 // Uses the Anthropic SDK; requires ANTHROPIC_API_KEY in the environment.
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { MAX_SKILL_CHECKS } from "@/lib/noa/skill-checks";
 import { REASON_LABEL } from "@/lib/noa/labels";
 
 // Plafond de temps pour l'appel LLM (ms). Au-delà, l'appel lève et l'appelant
@@ -128,6 +129,15 @@ async function generateStructured<T>(opts: {
   toolDescription: string;
   schema: Record<string, unknown>;
   maxTokens: number;
+  /**
+   * Délai propre à l'appel, quand MISSION_TIMEOUT_MS ne suffit pas.
+   *
+   * Les 30 s par défaut conviennent aux générations courtes. Une génération qui
+   * écrit deux champs libres par élément les dépasse sur un contexte réel : le
+   * SDK réessaie alors deux fois, et l'appelant attend 90 s avant un échec — un
+   * échec que les appelants avalent (repli silencieux), donc invisible.
+   */
+  timeoutMs?: number;
 }): Promise<T> {
   const client = new Anthropic();
   const response = await client.messages.create(
@@ -148,7 +158,7 @@ async function generateStructured<T>(opts: {
       ],
       tool_choice: { type: "tool", name: opts.toolName },
     },
-    { timeout: MISSION_TIMEOUT_MS },
+    { timeout: opts.timeoutMs ?? MISSION_TIMEOUT_MS },
   );
 
   const toolUse = response.content.find((b) => b.type === "tool_use");
@@ -544,7 +554,23 @@ export type CandidateContext = {
   skills: string[];
 };
 
-export type ScreeningCriterionSuggestion = { text: string; crit: string };
+export type ScreeningCriterionSuggestion = {
+  text: string;
+  crit: string;
+  /**
+   * mission_skills.id de la compétence attendue que ce critère vérifie, ou null
+   * quand il n'en vérifie aucune (disponibilité, budget, motivation).
+   *
+   * C'est ce rattachement qui permet de dire plus tard qu'une compétence a été
+   * confirmée en entretien. Sans lui, il faudrait rapprocher deux textes écrits
+   * indépendamment — ce que faisait la page de comparaison, et qui ne
+   * retrouvait presque jamais une compétence relationnelle ou de savoir-être.
+   */
+  skillId: string | null;
+};
+
+/** Valeur que le modèle renvoie quand un critère ne vérifie aucune compétence de la Scorecard. */
+export const NO_SCORECARD_SKILL = "aucune";
 export type GuideSectionSuggestion = { title: string; questions: { q: string; probes: string[] }[] };
 
 function jobSpecLines(job: JobSpecContext): string {
@@ -603,6 +629,22 @@ Règles :
 - crit : la catégorie du critère (parmi les valeurs autorisées). Inclus TOUJOURS 1 à 2 critères "Prérequis non négociable" : des critères d'ÉLIMINATION objectifs et vérifiables (diplôme/certification requis, autorisation de travail, zone géographique, disponibilité, budget plafond) — pas des critères d'appréciation subjective.
 - Rejette les critères génériques applicables à n'importe quel poste. Français, formulations concises.`;
 
+// Complément ajouté au prompt quand la campagne a une Scorecard.
+//
+// Deux choses s'y jouent. D'abord le rattachement : un critère dit QUELLE
+// compétence attendue il vérifie, au lieu qu'on tente de le deviner plus tard en
+// rapprochant son libellé du nom d'une compétence. Ensuite la couverture : sans
+// cette consigne, le modèle ne produit que des prérequis techniques et
+// logistiques, et les compétences relationnelles ou de savoir-être de la
+// Scorecard ne sont jamais vérifiées nulle part.
+const SCORECARD_ATTACHMENT_RULES = `
+Rattachement à la Scorecard :
+- scorecard_skill_id : l'identifiant de la compétence attendue que ce critère vérifie, pris dans la liste fournie. Tu ne peux utiliser QUE ces identifiants, tels quels.
+- Quand un critère ne vérifie aucune compétence de la liste (disponibilité, prétentions salariales, motivation, contrainte géographique), réponds exactement "${NO_SCORECARD_SKILL}". C'est une réponse normale, pas un échec.
+- Une compétence ne peut être rattachée qu'à UN seul critère. Ne découpe pas la même compétence en plusieurs critères.
+- Couvre en priorité les compétences non négociables du poste. Mais inclus AUSSI 1 à 2 critères portant sur des compétences relationnelles ou de savoir-être de la Scorecard, à condition qu'un premier entretien puisse réellement les vérifier en demandant un exemple vécu (une collaboration difficile, une priorité renégociée, une décision prise seul).
+- Ne rattache jamais un critère à une compétence qu'il ne vérifie pas vraiment, seulement parce que les mots se ressemblent : mieux vaut "${NO_SCORECARD_SKILL}".`;
+
 /**
  * Génère les critères de la grille d'évaluation de screening à partir du
  * cadrage (poste) et du profil candidat. Ce référentiel ne dépend pas de la
@@ -611,10 +653,49 @@ Règles :
 export async function generateScreeningCriteria(
   job: JobSpecContext,
   candidate: CandidateContext,
+  scorecard: ScorecardCriterionContext[] = [],
 ): Promise<ScreeningCriterionSuggestion[]> {
-  const result = await generateStructured<{ criteria: ScreeningCriterionSuggestion[] }>({
-    system: SCREENING_GRID_SYSTEM,
-    user: `${jobSpecLines(job)}\n\n${candidateLines(candidate)}`,
+  // Sans Scorecard, le rattachement n'a pas d'objet — et `enum: []` est un
+  // schéma invalide, refusé par l'API avant même d'être évalué.
+  const withScorecard = scorecard.length > 0;
+
+  const criterionProperties: Record<string, unknown> = {
+    text: { type: "string", maxLength: 45 },
+    crit: {
+      type: "string",
+      enum: [
+        "Prérequis non négociable",
+        "Critère important",
+        "Contrainte logistique",
+        "Contrainte budgétaire",
+        "Motivation & posture",
+      ],
+    },
+  };
+  const required = ["text", "crit"];
+
+  if (withScorecard) {
+    // Énumération contrainte aux identifiants réels : le modèle ne PEUT pas en
+    // inventer un. La valeur sentinelle fait partie de l'énumération pour que le
+    // champ reste requis en mode strict, où un champ optionnel n'existe pas.
+    criterionProperties.scorecard_skill_id = {
+      type: "string",
+      enum: [...scorecard.map((s) => s.id), NO_SCORECARD_SKILL],
+    };
+    required.push("scorecard_skill_id");
+  }
+
+  const scorecardLines = scorecard
+    .map((s) => `- [id: ${s.id}] (${s.category}) ${s.name}${s.justification ? ` — ${s.justification}` : ""}`)
+    .join("\n");
+
+  const result = await generateStructured<{
+    criteria: { text: string; crit: string; scorecard_skill_id?: string }[];
+  }>({
+    system: withScorecard ? `${SCREENING_GRID_SYSTEM}\n${SCORECARD_ATTACHMENT_RULES}` : SCREENING_GRID_SYSTEM,
+    user: withScorecard
+      ? `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCompétences attendues pour le poste :\n${scorecardLines}`
+      : `${jobSpecLines(job)}\n\n${candidateLines(candidate)}`,
     toolName: "proposer_grille_screening",
     toolDescription: "Enregistre les critères de la grille de screening.",
     maxTokens: 2048,
@@ -625,20 +706,8 @@ export async function generateScreeningCriteria(
           type: "array",
           items: {
             type: "object",
-            properties: {
-              text: { type: "string", maxLength: 45 },
-              crit: {
-                type: "string",
-                enum: [
-                  "Prérequis non négociable",
-                  "Critère important",
-                  "Contrainte logistique",
-                  "Contrainte budgétaire",
-                  "Motivation & posture",
-                ],
-              },
-            },
-            required: ["text", "crit"],
+            properties: criterionProperties,
+            required,
             additionalProperties: false,
           },
         },
@@ -647,7 +716,18 @@ export async function generateScreeningCriteria(
       additionalProperties: false,
     },
   });
-  return result.criteria ?? [];
+
+  // Une compétence ne peut être rattachée qu'à un seul critère : le prompt le
+  // demande, ce filtre le garantit. Deux critères sur la même compétence la
+  // feraient basculer en « confirmée » sur la foi d'une seule réponse.
+  const known = new Set(scorecard.map((s) => s.id));
+  const taken = new Set<string>();
+  return (result.criteria ?? []).map((c) => {
+    const claimed = c.scorecard_skill_id ?? "";
+    const skillId = known.has(claimed) && !taken.has(claimed) ? claimed : null;
+    if (skillId) taken.add(skillId);
+    return { text: c.text, crit: c.crit, skillId };
+  });
 }
 
 const SCREENING_GUIDE_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la grille de screening, du poste et du profil du candidat, tu rédiges le GUIDE d'entretien : pour chaque critère, les questions à poser et les relances pour creuser.
@@ -666,7 +746,10 @@ Règles :
  * relances). Lève en cas d'échec ; l'appelant retombe sur le guide statique.
  */
 export async function generateScreeningGuideSections(
-  criteria: ScreeningCriterionSuggestion[],
+  // Le guide ne pose que des questions : le rattachement à la Scorecard ne lui
+  // sert à rien, et l'exiger obligerait l'écran de préparation à le transporter
+  // jusqu'ici sans jamais s'en servir.
+  criteria: Pick<ScreeningCriterionSuggestion, "text" | "crit">[],
   job: JobSpecContext,
   candidate: CandidateContext,
   durationMinutes: number,
@@ -839,6 +922,110 @@ export async function generateTopgradingGuideSections(
   return result.sections ?? [];
 }
 
+// ─── Critères de compétence de l'entretien technique ───────────────────────
+//
+// Le parcours Topgrading fait raconter des situations vécues, mais ses réponses
+// sont des notes libres : rien n'y confirme jamais une compétence attendue. Ce
+// bloc ajoute des critères à réponse fermée, rattachés à la Scorecard, pour que
+// les compétences relationnelles et de savoir-être puissent enfin être
+// documentées par ce que le candidat raconte.
+//
+// Ce que ces critères peuvent produire : une question et un fait à chercher.
+// Rien d'autre. `scorecard_skill_id` est contraint par énumération aux
+// identifiants réels : le modèle ne PEUT pas en inventer un.
+const TOPGRADING_SKILL_CHECKS_SYSTEM = `Tu es noa, un expert en recrutement spécialiste du Topgrading. En plus du parcours chronologique, tu prépares une courte série de CRITÈRES à réponse fermée portant sur les compétences relationnelles et de savoir-être attendues pour le poste.
+
+Pour chaque critère tu produis :
+- scorecard_skill_id : l'identifiant de la compétence attendue que ce critère vérifie, pris dans la liste fournie. Tu ne peux utiliser QUE ces identifiants, tels quels.
+- question : UNE question à poser en entretien. Ouverte, au passé, sur une SITUATION RÉELLEMENT VÉCUE par le candidat, et qui demande comment il a procédé. Jamais une question d'opinion, jamais une mise en situation hypothétique (« que feriez-vous si… »), jamais une question à laquelle on répond par oui ou par non.
+- fait_attendu : UNE phrase courte, vingt-cinq mots au maximum, disant ce que la réponse doit CONTENIR pour que le critère soit validé — un exemple situé dans le temps, le rôle exact du candidat, ce qu'il a fait lui-même, et l'issue. C'est ce fait qui sera cherché dans la transcription, pas une impression générale.
+
+Règles :
+- UN seul critère par compétence, CINQ critères au maximum. Mieux vaut trois critères vérifiables que cinq artificiels.
+- Ne retiens que les compétences qu'un récit d'expérience peut réellement vérifier. Si une compétence ne s'y prête pas, ne produis pas de critère pour elle : en renvoyer moins est une réponse normale.
+- Ancre la question dans le parcours réel du candidat (entreprise, rôle, contexte fournis) quand c'est possible.
+- Une déclaration d'intention (« je suis quelqu'un de très collaboratif ») ne vaut pas exemple : la question doit aller chercher un fait.
+- N'évalue rien et ne préjuge de rien : tu écris ce qu'il faudra demander, pas ce que le candidat vaut.
+- Français, une seule phrase par question, ton professionnel.`;
+
+export type SkillCheckSuggestion = {
+  q: string;
+  /** mission_skills.id — jamais null : un critère de ce bloc n'existe que pour vérifier une compétence. */
+  skillId: string;
+  evidence: string;
+};
+
+/**
+ * Prépare les critères de compétence de l'entretien technique, rattachés à la
+ * Scorecard. Lève en cas d'échec ; l'appelant se passe du bloc et l'entretien se
+ * déroule comme avant.
+ */
+export async function generateTopgradingSkillChecks(input: {
+  job: JobSpecContext;
+  candidate: CandidateContext;
+  scorecard: ScorecardCriterionContext[];
+}): Promise<SkillCheckSuggestion[]> {
+  // Sans compétence à vérifier, rien à préparer — et `enum: []` est un schéma
+  // invalide, refusé par l'API avant même d'être évalué.
+  if (input.scorecard.length === 0) return [];
+
+  const skillsText = input.scorecard
+    .map((s) => `- [id: ${s.id}] (${s.category}) ${s.name}${s.justification ? ` — ${s.justification}` : ""}`)
+    .join("\n");
+  const user = `${jobSpecLines(input.job)}\n\n${candidateLines(input.candidate)}\n\nCompétences attendues à vérifier :\n${skillsText}`;
+
+  const result = await generateStructured<{
+    criteria: { scorecard_skill_id: string; question: string; fait_attendu: string }[];
+  }>({
+    system: TOPGRADING_SKILL_CHECKS_SYSTEM,
+    user,
+    toolName: "proposer_criteres_competences",
+    toolDescription: "Enregistre les critères de compétence à vérifier par un exemple vécu.",
+    maxTokens: 2048,
+    // Deux champs rédigés par critère, jusqu'à cinq critères : sur une campagne
+    // réelle, cet appel dépasse les 30 s par défaut de façon reproductible.
+    timeoutMs: 90_000,
+    schema: {
+      type: "object",
+      properties: {
+        criteria: {
+          // Pas de `maxItems` : refusé par le schéma d'outil strict d'Anthropic
+          // sur un tableau (400). Le plafond de cinq vit dans le prompt, et
+          // devient certain côté serveur (mergeSkillChecks).
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              scorecard_skill_id: { type: "string", enum: input.scorecard.map((s) => s.id) },
+              question: { type: "string" },
+              fait_attendu: { type: "string" },
+            },
+            required: ["scorecard_skill_id", "question", "fait_attendu"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["criteria"],
+      additionalProperties: false,
+    },
+  });
+
+  const known = new Set(input.scorecard.map((s) => s.id));
+  const taken = new Set<string>();
+  const kept: SkillCheckSuggestion[] = [];
+  for (const c of result.criteria ?? []) {
+    const skillId = c.scorecard_skill_id ?? "";
+    if (!known.has(skillId) || taken.has(skillId)) continue;
+    taken.add(skillId);
+    kept.push({ skillId, q: stripFieldTags(c.question ?? ""), evidence: stripFieldTags(c.fait_attendu ?? "") });
+  }
+  // Le plafond est demandé dans le prompt et constaté ici : sur une Scorecard de
+  // neuf compétences, le modèle en a rendu davantage. Une consigne n'est pas une
+  // garantie — `maxItems` étant refusé par les schémas stricts, la coupe se fait
+  // côté serveur.
+  return kept.slice(0, MAX_SKILL_CHECKS);
+}
+
 // ─── Évaluation automatique de la grille à partir de la transcription ──────
 // Le recruteur n'a plus rien à remplir pendant l'entretien : il consulte le
 // guide, enregistre via un outil externe, colle la transcription, et noa
@@ -949,6 +1136,77 @@ export async function evaluateTopgradingGrid(
   const notes: Record<string, string> = {};
   for (const n of result.notes ?? []) notes[n.id] = n.note;
   return notes;
+}
+
+const SKILL_CHECK_EVAL_SYSTEM = `Tu es noa, un expert en recrutement. À partir de la transcription d'un entretien et d'une liste de critères, tu détermines pour CHAQUE critère si ce que le candidat a RACONTÉ le valide.
+
+Ce qui vaut validation, et rien d'autre : un exemple vécu, situé (quand, où, avec qui), dans lequel le candidat dit ce qu'IL a fait, et ce que cela a produit.
+
+Règles :
+- "Oui" : le candidat raconte une situation précise qu'il a vécue, avec son rôle et l'issue, et cette situation correspond au fait attendu.
+- "Partiel" : il aborde le sujet mais reste général, parle au nom de l'équipe sans dire ce qu'il a fait lui-même, ne situe pas l'exemple, ou l'exemple ne correspond qu'en partie au fait attendu.
+- "Non" : le sujet n'est pas abordé, ou le candidat se contente d'affirmer une qualité (« je suis quelqu'un de très collaboratif ») sans exemple, ou ce qu'il raconte contredit le fait attendu.
+- Une intention, une opinion, une réponse à une mise en situation hypothétique ne valent JAMAIS "Oui" : ce ne sont pas des faits vécus.
+- Base-toi UNIQUEMENT sur la transcription. N'invente rien, ne complète rien par ce que le profil laisse supposer.
+- Réponds pour TOUS les critères fournis, sans exception.`;
+
+/**
+ * Rend un verdict fermé sur chaque critère de compétence, à partir du seul récit
+ * du candidat.
+ *
+ * La signature ne prend NI identifiant de compétence, NI hypothèse formulée
+ * avant l'entretien : le verdict porte sur ce qui a été raconté, et il n'existe
+ * aucun canal par lequel une déclaration antérieure pourrait l'influencer. C'est
+ * une garantie de structure, pas une consigne de prompt.
+ *
+ * Lève en cas d'échec ; l'appelant décide du repli.
+ */
+export async function evaluateTopgradingSkillChecks(
+  criteria: { id: string; q: string; evidence?: string }[],
+  transcript: string,
+  job: JobSpecContext,
+  candidate: CandidateContext,
+): Promise<Record<string, "Oui" | "Partiel" | "Non">> {
+  if (criteria.length === 0) return {};
+
+  const criteriaText = criteria
+    .map((c) => `- [${c.id}] ${c.q}${c.evidence ? `\n  Fait attendu : ${c.evidence}` : ""}`)
+    .join("\n");
+  const user = `${jobSpecLines(job)}\n\n${candidateLines(candidate)}\n\nCritères à évaluer (tous, sans exception) :\n${criteriaText}\n\nTranscription de l'entretien :\n${transcript}`;
+
+  const result = await generateStructured<{ evaluations: { id: string; answer: "Oui" | "Partiel" | "Non" }[] }>({
+    system: SKILL_CHECK_EVAL_SYSTEM,
+    user,
+    toolName: "evaluer_criteres_competences",
+    toolDescription: "Enregistre le verdict de chaque critère de compétence.",
+    maxTokens: 2048,
+    schema: {
+      type: "object",
+      properties: {
+        evaluations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              answer: { type: "string", enum: ["Oui", "Partiel", "Non"] },
+            },
+            required: ["id", "answer"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["evaluations"],
+      additionalProperties: false,
+    },
+  });
+
+  const known = new Set(criteria.map((c) => c.id));
+  const verdicts: Record<string, "Oui" | "Partiel" | "Non"> = {};
+  for (const ev of result.evaluations ?? []) {
+    if (known.has(ev.id)) verdicts[ev.id] = ev.answer;
+  }
+  return verdicts;
 }
 
 // ─── Synthèse post-entretien (D, partagée screening + topgrading) ───────────

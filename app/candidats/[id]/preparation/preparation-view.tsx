@@ -266,16 +266,26 @@ export function PreparationView({
                       </div>
                       <div className="flex flex-col gap-2 p-3 bg-gray-50">
                         {section.questions.map((q, qi) => (
-                          <div key={qi} className="flex items-start gap-2 bg-white rounded-xl px-3.5 py-2.5 group">
-                            <textarea
-                              value={q.text}
-                              onChange={(e) => updateQuestion(si, qi, e.target.value)}
-                              rows={2}
-                              className="flex-1 text-xs font-semibold text-gray-600 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-relaxed transition-colors resize-none whitespace-normal"
-                            />
-                            <button onClick={() => removeQuestion(si, qi)} className="mt-1 text-gray-200 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
-                              <X size={11} />
-                            </button>
+                          <div key={qi} className="bg-white rounded-xl px-3.5 py-2.5 group">
+                            <div className="flex items-start gap-2">
+                              <textarea
+                                value={q.text}
+                                onChange={(e) => updateQuestion(si, qi, e.target.value)}
+                                rows={2}
+                                className="flex-1 text-xs font-semibold text-gray-600 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#99BAF8] focus:outline-none py-0.5 leading-relaxed transition-colors resize-none whitespace-normal"
+                              />
+                              <button onClick={() => removeQuestion(si, qi)} className="mt-1 text-gray-200 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
+                                <X size={11} />
+                              </button>
+                            </div>
+                            {/* L'aide-mémoire du recruteur : ce que la réponse doit
+                                contenir pour valoir « Oui ». En lecture seule, c'est
+                                le critère lui-même, pas une question à reformuler. */}
+                            {q.evidence && (
+                              <p className="text-[10px] text-gray-400 leading-relaxed mt-1.5 pl-0.5">
+                                Attendu : {q.evidence}
+                              </p>
+                            )}
                           </div>
                         ))}
                         <button onClick={() => addQuestion(si)} className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-[#3a6fd4] transition-colors mt-1 pl-1">

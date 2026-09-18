@@ -509,3 +509,72 @@ describe("retrait du plan d'onboarding", () => {
     }
   });
 });
+
+// ─── Critères de compétence de l'entretien technique ────────────────────────
+//
+// Une compétence relationnelle peut désormais être confirmée par l'entretien
+// technique. Ce qui la confirme doit rester le RÉCIT du candidat, jamais ce
+// qu'il a déclaré de lui-même avant l'entretien.
+
+describe("critères de compétence", () => {
+  it("rend son verdict sans jamais recevoir ce qui a été déclaré avant", () => {
+    // La garantie est dans la SIGNATURE : pas d'identifiant de compétence, pas
+    // d'hypothèse. Il n'existe aucun canal par lequel une déclaration
+    // antérieure pourrait peser sur le verdict.
+    const ai = read("lib/noa/ai.ts");
+    const start = ai.indexOf("export async function evaluateTopgradingSkillChecks");
+    const fn = ai.slice(start, ai.indexOf("// ─── Synthèse post-entretien", start));
+    expect(start).toBeGreaterThan(-1);
+    expect(fn).toContain("criteria: { id: string; q: string; evidence?: string }[]");
+    expect(fn).not.toMatch(/skillId|scorecard_skill_id/);
+
+    // La tranche s'arrête au commentaire qui suit : celui-ci explique la
+    // garantie, et emploie légitimement le mot « hypothèse » pour dire ce que la
+    // fonction ne reçoit pas. C'est le PROMPT qui doit en être vierge.
+    const promptStart = ai.indexOf("const SKILL_CHECK_EVAL_SYSTEM");
+    const prompt = ai.slice(promptStart, ai.indexOf("/**", promptStart));
+    expect(prompt).toContain("Réponds pour TOUS les critères");
+    expect(prompt).not.toMatch(/pr[ée]f[ée]renc|hypoth[èe]se|questionnaire|briefing|dimension/i);
+  });
+
+  it("contraint la génération aux compétences réelles", () => {
+    const ai = read("lib/noa/ai.ts");
+    const block = ai.slice(
+      ai.indexOf("export async function generateTopgradingSkillChecks"),
+      ai.indexOf("// ─── Évaluation automatique"),
+    );
+    expect(block).toContain("additionalProperties: false");
+    expect(block).toMatch(/scorecard_skill_id:\s*\{\s*type:\s*"string",\s*enum:/);
+    expect(block).toContain("input.scorecard.length === 0");
+    // `maxItems` est refusé par les schémas d'outil stricts d'Anthropic.
+    expect(block).not.toMatch(/maxItems\s*:/);
+  });
+
+  it("n'entre pas dans la note du candidat", () => {
+    // Un « Non » ne doit pas compter comme une question documentée.
+    const score = read("lib/noa/score.ts");
+    expect(score).toContain("SKILL_CHECK_KIND");
+    expect(score).toMatch(/filter\(\(ep\) => ep\.kind !== SKILL_CHECK_KIND\)/);
+  });
+
+  it("survit à l'enregistrement de la préparation", () => {
+    // Seule protection réaliste : savePreparation n'est pas testable hors base,
+    // et sans ce report le rattachement disparaîtrait au premier enregistrement.
+    const actions = read("app/candidats/[id]/actions.ts");
+    const save = actions.slice(actions.indexOf("export async function savePreparation"));
+    const body = save.slice(0, save.indexOf("\n}\n") + 3);
+    expect(body).toContain("section.kind");
+    expect(body).toContain("q.skillId");
+    expect(body).toContain("q.evidence");
+  });
+
+  it("garde la question au mot près entre le guide et la grille", () => {
+    // La section de guide est construite sans IA : confiée au modèle, la
+    // question serait reformulée, et le recruteur poserait autre chose que ce
+    // qui sera évalué.
+    const checks = read("lib/noa/skill-checks.ts");
+    expect(checks).toContain("export function skillCheckGuideSection");
+    expect(checks).not.toContain("generateStructured");
+    expect(read("app/candidats/[id]/topgrading/page.tsx")).toContain("withSkillCheckGuideSection");
+  });
+});

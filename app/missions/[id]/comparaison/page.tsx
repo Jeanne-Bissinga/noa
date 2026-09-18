@@ -5,10 +5,11 @@ import { Card, BackLink } from "@/components/noa/ui-primitives";
 import {
   requireRecruiter, getMission, getMissionSkills, getCandidates,
   getInterviewsForCandidates, getSynthesesForCandidates, getCandidateSkillsForCandidates,
-  getDecisionsForCandidates, getRecruitersByIds,
+  getDecisionsForCandidates, getRecruitersByIds, getEvaluationGridsForInterviews,
 } from "@/lib/noa/queries";
+import { candidateCoversSkill, validatedSkillIds } from "@/lib/noa/skill-match";
 import { formatDate, initials } from "@/lib/noa/labels";
-import type { CandidateSkill, MissionSkillCategory, Synthesis } from "@/lib/noa/types";
+import type { MissionSkillCategory, Synthesis } from "@/lib/noa/types";
 import { ComparisonBoard } from "./comparison-board";
 import type { ComparisonCandidate, ComparisonSkillBlock } from "./comparison-board";
 
@@ -17,25 +18,6 @@ const SKILL_CATEGORY_LABEL: Record<MissionSkillCategory, string> = {
   relationnelle: "Relationnelles (soft skills)",
   comportementale: "Savoir-être & valeurs",
 };
-
-/**
- * Rapprochement texte libre entre le nom d'une compétence attendue (fiche de
- * mission) et les compétences déclarées d'un candidat (CV). Pas de
- * référentiel commun entre les deux tables : une correspondance approchée
- * (sous-chaîne, insensible à la casse/accents) reste plus utile qu'une
- * absence de rapprochement, tant qu'elle est présentée comme indicative.
- */
-function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-}
-
-function candidateCoversSkill(candidateSkills: CandidateSkill[], skillName: string): boolean {
-  const target = normalize(skillName);
-  return candidateSkills.some((s) => {
-    const cand = normalize(s.name);
-    return cand.length > 0 && (target.includes(cand) || cand.includes(target));
-  });
-}
 
 export default async function MissionComparisonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -59,6 +41,10 @@ export default async function MissionComparisonPage({ params }: { params: Promis
     getCandidateSkillsForCandidates(candidateIds),
     getDecisionsForCandidates(candidateIds),
   ]);
+  // Les deux grilles notées, jamais celle d'un entretien d'intégration : elle
+  // n'entre pas dans l'évaluation d'un recrutement.
+  const gradedInterviews = interviews.filter((i) => i.type === "screening" || i.type === "topgrading");
+  const evaluationGrids = await getEvaluationGridsForInterviews(gradedInterviews.map((i) => i.id));
 
   const recruiters = await getRecruitersByIds(decisions.map((d) => d.decided_by).filter((v): v is string => !!v));
   // null quand la décision n'a pas d'auteur connu : la phrase affichée s'arrête
@@ -86,6 +72,8 @@ export default async function MissionComparisonPage({ params }: { params: Promis
     const screeningInterview = interviews.find((i) => i.candidate_id === c.id && i.type === "screening");
     const topgradingInterview = interviews.find((i) => i.candidate_id === c.id && i.type === "topgrading");
     const skills = candidateSkills.filter((s) => s.candidate_id === c.id);
+    const screeningGrid = evaluationGrids.find((g) => g.interview_id === screeningInterview?.id);
+    const topgradingGrid = evaluationGrids.find((g) => g.interview_id === topgradingInterview?.id);
     return {
       id: c.id,
       firstName: c.first_name,
@@ -94,9 +82,12 @@ export default async function MissionComparisonPage({ params }: { params: Promis
       status: c.status,
       score: c.score,
       coveredSkillIds: missionSkills.filter((s) => candidateCoversSkill(skills, s.name)).map((s) => s.id),
+      screeningValidatedSkillIds: [...validatedSkillIds(screeningGrid, missionSkills)],
+      topgradingValidatedSkillIds: [...validatedSkillIds(topgradingGrid, missionSkills)],
       screeningAdvice: noaSynthesis(c.id, screeningInterview?.id)?.advice ?? null,
       topgradingAdvice: noaSynthesis(c.id, topgradingInterview?.id)?.advice ?? null,
       noaOverview: noaSynthesis(c.id, null)?.content ?? null,
+      noaVerdict: noaSynthesis(c.id, null)?.advice ?? null,
       decisions: decisions
         .filter((d) => d.candidate_id === c.id)
         .map((d) => ({

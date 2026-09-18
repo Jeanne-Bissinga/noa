@@ -6,7 +6,7 @@ import { Check, ChevronRight, Circle, Clock, Sparkles } from "lucide-react";
 import { Card, Badge, Avatar, LinkBtn } from "@/components/noa/ui-primitives";
 import {
   CANDIDATE_STATUS_LABEL, CANDIDATE_BADGE, CANDIDATE_AVATAR_COLOR,
-  DECISION_STATUS_LABEL, DECISION_STATUS_COLOR,
+  DECISION_STATUS_LABEL, DECISION_STATUS_COLOR, INTERVIEW_LABEL,
 } from "@/lib/noa/labels";
 import type { CandidateStatus, DecisionStage, DecisionStatus } from "@/lib/noa/types";
 
@@ -35,10 +35,25 @@ export type ComparisonCandidate = {
   score: number | null;
   /** Compétences de la mission retrouvées dans le CV, par identifiant. */
   coveredSkillIds: string[];
+  /** Compétences confirmées au premier entretien (critère répondu « Oui »/« Partiel »). */
+  screeningValidatedSkillIds: string[];
+  /** Compétences confirmées à l'entretien technique, par un exemple vécu. */
+  topgradingValidatedSkillIds: string[];
   screeningAdvice: string | null;
   topgradingAdvice: string | null;
   noaOverview: string | null;
+  /** Verdict de la recommandation finale ("Recommandation : recruter/à discuter/écarter"), pas encore formulé si null. */
+  noaVerdict: string | null;
   decisions: ComparisonDecision[];
+};
+
+// Mêmes libellés/tonalités que la fiche de décision finale (decision-finale/
+// final-decision-view.tsx) : un même verdict ne doit pas changer de couleur
+// selon l'écran où le recruteur le lit.
+const VERDICT_STYLE: Record<string, { label: string; badge: "green" | "blue" | "red" }> = {
+  "Recommandation : recruter": { label: "Suggestion : recruter", badge: "green" },
+  "Recommandation : à discuter": { label: "Suggestion : à discuter", badge: "blue" },
+  "Recommandation : écarter": { label: "Suggestion : écarter", badge: "red" },
 };
 
 // DECISION_STAGE_LABEL sert de titre ("Premier entretien") ; l'historique, lui,
@@ -95,24 +110,42 @@ function Section({
   );
 }
 
-const StageBlock = ({ label, text, empty, icon }: {
+// Une bordure de couleur par étape (même bleu/violet que les badges de statut
+// candidat) : sur une fiche qui empile 2-3 blocs de texte au ton neutre, c'est
+// ce repère qui permet de savoir d'un coup d'oeil de quel entretien on lit la
+// synthèse, sans avoir à relire le petit libellé au-dessus.
+const STAGE_ACCENT = {
+  screening: "border-[#99BAF8] bg-[#99BAF8]/[0.06]",
+  topgrading: "border-[#CCB8FF] bg-[#CCB8FF]/[0.08]",
+  overview: "border-[#3a6fd4] bg-[#3a6fd4]/[0.04]",
+} as const;
+
+const StageBlock = ({ label, text, empty, icon, accent, badge }: {
   label: string;
   text: string | null;
   empty: string;
   icon?: React.ReactNode;
+  accent: keyof typeof STAGE_ACCENT;
+  badge?: { label: string; color: "green" | "blue" | "red" };
 }) => (
-  <div className="mb-4 last:mb-0">
+  <div className={`mb-3 last:mb-0 rounded-lg border-l-2 pl-2.5 py-2 pr-2 ${STAGE_ACCENT[accent]}`}>
     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 mb-1">
       {icon}
       {label}
+      {badge && <span className="ml-auto"><Badge color={badge.color}>{badge.label}</Badge></span>}
     </p>
-    <p className={`text-xs leading-relaxed ${text ? "text-gray-600" : "text-gray-400"}`}>{text ?? empty}</p>
+    <p className={`text-xs leading-relaxed ${text ? "text-gray-700" : "text-gray-400"}`}>{text ?? empty}</p>
   </div>
 );
 
-function coverageSummary(covered: number, total: number): string {
+// `repérées` couvre les deux sources. Dire « dans le CV » d'un total qui compte
+// aussi les compétences confirmées en entretien serait faux : une compétence
+// confirmée peut très bien ne figurer nulle part dans le CV.
+function coverageSummary(covered: number, validated: number, total: number): string {
   if (total === 0) return "Aucune compétence définie";
-  return `${covered} sur ${total} dans le CV`;
+  if (validated === 0) return `${covered} sur ${total} dans le CV`;
+  const confirmees = validated === 1 ? "1 confirmée" : `${validated} confirmées`;
+  return `${covered} sur ${total} repérées, dont ${confirmees} en entretien`;
 }
 
 function interviewsSummary(c: ComparisonCandidate): string {
@@ -138,6 +171,10 @@ function CandidateCard({
 }) {
   const decided = c.status === "Recrute" || c.status === "Non retenu";
   const covered = new Set(c.coveredSkillIds);
+  const confirmedAt = { screening: new Set(c.screeningValidatedSkillIds), topgrading: new Set(c.topgradingValidatedSkillIds) };
+  const validated = new Set([...c.screeningValidatedSkillIds, ...c.topgradingValidatedSkillIds]);
+  const coveredOrValidated = new Set([...c.coveredSkillIds, ...validated]);
+  const verdictStyle = c.noaVerdict ? VERDICT_STYLE[c.noaVerdict] : undefined;
 
   return (
     <Card className="p-5 flex flex-col">
@@ -182,7 +219,7 @@ function CandidateCard({
         <Section
           id={`${c.id}-skills`}
           label="Compétences attendues"
-          summary={coverageSummary(covered.size, totalSkills)}
+          summary={coverageSummary(coveredOrValidated.size, validated.size, totalSkills)}
           open={open.skills}
           onToggle={() => onToggle("skills")}
         >
@@ -194,17 +231,40 @@ function CandidateCard({
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{block.label}</p>
                 <ul className="flex flex-col gap-1.5">
                   {block.items.map((skill) => {
-                    const ok = covered.has(skill.id);
+                    const isValidated = validated.has(skill.id);
+                    const isCovered = covered.has(skill.id);
+                    // Le pourquoi de la compétence reste lisible au survol : il
+                    // disparaissait dès qu'il y avait quelque chose à dire sur
+                    // le candidat, c'est-à-dire quand il servait le plus.
+                    // Dire À QUEL entretien la compétence a été confirmée : « au
+                    // premier entretien » et « à l'entretien technique » ne valent
+                    // pas la même chose, la seconde reposant sur un exemple vécu.
+                    const stages = [
+                      confirmedAt.screening.has(skill.id) ? INTERVIEW_LABEL.screening.toLowerCase() : null,
+                      confirmedAt.topgrading.has(skill.id) ? INTERVIEW_LABEL.topgrading.toLowerCase() : null,
+                    ].filter(Boolean);
+                    const provenance = stages.length > 0
+                      ? `Confirmée au ${stages.join(" et au ")}`
+                      : isCovered
+                        ? "Repérée dans le CV, pas encore confirmée en entretien"
+                        : null;
+                    const title = [provenance, skill.justification].filter(Boolean).join("\n\n") || undefined;
                     return (
                       <li key={skill.id} className="flex items-start gap-2">
-                        {ok ? (
-                          <Check size={13} className="text-[#1e8f52] mt-0.5 shrink-0" />
+                        {/* Une seule coche, d'une seule couleur : la marque dit
+                            « cette compétence est couverte », un point c'est
+                            tout. D'où vient cette couverture — un exemple donné
+                            en entretien, ou une mention de CV — se lit dans la
+                            phrase au survol et dans le résumé de la section,
+                            pas dans une nuance de vert ou de bleu. */}
+                        {isValidated || isCovered ? (
+                          <Check size={13} className="text-[#3a6fd4] mt-0.5 shrink-0" />
                         ) : (
                           <Circle size={13} className="text-gray-200 mt-0.5 shrink-0" />
                         )}
                         <span
-                          className={`text-xs leading-snug ${ok ? "text-[#010101]" : "text-gray-400"}`}
-                          title={skill.justification ?? undefined}
+                          className={`text-xs leading-snug ${isValidated || isCovered ? "text-[#010101]" : "text-gray-400"}`}
+                          title={title}
                         >
                           {skill.name}
                         </span>
@@ -228,17 +288,21 @@ function CandidateCard({
             label="Premier entretien"
             text={c.screeningAdvice}
             empty={`Le premier entretien de ${c.firstName} n'a pas encore été synthétisé.`}
+            accent="screening"
           />
           <StageBlock
             label="Entretien technique"
             text={c.topgradingAdvice}
             empty={`L'entretien technique de ${c.firstName} n'a pas encore été synthétisé.`}
+            accent="topgrading"
           />
           <StageBlock
             label="Ce que noa retient de l'ensemble"
             icon={<Sparkles size={11} className="text-[#3a6fd4]" />}
             text={c.noaOverview}
             empty={`noa n'a pas encore d'avis d'ensemble sur ${c.firstName}.`}
+            accent="overview"
+            badge={verdictStyle ? { label: verdictStyle.label, color: verdictStyle.badge } : undefined}
           />
         </Section>
 
