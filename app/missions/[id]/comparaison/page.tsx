@@ -87,6 +87,7 @@ export default async function MissionComparisonPage({ params }: { params: Promis
       screeningAdvice: noaSynthesis(c.id, screeningInterview?.id)?.advice ?? null,
       topgradingAdvice: noaSynthesis(c.id, topgradingInterview?.id)?.advice ?? null,
       noaOverview: noaSynthesis(c.id, null)?.content ?? null,
+      noaVerdict: noaSynthesis(c.id, null)?.advice ?? null,
       decisions: decisions
         .filter((d) => d.candidate_id === c.id)
         .map((d) => ({

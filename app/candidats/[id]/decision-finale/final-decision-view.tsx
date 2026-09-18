@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, X, TrendingUp, PartyPopper, Sparkles, ChevronRight, GitCompare } from "lucide-react";
+import { Check, X, PartyPopper, Sparkles, ChevronRight, GitCompare } from "lucide-react";
 import { AppLayout } from "@/components/noa/app-shell";
 import { Card, Avatar, Badge, Btn, BackLink, LinkBtn } from "@/components/noa/ui-primitives";
 import { useRegisterTestFiller } from "@/components/noa/test-fill-context";
@@ -115,23 +115,6 @@ export function FinalDecisionView({
     ? "bg-[#99BAF8]/20 text-[#3a6fd4]"
     : "bg-red-50 text-red-400";
 
-  // Une bonne note ne doit pas afficher "recommandé" si noa a lui-même signalé
-  // un point de vigilance non levé dans son analyse : le badge doit refléter
-  // la nuance de la synthèse, pas seulement le score brut.
-  const riskFlagged = /risque|point de vigilance|à confirmer|zone d'incertitude|non levé/i.test(
-    `${globalRecommendation?.content ?? ""} ${globalRecommendation?.advice ?? ""}`,
-  );
-
-  const recommendation = score === null
-    ? { label: "Score en attente", tone: "bg-gray-100 text-gray-500" }
-    : score >= 75 && riskFlagged
-    ? { label: "Profil à approfondir", tone: "bg-[#FEE831]/20 text-[#8a6a00]" }
-    : score >= 75
-    ? { label: "Profil recommandé", tone: "bg-[#75DA9F]/15 text-[#1e8f52]" }
-    : score >= 50
-    ? { label: "Profil à discuter", tone: "bg-[#99BAF8]/15 text-[#3a6fd4]" }
-    : { label: "Profil insuffisant", tone: "bg-red-50 text-red-500" };
-
   const verdict = globalRecommendation?.advice ? VERDICT_STYLE[globalRecommendation.advice] : null;
 
   const handleDecide = (action: "non_retenu" | "retenu") => {
@@ -238,6 +221,27 @@ export function FinalDecisionView({
           )}
         </div>
 
+        {/* Score */}
+        <Card className="p-6 mb-4 text-center">
+          <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-3 font-semibold">Note globale</p>
+          <div className="inline-flex items-end gap-1.5 mb-2">
+            <span className="text-6xl font-bold text-[#010101] leading-none" style={{ fontFamily: "Poppins, sans-serif" }}>
+              {score ?? "-"}
+            </span>
+            <span className="text-2xl text-gray-200 font-light mb-1">/100</span>
+          </div>
+          {/* Pas de badge dérivé du seul score ici : sur un candidat comme
+              Thomas (81/100 mais mal aligné sur des dimensions clés du poste),
+              un badge "Profil recommandé" à côté d'une suggestion noa
+              "écarter" contredit ouvertement le verdict juste en dessous. Le
+              score reste un chiffre brut ; l'appréciation vient de la
+              synthèse qualitative, pas d'un palier automatique sur la note. */}
+          <p className="text-[10px] text-gray-400 italic mt-3">
+            {scoreExplanation(scoreBreakdown) ?? "Calculée à partir des grilles d'entretien."}
+            {" "}Proposition d&apos;analyse, la décision vous appartient.
+          </p>
+        </Card>
+
         {/* Suggestion de noa */}
         {globalRecommendation && (
           <Card className="p-5 mb-4 border-[#99BAF8]/25">
@@ -254,30 +258,6 @@ export function FinalDecisionView({
             <p className="text-[10px] text-gray-400 italic mt-3">Proposition d&apos;analyse. La décision vous appartient.</p>
           </Card>
         )}
-
-        {/* Score */}
-        <Card className="p-6 mb-4 text-center">
-          <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-3 font-semibold">Note globale</p>
-          <div className="inline-flex items-end gap-1.5 mb-2">
-            <span className="text-6xl font-bold text-[#010101] leading-none" style={{ fontFamily: "Poppins, sans-serif" }}>
-              {score ?? "-"}
-            </span>
-            <span className="text-2xl text-gray-200 font-light mb-1">/100</span>
-          </div>
-          <div className="flex justify-center">
-            <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold ${recommendation.tone}`}>
-              <TrendingUp size={12} />
-              {recommendation.label}
-            </span>
-          </div>
-          {/* Rattaché à la note elle-même (pas à la carte "Suggestion de noa"
-              ci-dessus, absente tant que globalRecommendation n'existe pas) :
-              le score seul ne doit jamais s'afficher sans ce rappel. */}
-          <p className="text-[10px] text-gray-400 italic mt-3">
-            {scoreExplanation(scoreBreakdown) ?? "Calculée à partir des grilles d'entretien."}
-            {" "}Proposition d&apos;analyse, la décision vous appartient.
-          </p>
-        </Card>
 
         {/* Récap Screening / Topgrading */}
         <div className="grid grid-cols-2 gap-3 mb-4">

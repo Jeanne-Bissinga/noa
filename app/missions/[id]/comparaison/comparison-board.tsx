@@ -42,7 +42,18 @@ export type ComparisonCandidate = {
   screeningAdvice: string | null;
   topgradingAdvice: string | null;
   noaOverview: string | null;
+  /** Verdict de la recommandation finale ("Recommandation : recruter/à discuter/écarter"), pas encore formulé si null. */
+  noaVerdict: string | null;
   decisions: ComparisonDecision[];
+};
+
+// Mêmes libellés/tonalités que la fiche de décision finale (decision-finale/
+// final-decision-view.tsx) : un même verdict ne doit pas changer de couleur
+// selon l'écran où le recruteur le lit.
+const VERDICT_STYLE: Record<string, { label: string; badge: "green" | "blue" | "red" }> = {
+  "Recommandation : recruter": { label: "Suggestion : recruter", badge: "green" },
+  "Recommandation : à discuter": { label: "Suggestion : à discuter", badge: "blue" },
+  "Recommandation : écarter": { label: "Suggestion : écarter", badge: "red" },
 };
 
 // DECISION_STAGE_LABEL sert de titre ("Premier entretien") ; l'historique, lui,
@@ -99,18 +110,31 @@ function Section({
   );
 }
 
-const StageBlock = ({ label, text, empty, icon }: {
+// Une bordure de couleur par étape (même bleu/violet que les badges de statut
+// candidat) : sur une fiche qui empile 2-3 blocs de texte au ton neutre, c'est
+// ce repère qui permet de savoir d'un coup d'oeil de quel entretien on lit la
+// synthèse, sans avoir à relire le petit libellé au-dessus.
+const STAGE_ACCENT = {
+  screening: "border-[#99BAF8] bg-[#99BAF8]/[0.06]",
+  topgrading: "border-[#CCB8FF] bg-[#CCB8FF]/[0.08]",
+  overview: "border-[#3a6fd4] bg-[#3a6fd4]/[0.04]",
+} as const;
+
+const StageBlock = ({ label, text, empty, icon, accent, badge }: {
   label: string;
   text: string | null;
   empty: string;
   icon?: React.ReactNode;
+  accent: keyof typeof STAGE_ACCENT;
+  badge?: { label: string; color: "green" | "blue" | "red" };
 }) => (
-  <div className="mb-4 last:mb-0">
+  <div className={`mb-3 last:mb-0 rounded-lg border-l-2 pl-2.5 py-2 pr-2 ${STAGE_ACCENT[accent]}`}>
     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 mb-1">
       {icon}
       {label}
+      {badge && <span className="ml-auto"><Badge color={badge.color}>{badge.label}</Badge></span>}
     </p>
-    <p className={`text-xs leading-relaxed ${text ? "text-gray-600" : "text-gray-400"}`}>{text ?? empty}</p>
+    <p className={`text-xs leading-relaxed ${text ? "text-gray-700" : "text-gray-400"}`}>{text ?? empty}</p>
   </div>
 );
 
@@ -150,6 +174,7 @@ function CandidateCard({
   const confirmedAt = { screening: new Set(c.screeningValidatedSkillIds), topgrading: new Set(c.topgradingValidatedSkillIds) };
   const validated = new Set([...c.screeningValidatedSkillIds, ...c.topgradingValidatedSkillIds]);
   const coveredOrValidated = new Set([...c.coveredSkillIds, ...validated]);
+  const verdictStyle = c.noaVerdict ? VERDICT_STYLE[c.noaVerdict] : undefined;
 
   return (
     <Card className="p-5 flex flex-col">
@@ -263,17 +288,21 @@ function CandidateCard({
             label="Premier entretien"
             text={c.screeningAdvice}
             empty={`Le premier entretien de ${c.firstName} n'a pas encore été synthétisé.`}
+            accent="screening"
           />
           <StageBlock
             label="Entretien technique"
             text={c.topgradingAdvice}
             empty={`L'entretien technique de ${c.firstName} n'a pas encore été synthétisé.`}
+            accent="topgrading"
           />
           <StageBlock
             label="Ce que noa retient de l'ensemble"
             icon={<Sparkles size={11} className="text-[#3a6fd4]" />}
             text={c.noaOverview}
             empty={`noa n'a pas encore d'avis d'ensemble sur ${c.firstName}.`}
+            accent="overview"
+            badge={verdictStyle ? { label: verdictStyle.label, color: verdictStyle.badge } : undefined}
           />
         </Section>
 
