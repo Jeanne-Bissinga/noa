@@ -4,8 +4,11 @@ import { WebSocket } from "ws";
 // Node 20 n'a pas de WebSocket natif (arrivé en Node 22) ; le client Supabase
 // en instancie un pour Realtime même quand on ne l'utilise pas, et plante à
 // la construction sans ce polyfill.
+// Le WebSocket de `ws` et celui du DOM ne se recouvrent pas assez pour un cast
+// direct, d'où le passage par `unknown` : c'est la conversion que TypeScript
+// indique lui-même, et elle ne change rien à l'exécution.
 if (!globalThis.WebSocket) {
-  (globalThis as { WebSocket?: typeof WebSocket }).WebSocket = WebSocket;
+  (globalThis as unknown as { WebSocket?: typeof WebSocket }).WebSocket = WebSocket;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
 } from "@/lib/noa/skill-checks";
 import { SCREENING_CRITERIA, TOPGRADING_EPISODES, PREP_META, type PrepGridSection, type PrepGuideSection } from "@/lib/noa/interview-content";
 import { TEST_USER_ID } from "@/lib/noa/test-account";
+import { classifyAiFallback, recordAiFallback } from "@/lib/noa/ai-fallbacks";
 import {
   generateScreeningCriteria,
   generateScreeningGuideSections,
@@ -98,6 +99,10 @@ async function buildSkillCheckSeeds(
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Critères de compétence non générés, l'entretien continue sans : ${err?.message ?? String(e)}`);
+    // Sans company_id : cette fonction ne reçoit ni recruteur ni entreprise, et
+    // sa signature n'a pas été élargie pour du monitoring. Le compte par
+    // opération reste juste, seule la ventilation par entreprise manque ici.
+    await recordAiFallback({ operation: "topgrading_skill_checks", reason: classifyAiFallback(e) });
   }
   return mergeSkillChecks([], generated);
 }
@@ -145,6 +150,14 @@ async function seedGridCriteria(type: RecruitmentInterviewType, candidate: Candi
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Génération de la grille ${type} échouée, repli sur la grille statique : ${err?.message ?? String(e)}`);
+    // `type` est interpolé dans le journal, mais PAS dans l'identifiant
+    // d'opération : le compteur veut une valeur stable, prise dans une liste
+    // fermée, sinon la même panne s'agrège sous deux libellés.
+    await recordAiFallback({
+      operation: type === "screening" ? "screening_grid" : "topgrading_grid",
+      reason: classifyAiFallback(e),
+      companyId: recruiter.company?.id ?? null,
+    });
     return type === "screening" ? SCREENING_CRITERIA : TOPGRADING_EPISODES;
   }
 }

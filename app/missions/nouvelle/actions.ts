@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 import { generateMissionText } from "@/lib/noa/ai";
+import { classifyAiFallback, recordAiFallback } from "@/lib/noa/ai-fallbacks";
 
 export type CreateMissionState = {
   error?: string;
@@ -51,6 +52,13 @@ export async function createMission(
       `[noa] Génération de la mission échouée, repli sur le texte brut. ` +
         `status=${err?.status ?? "?"} type=${err?.error?.error?.type ?? "?"} : ${reason}`,
     );
+    // En plus du journal, pas à sa place : de quoi compter les replis sur la
+    // semaine (cf. lib/noa/ai-fallbacks.ts). Ne lève jamais.
+    await recordAiFallback({
+      operation: "mission_text",
+      reason: classifyAiFallback(e),
+      companyId: recruiter.company_id,
+    });
   }
 
   const supabase = await createClient();

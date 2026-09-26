@@ -1,0 +1,61 @@
+# Contrôles automatiques sur les Pull Requests vers main.
+#
+# Vercel installe et compile déjà le projet à chaque push, mais ne lance ni
+# test, ni lint, ni typecheck : une régression pouvait donc atteindre main avec
+# deux checks verts. C'est ce qui a laissé l'incident `maxItems` vivre deux mois
+# (cf. tests/unit/ai-schemas.test.ts).
+#
+# Volontairement limité aux tests UNITAIRES : ils ne touchent ni Supabase ni
+# Anthropic, donc ce workflow ne demande aucun secret et ne peut pas échouer
+# pour une raison étrangère au code. Les tests CRUD (projet Supabase de test) et
+# `test:ai` (appels Anthropic facturés) restent lancés à la main.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# Un push de plus sur la même PR annule la exécution précédente : inutile de
+# payer deux fois pour un état de code dépassé.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    # Ce nom est celui du check affiché sur la PR, et donc celui à inscrire dans
+    # la protection de branche de main. Court et fixé explicitement pour qu'un
+    # renommage du job ne casse pas la règle côté GitHub.
+    name: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          # Aligné sur @types/node ^24. Pas de champ `engines` dans
+          # package.json : la version est fixée ici, et seulement ici.
+          node-version: 24
+          cache: npm
+
+      # `npm ci` et non `npm install` : installe exactement package-lock.json,
+      # et échoue si le lockfile a divergé du package.json — le défaut qui avait
+      # bloqué tous les déploiements Vercel en août (cf. PR #18).
+      - name: Installation déterministe
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests unitaires
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build

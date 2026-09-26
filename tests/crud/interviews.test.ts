@@ -48,7 +48,9 @@ describe("CRUD entretiens (interviews, grilles, guides)", () => {
       .single();
 
     expect(error).toBeNull();
-    expect(data.id).toBeDefined();
+    // `.single()` type `data` comme nullable ; l'assertion ci-dessus l'exclut,
+    // mais TypeScript ne le déduit pas. Même `!` que dans candidate-cv-upload.
+    expect(data!.id).toBeDefined();
   });
 
   it("refuse une seconde grille pour le même entretien (contrainte unique)", async () => {
