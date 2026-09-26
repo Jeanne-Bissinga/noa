@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ERROR_MESSAGE, userError } from "@/lib/noa/errors";
 import { getCurrentRecruiter, getMission, getMissionObjectives, getMissionSkills } from "@/lib/noa/queries";
 import { getSkillsSignals } from "@/lib/noa/skills-signals";
+import { classifyAiFallback, recordAiFallback } from "@/lib/noa/ai-fallbacks";
 import type { Company, Mission, MissionSkill, MissionSkillCategory } from "@/lib/noa/types";
 import {
   generateObjectiveSuggestions,
@@ -159,6 +160,11 @@ async function suggestObjectives(mission: Mission, recruiter: { company: Company
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Suggestions d'objectifs échouées, repli statique : ${err?.message ?? String(e)}`);
+    await recordAiFallback({
+      operation: "objective_suggestions",
+      reason: classifyAiFallback(e),
+      companyId: recruiter.company?.id ?? null,
+    });
   }
   return NOA_OBJ_SUGGESTIONS;
 }
@@ -297,8 +303,9 @@ const NOA_SKILL_SUGGESTIONS: SkillSuggestions = {
 // marché (flux RSS ingérés dans skills_signals, cf. lib/noa/skills-signals.ts) :
 // c'est la même intelligence marché que la Scorecard intelligente (chat),
 // appliquée directement à la génération des compétences de la campagne.
-// Repli sur des suggestions statiques si l'IA échoue. Partagé par
-// fillSkillSuggestions (écrit en base) et getSkillSuggestions (lecture seule).
+// Repli sur des suggestions statiques si l'IA échoue, ou si elle aboutit sans
+// proposer une seule compétence. Partagé par fillSkillSuggestions (écrit en
+// base) et getSkillSuggestions (lecture seule).
 async function suggestSkills(mission: Mission, recruiter: { company: Company | null }): Promise<SkillSuggestions> {
   try {
     const objectives = await getMissionObjectives(mission.id);
@@ -307,9 +314,24 @@ async function suggestSkills(mission: Mission, recruiter: { company: Company | n
     if (generated.technique.length || generated.relationnelle.length || generated.comportementale.length) {
       return generated;
     }
+    // Appel abouti, mais aucune compétence dans les trois catégories. Ce cas ne
+    // lève pas, donc il ne passait par aucun `catch` : c'était le seul repli du
+    // parcours à être réellement muet. Il est distinct d'un échec d'appel, et le
+    // dire permet de ne pas chercher une panne réseau là où il n'y en a pas.
+    console.error("[noa] Suggestions de compétences vides, repli statique : l'appel a abouti sans proposer de compétence.");
+    await recordAiFallback({
+      operation: "skill_suggestions",
+      reason: "empty_response",
+      companyId: recruiter.company?.id ?? null,
+    });
   } catch (e) {
     const err = e as { message?: string };
     console.error(`[noa] Suggestions de compétences échouées, repli statique : ${err?.message ?? String(e)}`);
+    await recordAiFallback({
+      operation: "skill_suggestions",
+      reason: classifyAiFallback(e),
+      companyId: recruiter.company?.id ?? null,
+    });
   }
   return NOA_SKILL_SUGGESTIONS;
 }
