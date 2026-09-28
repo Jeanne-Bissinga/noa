@@ -1,5 +1,6 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { useRef, useState } from "react";
 
 export type RecorderStatus = "idle" | "recording" | "uploading" | "transcribing" | "error";
@@ -57,10 +58,10 @@ export function useInterviewRecorder(onTranscript: (text: string) => void) {
     }
   };
 
-  const pollTranscript = (transcriptId: string) => {
+  const pollTranscript = (transcriptId: string, audioUrl: string) => {
     pollRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/assemblyai/status/${transcriptId}`);
+        const res = await fetch(`/api/assemblyai/status/${transcriptId}?audioUrl=${encodeURIComponent(audioUrl)}`);
         const data = await res.json();
 
         if (!res.ok || data.status === "error") {
@@ -73,7 +74,7 @@ export function useInterviewRecorder(onTranscript: (text: string) => void) {
           setStatus("idle");
           return;
         }
-        pollTranscript(transcriptId);
+        pollTranscript(transcriptId, audioUrl);
       } catch {
         setError("Connexion perdue pendant la transcription.");
         setStatus("error");
@@ -90,7 +91,19 @@ export function useInterviewRecorder(onTranscript: (text: string) => void) {
       setStatus("uploading");
       try {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        const res = await fetch("/api/assemblyai/upload", { method: "POST", body: blob });
+        // Upload direct navigateur -> Vercel Blob : un entretien long dépasse
+        // la limite de payload d'une Vercel Function (~4.5 Mo), ce qui
+        // déclenchait une 413 quand l'audio transitait par notre serveur.
+        const uploaded = await upload(`entretiens/${crypto.randomUUID()}.webm`, blob, {
+          access: "public",
+          handleUploadUrl: "/api/assemblyai/blob-upload",
+        });
+
+        const res = await fetch("/api/assemblyai/upload", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ audioUrl: uploaded.url }),
+        });
         const data = await res.json();
 
         if (!res.ok) {
@@ -100,7 +113,7 @@ export function useInterviewRecorder(onTranscript: (text: string) => void) {
         }
 
         setStatus("transcribing");
-        pollTranscript(data.transcriptId);
+        pollTranscript(data.transcriptId, uploaded.url);
       } catch {
         setError("Échec de l'envoi de l'enregistrement.");
         setStatus("error");
