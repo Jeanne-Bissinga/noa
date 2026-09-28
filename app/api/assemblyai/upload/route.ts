@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 import { ASSEMBLYAI_BASE_URL } from "@/lib/noa/assemblyai";
 
+// Route en Edge Runtime : les enregistrements d'entretiens longs (topgrading)
+// dépassent la limite de payload des Serverless Functions Node.js (~4.5 Mo
+// sur Vercel), qui rejette la requête en 413 avant même d'atteindre ce code.
+export const runtime = "edge";
+
 // Reçoit le blob audio enregistré côté navigateur, le transmet à AssemblyAI
 // puis lance la transcription (langue française). Ne renvoie que l'id du
 // job : le texte est récupéré par polling via /status/[id], pour ne pas
