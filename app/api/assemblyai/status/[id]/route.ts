@@ -1,9 +1,10 @@
 import "server-only";
+import { del } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { ASSEMBLYAI_BASE_URL } from "@/lib/noa/assemblyai";
 import { getCurrentRecruiter } from "@/lib/noa/queries";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const recruiter = await getCurrentRecruiter();
   if (!recruiter) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
@@ -15,6 +16,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
+  const audioUrl = new URL(request.url).searchParams.get("audioUrl");
 
   const res = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/transcript/${id}`, {
     headers: { authorization: apiKey },
@@ -25,6 +27,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const data = await res.json();
+
+  // L'audio de l'entretien n'a plus besoin d'être conservé sur Vercel Blob
+  // une fois la transcription terminée (succès ou échec) : on le supprime
+  // pour limiter la durée d'exposition de cette donnée sensible.
+  if ((data.status === "completed" || data.status === "error") && audioUrl) {
+    await del(audioUrl).catch(() => {});
+  }
 
   if (data.status === "error") {
     return NextResponse.json({ status: "error", error: data.error ?? "La transcription a échoué." });
